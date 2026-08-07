@@ -25,6 +25,42 @@ sa-east-1), con datos de prueba cargados.
 > absoluta, porque el proceso que lanza el server no tenía Node en el PATH cuando
 > se instaló. Una vez reiniciado el entorno se puede volver a `npm` / `run dev`.
 
+## Despliegue en Vercel
+
+El proyecto ya está preparado: usa `@sveltejs/adapter-vercel` y lee las claves en
+runtime, así que el build no las necesita.
+
+1. Crear un repositorio vacío en GitHub y subir el que ya está acá:
+
+   ```bash
+   git remote add origin https://github.com/USUARIO/mesas.git
+   git push -u origin main
+   ```
+
+2. En [vercel.com/new](https://vercel.com/new), importar ese repositorio. Vercel
+   detecta SvelteKit solo; no hay que tocar los comandos de build.
+
+3. Antes de la primera compilación, en **Environment Variables** cargar las dos:
+
+   | Variable | Valor |
+   | -------- | ----- |
+   | `SUPABASE_URL` | `https://ihqirdjsrxqovxjwtoto.supabase.co` |
+   | `SUPABASE_SERVICE_ROLE_KEY` | la clave `service_role` del dashboard |
+
+   La `service_role` es secreta y sólo se usa del lado del servidor. Si se cargan
+   después del primer deploy, hay que volver a desplegar para que las funciones las
+   tomen.
+
+A partir de ahí, cada `git push` publica una versión nueva.
+
+Los códigos QR se arman con el origen del pedido, así que en cuanto la app esté en
+su dominio los QR van a apuntar solos a la URL correcta — no hay nada que configurar.
+
+> **Antes de cargar el padrón real:** hoy no hay autenticación. Cualquiera con la
+> URL puede entrar a la administración, ver todas las evaluaciones y editar el
+> padrón. Para ensayar el circuito con datos de prueba está bien; **no cargar
+> nombres y DNI de personas reales hasta que exista el ingreso de administrador**.
+
 ## Lo que hay hoy
 
 `/admin/checklists` — el administrador crea un checklist indicando el rol
