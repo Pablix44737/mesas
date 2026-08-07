@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="MESAS">
+	<rect width="512" height="512" rx="96" fill="#126199" />
+	<path
+		d="M150 268l62 62 150-150"
+		fill="none"
+		stroke="#99cc33"
+		stroke-width="44"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+	/>
+	<rect x="150" y="356" width="212" height="26" rx="13" fill="#4f8cba" />
+</svg>

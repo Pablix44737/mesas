@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(git --version)",
+      "PowerShell(node --version)",
+      "PowerShell(npm --version)",
+      "PowerShell(Get-ChildItem \"C:\\\\Program Files\\\\nodejs\",\"$env:LOCALAPPDATA\\\\nvs\",\"$env:APPDATA\\\\nvm\",\"$env:LOCALAPPDATA\\\\fnm_multishells\",\"$env:USERPROFILE\\\\scoop\\\\apps\\\\nodejs\" -ErrorAction SilentlyContinue | Select-Object -First 20 FullName)",
+      "mcp__b95fb8da-0c81-4d36-b917-99a7ee64541d__list_projects",
+      "mcp__b95fb8da-0c81-4d36-b917-99a7ee64541d__list_organizations",
+      "PowerShell($p = @\\(\"C:\\\\Program Files\\\\nodejs\\\\node.exe\",\"C:\\\\Program Files \\(x86\\)\\\\nodejs\\\\node.exe\",\"$env:LOCALAPPDATA\\\\Programs\\\\nodejs\\\\node.exe\",\"$env:APPDATA\\\\npm\\\\node.exe\"\\); foreach \\($x in $p\\) { if \\(Test-Path $x\\) { \"FOUND: $x\" } }; \"---winget---\"; try { winget list --id OpenJS.NodeJS -ErrorAction Stop } catch { \"winget check failed\" })",
+      "mcp__b95fb8da-0c81-4d36-b917-99a7ee64541d__get_cost",
+      "mcp__b95fb8da-0c81-4d36-b917-99a7ee64541d__confirm_cost",
+      "mcp__b95fb8da-0c81-4d36-b917-99a7ee64541d__create_project",
+      "mcp__b95fb8da-0c81-4d36-b917-99a7ee64541d__apply_migration",
+      "mcp__b95fb8da-0c81-4d36-b917-99a7ee64541d__execute_sql",
+      "mcp__b95fb8da-0c81-4d36-b917-99a7ee64541d__get_advisors",
+      "mcp__b95fb8da-0c81-4d36-b917-99a7ee64541d__get_project_url",
+      "mcp__b95fb8da-0c81-4d36-b917-99a7ee64541d__list_migrations",
+      "PowerShell(winget install --id OpenJS.NodeJS.LTS -e --accept-source-agreements --accept-package-agreements --disable-interactivity)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); node --version; npm --version)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); npm install --no-fund --no-audit)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); npx vite --version)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); npm run check)",
+      "mcp__b95fb8da-0c81-4d36-b917-99a7ee64541d__generate_typescript_types",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); npm run build)",
+      "PowerShell($s = \"C:\\\\Users\\\\Usuario\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Usuario-Documents-claude-code\\\\2e8a415a-dd1a-45c7-96d7-77a934371835\\\\scratchpad\"; & \"C:\\\\Program Files\\\\nodejs\\\\node.exe\" \"$s\\\\generar-pdf.cjs\" \"$s\\\\planificacion-politraumatizado.pdf\")",
+      "PowerShell($p = \"C:\\\\Users\\\\Usuario\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Usuario-Documents-claude-code\\\\2e8a415a-dd1a-45c7-96d7-77a934371835\\\\scratchpad\\\\planificacion-politraumatizado.pdf\"; [Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\($p\\)\\))",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); npm install qrcode@^1.5.4 --no-fund --no-audit; npm install -D \"@types/qrcode@^1.5.5\" --no-fund --no-audit)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); npm run check; if \\($?\\) { npm run build 2>&1 | Select-Object -Last 5 })",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); npm run check; if \\($?\\) { npm run build 2>&1 | Select-Object -Last 3 })",
+      "Bash(cd \"C:/Users/Usuario/Documents/claude-code\" && cp /dev/null /dev/null && echo ok)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); npm install @fontsource/hanken-grotesk @fontsource/inter --no-fund --no-audit)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); npm run check; if \\($?\\) { npm run build 2>&1 | Select-String -Pattern \"built in|error|Error\" | Select-Object -First 8 })",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); npm install -D \"@sveltejs/adapter-vercel@^5.4.0\" --no-fund --no-audit)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); Rename-Item .env .env.guardado; try { npm run build 2>&1 | Select-String -Pattern \"built in|Error|error\" | Select-Object -First 6 } finally { Rename-Item .env.guardado .env; \"--- .env restaurado: $\\(Test-Path .env\\) ---\" })",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); $raiz = \\(Get-Location\\).Path; Get-ChildItem -Recurse -File -Path src,static | ForEach-Object { $_.FullName.Substring\\($raiz.Length+1\\).Replace\\('\\\\','/'\\) + \"  \" + $_.Length }; \"--- raiz ---\"; Get-ChildItem -File | Where-Object { $_.Name -in @\\('package.json','package-lock.json','svelte.config.js','vite.config.ts','tsconfig.json'\\) } | ForEach-Object { $_.Name + \"  \" + $_.Length })",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); try { gh auth status 2>&1 | Select-Object -First 6 } catch { \"gh no disponible\" }; \"--- git ---\"; git rev-parse --is-inside-work-tree 2>&1)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); if \\(-not \\(Test-Path .git\\)\\) { git init -q -b main }; git add -A; git -c user.name=\"Pablo\" -c user.email=\"pabloluna44737@gmail.com\" commit -q -m \"MESAS: sistema de apoyo a escenarios de simulacion clinica\" -m \"Diez features del documento de especificaciones, implementadas y verificadas. SvelteKit y Supabase, 22 migraciones versionadas, interfaz sobre la paleta institucional de la Escuela de Enfermeria \\(UNaM\\). Pendiente: falta autenticacion en las areas de administracion y de lider de mesa.\"; git log --oneline)"
+    ]
+  }
+}
