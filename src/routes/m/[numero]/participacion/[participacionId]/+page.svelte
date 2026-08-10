@@ -8,8 +8,18 @@
 
 	let { data, form } = $props();
 
-	/** Marcas ya enviadas al servidor pero sin confirmar, para que el toque sea inmediato. */
-	let pendientes = $state<Record<string, boolean>>({});
+	/**
+	 * Lo que el observador marcó en esta pantalla. Manda sobre lo que trajo el
+	 * servidor mientras el checklist está abierto.
+	 *
+	 * Antes cada marca llamaba a `update()`, que recarga todos los datos de la
+	 * página. Con toques seguidos, la respuesta de una recarga vieja llegaba
+	 * después de una nueva y pisaba marcas ya hechas: ítems que se marcaban o
+	 * desmarcaban solos. Ahora la marca viaja al servidor sin recargar nada, y si
+	 * el servidor la rechaza se vuelve atrás ese ítem.
+	 */
+	let marcas = $state<Record<string, boolean>>({});
+	let falloDeMarca = $state<string | null>(null);
 	let confirmandoEnvio = $state(false);
 	let enviando = $state(false);
 
@@ -20,7 +30,7 @@
 	const items = $derived(
 		(data.checklist?.items ?? []).map((item) => ({
 			...item,
-			cumplido: pendientes[item.id] ?? item.cumplido
+			cumplido: marcas[item.id] ?? item.cumplido
 		}))
 	);
 
@@ -99,10 +109,10 @@
 			</div>
 		{/if}
 
-		{#if form?.mensaje}
+		{#if form?.mensaje || falloDeMarca}
 			<div class="aviso error" role="alert">
 				<Icono nombre="error" />
-				<span>{form.mensaje}</span>
+				<span>{form?.mensaje ?? falloDeMarca}</span>
 			</div>
 		{/if}
 
@@ -201,10 +211,22 @@
 							method="POST"
 							action="?/marcar"
 							use:enhance={() => {
-								pendientes[item.id] = !item.cumplido;
-								return async ({ update }) => {
-									await update({ reset: false });
-									delete pendientes[item.id];
+								const antes = item.cumplido;
+								marcas[item.id] = !antes;
+								// Sin `update()`: recargar en cada toque hacía que respuestas fuera
+								// de orden pisaran marcas ya hechas.
+								return async ({ result }) => {
+									if (result.type === 'failure') {
+										marcas[item.id] = antes;
+										falloDeMarca =
+											(result.data?.mensaje as string) ??
+											'No se pudo registrar la marca. Probá de nuevo.';
+									} else if (result.type === 'error') {
+										marcas[item.id] = antes;
+										falloDeMarca = 'Se perdió la conexión. La marca no quedó registrada.';
+									} else {
+										falloDeMarca = null;
+									}
 								};
 							}}
 						>
@@ -242,6 +264,9 @@
 										enviando = true;
 										return async ({ update }) => {
 											await update({ reset: false });
+											// Enviado: a partir de acá manda lo que devuelve el servidor.
+											marcas = {};
+											falloDeMarca = null;
 											enviando = false;
 											confirmandoEnvio = false;
 										};

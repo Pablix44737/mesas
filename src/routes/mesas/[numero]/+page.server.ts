@@ -26,7 +26,7 @@ async function traerMesa(numeroCrudo: string) {
 	return mesa;
 }
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, url }) => {
 	const mesa = await traerMesa(params.numero);
 
 	// El de la operación no cuelga del escenario: es común a todas las mesas.
@@ -79,6 +79,9 @@ export const load: PageServerLoad = async ({ params }) => {
 		: { data: null };
 
 	return {
+		// Para mostrar junto al QR la dirección que codifica, por si alguien
+		// prefiere tipearla en vez de escanear.
+		origen: url.origin,
 		sinEnviar: (sinEnviar ?? []).map((p) => ({
 			quien: p.participante_nombre ?? `DNI ${p.dni}`,
 			rol: p.rol_nombre ?? '',

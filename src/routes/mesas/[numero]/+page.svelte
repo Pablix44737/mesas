@@ -8,6 +8,7 @@
 
 	let habilitando = $state(false);
 	let confirmandoAvance = $state(false);
+	let mostrarQr = $state(true);
 
 	const siguiente = $derived((data.corridas[0]?.numero ?? 0) + 1);
 
@@ -52,10 +53,42 @@
 
 		<div class="tarjeta">
 			<div class="tarjeta-cabecera">
+				<h2>Código QR de la mesa</h2>
+				<button class="enlace" type="button" onclick={() => (mostrarQr = !mostrarQr)}>
+					{mostrarQr ? 'Ocultar' : 'Mostrar'}
+				</button>
+			</div>
+
+			{#if mostrarQr}
+				<div class="qr-panel">
+					<img
+						class="qr"
+						src="/m/{data.mesa.numero}/qr"
+						alt="Código QR para entrar a la mesa {data.mesa.numero}"
+						width="240"
+						height="240"
+					/>
+					<p class="detalle" style="margin: 0">
+						Los participantes lo escanean para identificarse y declarar su rol.
+					</p>
+					<p class="qr-url">{data.origen}/m/{data.mesa.numero}</p>
+					<a
+						class="boton secundario"
+						href="/m/{data.mesa.numero}/qr"
+						target="_blank"
+						rel="noopener"
+					>
+						<Icono nombre="qr" />
+						Abrirlo solo, para proyectar o imprimir
+					</a>
+				</div>
+			{/if}
+		</div>
+
+		<div class="tarjeta">
+			<div class="tarjeta-cabecera">
 				<h2>Corridas</h2>
-				<a class="enlace" href="/m/{data.mesa.numero}/qr" target="_blank" rel="noopener">
-					Código QR
-				</a>
+				<Icono nombre="corrida" />
 			</div>
 
 			{#if data.corridaEnCurso}
@@ -224,9 +257,5 @@
 			</div>
 		</div>
 
-		<p class="pie">
-			Los participantes entran escaneando el
-			<a href="/m/{data.mesa.numero}/qr" target="_blank" rel="noopener">código QR de la mesa</a>.
-		</p>
 	</div>
 </div>

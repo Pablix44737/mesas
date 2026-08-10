@@ -390,16 +390,16 @@ a {
 }
 
 .tarjeta > :not(.tarjeta-cabecera):not(.tarjeta-pie) {
-	margin-left: var(--e-4);
-	margin-right: var(--e-4);
+	margin-left: var(--e-5);
+	margin-right: var(--e-5);
 }
 
 .tarjeta > :not(.tarjeta-cabecera):first-child {
-	margin-top: var(--e-4);
+	margin-top: var(--e-5);
 }
 
 .tarjeta > :not(.tarjeta-pie):last-child {
-	margin-bottom: var(--e-4);
+	margin-bottom: var(--e-5);
 }
 
 .tarjeta-cabecera {
@@ -407,7 +407,7 @@ a {
 	align-items: center;
 	justify-content: space-between;
 	gap: var(--e-3);
-	padding: var(--e-3) var(--e-4);
+	padding: var(--e-4) var(--e-5);
 	background: var(--superficie-baja);
 	border-bottom: 1px solid var(--borde);
 }
@@ -420,7 +420,7 @@ a {
 }
 
 .tarjeta-pie {
-	padding: var(--e-3) var(--e-4);
+	padding: var(--e-4) var(--e-5);
 	background: var(--superficie-baja);
 	border-top: 1px solid var(--borde);
 }
@@ -485,7 +485,7 @@ a {
 	display: inline-flex;
 	align-items: center;
 	gap: var(--e-1);
-	padding: 3px 10px;
+	padding: 4px 11px;
 	border-radius: var(--r-full);
 	background: var(--superficie-media);
 	color: var(--tinta-suave);
@@ -627,7 +627,9 @@ input[type='file'] {
 	display: flex;
 	align-items: flex-start;
 	gap: var(--e-3);
-	padding: var(--e-3) var(--e-4);
+	/* El borde de acento de la izquierda come espacio: se compensa con más
+	   padding, para que el texto no quede pegado al marco. */
+	padding: var(--e-4) var(--e-4) var(--e-4) var(--e-5);
 	margin-bottom: var(--e-4);
 	border: 1px solid transparent;
 	border-left-width: 3px;
@@ -752,7 +754,7 @@ input[type='file'] {
 	display: flex;
 	flex-direction: column;
 	gap: 2px;
-	padding-left: var(--e-3);
+	padding-left: var(--e-4);
 	border-left: 3px solid var(--verde);
 }
 
@@ -781,7 +783,7 @@ fieldset.roles.invalido legend {
 	align-items: center;
 	gap: var(--e-3);
 	min-height: 68px;
-	padding: var(--e-3);
+	padding: var(--e-4);
 	margin-bottom: var(--e-2);
 	border: 1px solid var(--borde);
 	border-radius: var(--r-lg);
@@ -940,7 +942,7 @@ fieldset.roles.invalido legend {
 	gap: var(--e-3);
 	width: 100%;
 	min-height: 60px;
-	padding: var(--e-3);
+	padding: var(--e-4);
 	text-align: left;
 	font: inherit;
 	font-size: 16px;
@@ -1014,7 +1016,7 @@ fieldset.roles.invalido legend {
 	display: flex;
 	align-items: flex-start;
 	gap: var(--e-3);
-	padding: 10px var(--e-3);
+	padding: var(--e-3) var(--e-4) var(--e-3) var(--e-5);
 	border-radius: var(--r-md);
 	background: var(--superficie-baja);
 	border-left: 3px solid var(--borde-fuerte);
@@ -1050,7 +1052,7 @@ fieldset.roles.invalido legend {
 	align-items: flex-start;
 	flex-wrap: wrap;
 	gap: var(--e-3);
-	padding: var(--e-3);
+	padding: var(--e-4);
 	background: var(--superficie);
 	border: 1px solid var(--borde);
 	border-radius: var(--r-lg);
@@ -1121,8 +1123,8 @@ fieldset.roles.invalido legend {
 	display: flex;
 	align-items: baseline;
 	flex-wrap: wrap;
-	gap: var(--e-1) var(--e-3);
-	padding: 10px var(--e-3);
+	gap: var(--e-1) var(--e-4);
+	padding: var(--e-3) var(--e-4);
 	border-radius: var(--r-md);
 	background: var(--superficie-baja);
 }
@@ -1142,14 +1144,18 @@ fieldset.roles.invalido legend {
 	font-weight: 600;
 }
 
+/* Las filas con borde de acento llevan más padding a la izquierda: si no, el
+   texto queda pegado al marco. */
 .lista li.en-curso {
 	background: var(--verde-claro);
 	border-left: 3px solid var(--verde);
+	padding-left: var(--e-5);
 }
 
 .lista li.pendiente-padron {
 	background: var(--alerta-claro);
 	border-left: 3px solid var(--alerta);
+	padding-left: var(--e-5);
 }
 
 /* --- tabla (administración en escritorio) --- */
@@ -1165,7 +1171,7 @@ fieldset.roles.invalido legend {
 }
 
 .tabla th {
-	padding: var(--e-3) var(--e-4);
+	padding: var(--e-3) var(--e-5);
 	background: var(--superficie-baja);
 	border-bottom: 1px solid var(--borde);
 	text-align: left;
@@ -1178,7 +1184,7 @@ fieldset.roles.invalido legend {
 }
 
 .tabla td {
-	padding: var(--e-3) var(--e-4);
+	padding: var(--e-4) var(--e-5);
 	border-bottom: 1px solid var(--borde);
 	vertical-align: middle;
 }
@@ -1362,8 +1368,8 @@ fieldset.roles.invalido legend {
 .tarjeta-enlace {
 	display: flex;
 	align-items: center;
-	gap: var(--e-3);
-	padding: var(--e-4);
+	gap: var(--e-4);
+	padding: var(--e-5);
 	margin-bottom: var(--e-2);
 	background: var(--superficie);
 	border: 1px solid var(--borde);
@@ -1402,6 +1408,38 @@ fieldset.roles.invalido legend {
 
 .tarjeta-enlace:hover .flecha {
 	color: var(--azul);
+}
+
+/* --- código QR de la mesa, dentro de su pantalla --- */
+
+.qr-panel {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--e-3);
+	text-align: center;
+}
+
+.qr-panel .qr {
+	width: 240px;
+	max-width: 100%;
+	height: auto;
+	padding: var(--e-3);
+	background: #fff;
+	border: 1px solid var(--borde);
+	border-radius: var(--r-md);
+}
+
+.qr-panel .qr-url {
+	margin: 0;
+	padding: var(--e-2) var(--e-3);
+	background: var(--superficie-baja);
+	border: 1px solid var(--borde);
+	border-radius: var(--r-sm);
+	font-size: 13px;
+	color: var(--tinta-suave);
+	word-break: break-all;
+	user-select: all;
 }
 
 /* --- rejillas --- */
