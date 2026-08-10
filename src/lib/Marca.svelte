@@ -1,0 +1,44 @@
+<script lang="ts">
+	/**
+	 * Silueta de perfil del Centro de Simulación.
+	 *
+	 * El `viewBox` está recortado al trazo real (311 × 383 dentro del lienzo
+	 * original de 450), para que la marca no arrastre aire vacío y se pueda alinear
+	 * con el texto. Toma el color de donde esté: `fill="currentColor"`.
+	 */
+	let { alto = 24, clase = '' }: { alto?: number; clase?: string } = $props();
+
+	const ancho = $derived(Math.round(alto * 0.813));
+</script>
+
+<svg
+	class="marca-silueta {clase}"
+	width={ancho}
+	height={alto}
+	viewBox="69.6 67.2 311.3 382.9"
+	fill="currentColor"
+	aria-hidden="true"
+	focusable="false"
+>
+	<g transform="translate(0,450) scale(0.1,-0.1)">
+		<path
+			d="M2120 3823 c-159 -17 -309 -62 -450 -134 -122 -62 -204 -125 -310
+-236 -135 -139 -234 -305 -293 -488 -49 -152 -56 -220 -43 -420 9 -135 -2
+-242 -34 -328 -16 -42 -45 -81 -126 -168 -138 -149 -167 -192 -168 -243 -1
+-40 1 -42 64 -83 154 -99 184 -135 180 -221 -6 -157 -9 -145 32 -164 51 -24
+54 -35 20 -71 -46 -49 -49 -72 -13 -105 16 -15 45 -41 64 -58 55 -51 60 -79
+26 -158 -30 -71 -37 -133 -18 -168 13 -24 79 -55 146 -67 27 -6 130 -17 229
+-25 215 -19 276 -35 322 -83 105 -112 183 -407 149 -565 l-8 -38 831 0 c551 0
+830 3 830 10 0 6 -14 72 -31 148 -44 197 -86 409 -109 542 -58 349 -52 702 14
+845 13 28 59 102 104 164 188 269 268 509 279 846 6 195 -7 295 -59 428 -180
+468 -659 780 -1283 837 -105 10 -271 11 -345 3z"
+		/>
+	</g>
+</svg>
+
+<style>
+	.marca-silueta {
+		flex: 0 0 auto;
+		display: block;
+	}
+</style>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import Icono from '$lib/Icono.svelte';
+	import Marca from '$lib/Marca.svelte';
 
 	let { children } = $props();
 
@@ -17,7 +18,7 @@
 <div class="admin">
 	<nav class="lateral" aria-label="Administración">
 		<a class="lateral-marca" href="/">
-			<span class="logo"><Icono nombre="checklist" tamano={22} /></span>
+			<span class="logo"><Marca alto={24} /></span>
 			<span>
 				<span class="nombre">MESAS</span><br />
 				<span class="sub">Administración</span>
@@ -43,7 +44,7 @@
 	<div class="admin-main">
 		<header class="app-barra">
 			<a class="marca" href="/">
-				<Icono nombre="checklist" tamano={22} />
+				<Marca alto={26} />
 				MESAS
 			</a>
 			<div class="contexto"></div>

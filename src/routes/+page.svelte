@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icono from '$lib/Icono.svelte';
+	import Marca from '$lib/Marca.svelte';
 
 	const administracion = [
 		{
@@ -36,7 +37,7 @@
 <div class="app">
 	<header class="app-barra">
 		<a class="marca" href="/">
-			<Icono nombre="checklist" tamano={22} />
+			<Marca alto={26} />
 			MESAS
 		</a>
 	</header>

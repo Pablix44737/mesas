@@ -149,6 +149,12 @@ secundario; acá se hace al revés. Tampoco su `user-scalable=no`, que bloquea e
 zoom. Ni las pantallas que suponían features inexistentes (timer de corrida, notas
 libres, secciones dentro de un checklist, métricas de dashboard, búsqueda).
 
+**La marca es la silueta de perfil del Centro de Simulación** (`Marca.svelte`), con
+el `viewBox` recortado al trazo real para que no arrastre aire vacío y se alinee con
+el texto. Se usa en la barra superior, en la insignia del sidebar y en los iconos de
+la PWA. Toma el color de donde esté, así que va en azul sobre blanco y en blanco
+sobre azul sin necesidad de dos archivos.
+
 **Sin dependencias externas de tipografía ni iconos.** Hanken Grotesk (títulos) e
 Inter (texto) se sirven desde el propio proyecto vía Fontsource. Los ~28 iconos son
 trazos SVG inline en `iconos.ts`, no una fuente de iconos. Nada de esto se pide a un
