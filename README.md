@@ -68,9 +68,11 @@ observador al que corresponde, le carga sus criterios, decide si ponderarlo y lo
 por terminado. Recién ahí queda disponible para asociarse a un escenario y
 presentarse en las mesas.
 
-`/admin/padron` — el administrador ve quiénes están cargados e incorpora a los que
-falten. Los DNI que ocuparon un rol sin estar en el padrón aparecen arriba, con el
-rol y la corrida donde se usaron; incorporarlos resuelve sus registros solo.
+`/admin/padron` — el administrador ve quiénes están cargados, incorpora a los que
+falten y quita a los que sobren. Los DNI que ocuparon un rol sin estar en el padrón
+aparecen arriba, con el rol y la corrida donde se usaron; incorporarlos resuelve sus
+registros solo. Cada persona muestra cuántos roles ocupó, que es lo que hay que
+saber antes de quitarla.
 
 `/admin/mesas` — el administrador consulta cómo se desarrolló cada mesa: sus
 corridas, quiénes ocuparon cada rol en cada una y quién llegó a enviar su checklist.
@@ -179,6 +181,22 @@ búsqueda de «ya me identifiqué» está acotada a la corrida habilitada— y p
 declarar otro rol. Los registros de las corridas previas quedan intactos y cada
 evaluación cuelga de su corrida. Verificado en la Mesa 1: Ana pasó de observadora
 de la técnica (corrida 2) a operadora (corrida 3), y Elena hizo el camino inverso.
+
+**Quitar a alguien del padrón no borra lo que hizo.** La clave está en el FK:
+`participaciones.participante_id` tiene `on delete set null`, así que al quitar a
+una persona sus participaciones y evaluaciones quedan intactas —con el DNI, que es
+el dato de base— y sólo pierden el nombre. Vuelven a resolverse solas si esa persona
+se reincorpora. Bloquear el borrado habría sido peor: dejaría el padrón sin forma de
+arreglar una carga equivocada.
+
+**Reordenar criterios no toca las evaluaciones.** Las respuestas apuntan al criterio
+por su id, no por su posición, así que mover un criterio es puramente presentación:
+una evaluación ya enviada sigue mostrando lo que su observador marcó. El intercambio
+de órdenes lo hace `mover_criterio()` en la base y no la app, porque
+`(plantilla_id, orden)` es único y dos updates sueltos chocarían; la función pasa por
+un valor negativo dentro de la misma transacción, así que nunca queda a la vista.
+En pantalla la posición se cuenta sobre la lista y no se lee de `orden`: al quitar
+criterios el orden guardado deja huecos, y mostrarlos confundiría.
 
 **El padrón resuelve en las dos direcciones.** Un trigger sobre `participaciones`
 busca el DNI al registrarse, y otro sobre `participantes` resuelve, al incorporarse
@@ -324,9 +342,10 @@ supabase/
 - **Nada tiene autenticación todavía.** Cualquiera que llegue a `/admin` puede
   preparar escenarios y cualquiera en `/mesas` puede crear mesas. Hay que
   resolverlo antes de exponer esto fuera de una máquina de desarrollo.
-- **Del padrón sólo se puede dar de alta.** No hay pantalla para corregir ni quitar
-  a alguien ya cargado. La base lo soporta —cambiar un DNI reacomoda los registros—
-  pero el Gherkin sólo pide incorporar, así que no inventé el resto.
+- **Del padrón se puede dar de alta y quitar, pero no corregir.** Para arreglar un
+  DNI o un nombre mal cargado hay que quitar y volver a incorporar. La base soporta
+  la corrección directa —cambiar un DNI reacomoda los registros solo—, falta la
+  pantalla.
 - **Cambiar de rol dentro de una corrida no es posible.** Quien se equivoca al
   elegir vuelve siempre a su registro original. El Gherkin no lo contempla, así que
   no inventé un flujo; si en la práctica pasa seguido, hay que resolverlo.

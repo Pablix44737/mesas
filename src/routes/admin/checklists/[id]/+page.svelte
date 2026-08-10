@@ -132,8 +132,14 @@
 	</div>
 {/if}
 
+{#if data.items.length > 1}
+	<p class="ayuda" style="margin-bottom: 12px">
+		Con las flechas cambiás el orden en que los observadores van a ver los criterios.
+	</p>
+{/if}
+
 <div class="items">
-	{#each data.items as item (item.id)}
+	{#each data.items as item, i (item.id)}
 		{#if editando === item.id}
 			<div class="tarjeta" style="margin: 0">
 				<form
@@ -173,13 +179,49 @@
 			</div>
 		{:else}
 			<div class="criterio">
-				<span class="orden">{item.orden}</span>
+				<!-- La posición se cuenta acá y no se lee de `orden`: al quitar criterios
+				     el orden guardado deja huecos, y mostrarlos confundiría. -->
+				<span class="orden">{i + 1}</span>
 				<span class="texto">{item.texto}</span>
 				{#if data.plantilla.ponderado}
 					<span class="peso" title="Peso del criterio">{item.peso}</span>
 				{/if}
 				<span class="acciones">
-					<button class="icono-boton" type="button" onclick={() => (editando = item.id)}>
+					<form
+						method="POST"
+						action="?/moverItem"
+						use:enhance={() => async ({ update }) => await update({ reset: false })}
+					>
+						<input type="hidden" name="itemId" value={item.id} />
+						<input type="hidden" name="hacia" value="arriba" />
+						<button class="icono-boton" type="submit" disabled={i === 0} title="Subir">
+							<Icono nombre="arriba" tamano={18} />
+							<span class="visualmente-oculto">Subir</span>
+						</button>
+					</form>
+					<form
+						method="POST"
+						action="?/moverItem"
+						use:enhance={() => async ({ update }) => await update({ reset: false })}
+					>
+						<input type="hidden" name="itemId" value={item.id} />
+						<input type="hidden" name="hacia" value="abajo" />
+						<button
+							class="icono-boton"
+							type="submit"
+							disabled={i === data.items.length - 1}
+							title="Bajar"
+						>
+							<Icono nombre="abajo" tamano={18} />
+							<span class="visualmente-oculto">Bajar</span>
+						</button>
+					</form>
+					<button
+						class="icono-boton"
+						type="button"
+						onclick={() => (editando = item.id)}
+						title="Editar"
+					>
 						<Icono nombre="editar" tamano={18} />
 						<span class="visualmente-oculto">Editar</span>
 					</button>
@@ -189,7 +231,7 @@
 						use:enhance={() => async ({ update }) => await update({ reset: false })}
 					>
 						<input type="hidden" name="itemId" value={item.id} />
-						<button class="icono-boton" type="submit">
+						<button class="icono-boton peligroso" type="submit" title="Quitar">
 							<Icono nombre="quitar" tamano={18} />
 							<span class="visualmente-oculto">Quitar</span>
 						</button>

@@ -271,9 +271,23 @@ a {
 	text-decoration: none;
 }
 
-.icono-boton:hover {
+.icono-boton:hover:not(:disabled) {
 	background: var(--superficie-baja);
 	color: var(--tinta);
+}
+
+.icono-boton:disabled {
+	opacity: 0.3;
+	cursor: not-allowed;
+}
+
+.icono-boton.peligroso {
+	color: var(--error);
+}
+
+.icono-boton.peligroso:hover:not(:disabled) {
+	background: var(--error-claro);
+	color: var(--error);
 }
 
 /* --- botones --- */
@@ -1076,10 +1090,11 @@ fieldset.roles.invalido legend {
 	flex: 1 1 12rem;
 }
 
+/* Cuatro botones de icono: el hueco lo dan ellos mismos, no el gap. */
 .criterio .acciones {
 	display: flex;
 	align-items: center;
-	gap: var(--e-3);
+	gap: 2px;
 	margin-left: auto;
 }
 

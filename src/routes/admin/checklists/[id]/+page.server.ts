@@ -113,6 +113,42 @@ export const actions: Actions = {
 		return { mensaje: null, exito: 'Criterio guardado.' };
 	},
 
+	/**
+	 * Mueve un criterio un lugar arriba o abajo. El intercambio de órdenes lo hace
+	 * `mover_criterio()` en la base, de una sola vez: `(plantilla_id, orden)` es
+	 * único y dos updates sueltos chocarían entre sí.
+	 */
+	moverItem: async ({ request, params }) => {
+		const plantilla = await traerPlantilla(params.id);
+
+		const formulario = await request.formData();
+		const itemId = String(formulario.get('itemId') ?? '');
+		const hacia = String(formulario.get('hacia') ?? '');
+
+		if (!UUID.test(itemId)) return rechazar(400, 'Criterio inválido.');
+		if (hacia !== 'arriba' && hacia !== 'abajo') return rechazar(400, 'Dirección inválida.');
+
+		// Que el criterio sea de este checklist y no de otro.
+		const { data: item } = await supabase
+			.from('checklist_items')
+			.select('id')
+			.eq('id', itemId)
+			.eq('plantilla_id', plantilla.id)
+			.maybeSingle();
+
+		if (!item) return rechazar(404, 'Ese criterio no es de este checklist.');
+
+		const { error: fallo } = await supabase.rpc('mover_criterio', {
+			p_item_id: itemId,
+			p_hacia: hacia
+		});
+
+		if (fallo) return rechazar(400, 'No se pudo mover el criterio. Intentá de nuevo.');
+
+		// Sin aviso de éxito: el movimiento se ve solo en la lista.
+		return { mensaje: null, exito: null };
+	},
+
 	quitarItem: async ({ request, params }) => {
 		const plantilla = await traerPlantilla(params.id);
 

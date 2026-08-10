@@ -479,6 +479,10 @@ export type Database = {
 				Args: { p_participacion_id: string };
 				Returns: string;
 			};
+			mover_criterio: {
+				Args: { p_item_id: string; p_hacia: string };
+				Returns: undefined;
+			};
 			habilitar_siguiente_corrida: {
 				Args: { p_mesa_id: string };
 				Returns: {

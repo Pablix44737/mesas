@@ -6,6 +6,8 @@
 	let { data, form } = $props();
 
 	let incorporando = $state(false);
+	/** Id de la persona que se está por quitar, mientras se confirma. */
+	let quitando = $state<string | null>(null);
 
 	/** Precarga el formulario con un DNI pendiente para no tipearlo de nuevo. */
 	function completarCon(dni: string) {
@@ -151,6 +153,8 @@
 					<tr>
 						<th>DNI</th>
 						<th>Apellido y nombre</th>
+						<th>Roles ocupados</th>
+						<th class="acciones"></th>
 					</tr>
 				</thead>
 				<tbody>
@@ -158,7 +162,71 @@
 						<tr>
 							<td>{mostrarDni(persona.dni)}</td>
 							<td class="principal">{persona.apellido}, {persona.nombre}</td>
+							<td class="detalle">
+								{#if persona.registros === 0}
+									—
+								{:else}
+									{persona.registros}
+								{/if}
+							</td>
+							<td class="acciones">
+								{#if quitando === persona.id}
+									<button class="enlace" type="button" onclick={() => (quitando = null)}>
+										Cancelar
+									</button>
+								{:else}
+									<button
+										class="enlace peligroso"
+										type="button"
+										onclick={() => (quitando = persona.id)}
+									>
+										Quitar
+									</button>
+								{/if}
+							</td>
 						</tr>
+
+						{#if quitando === persona.id}
+							<tr>
+								<td colspan="4" style="padding-top: 0">
+									<div class="aviso alerta" style="margin: 0">
+										<Icono nombre="alerta" />
+										<div>
+											{#if persona.registros > 0}
+												<strong>
+													{persona.apellido}, {persona.nombre} ocupó
+													{persona.registros === 1 ? 'un rol' : `${persona.registros} roles`}
+													en las mesas.
+												</strong>
+												Al quitar a esa persona del padrón, sus registros y evaluaciones
+												<strong>no se borran</strong>: quedan con el DNI, sin identificar.
+												Si vuelve al padrón, se resuelven solos.
+											{:else}
+												<strong>
+													{persona.apellido}, {persona.nombre} todavía no ocupó ningún rol.
+												</strong>
+												Quitar ese registro no afecta a ninguna mesa.
+											{/if}
+											<form
+												method="POST"
+												action="?/quitar"
+												style="margin-top: 12px"
+												use:enhance={() => async ({ update }) => {
+													await update();
+													quitando = null;
+												}}
+											>
+												<input type="hidden" name="id" value={persona.id} />
+												<button class="boton peligro" type="submit">
+													<Icono nombre="quitar" />
+													Sí, quitar del padrón
+												</button>
+											</form>
+										</div>
+									</div>
+								</td>
+							</tr>
+						{/if}
 					{/each}
 				</tbody>
 			</table>
