@@ -46,7 +46,7 @@
 		<div class="pagina-cabecera">
 			<div class="titulo">
 				<h1>Simulación clínica</h1>
-				<p class="bajada">Apoyo a escenarios bajo el modelo MESAS</p>
+				<p class="bajada">Apoyo a escenarios de simulación clínica</p>
 			</div>
 		</div>
 
