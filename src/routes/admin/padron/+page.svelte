@@ -20,7 +20,7 @@
 </script>
 
 <svelte:head>
-	<title>Padrón — MESAS</title>
+	<title>Padrón — SIMUNaM</title>
 </svelte:head>
 
 <div class="pagina-cabecera">

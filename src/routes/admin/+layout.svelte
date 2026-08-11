@@ -20,7 +20,7 @@
 		<a class="lateral-marca" href="/">
 			<span class="logo"><Marca alto={24} /></span>
 			<span>
-				<span class="nombre">MESAS</span><br />
+				<span class="nombre">SIMUNaM</span><br />
 				<span class="sub">Administración</span>
 			</span>
 		</a>
@@ -45,7 +45,7 @@
 		<header class="app-barra">
 			<a class="marca" href="/">
 				<Marca alto={26} />
-				MESAS
+				SIMUNaM
 			</a>
 			<div class="contexto"></div>
 		</header>

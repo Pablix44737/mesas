@@ -5,7 +5,7 @@
 </script>
 
 <svelte:head>
-	<title>Mesas — MESAS</title>
+	<title>Mesas — SIMUNaM</title>
 </svelte:head>
 
 <div class="pagina-cabecera">

@@ -31,14 +31,14 @@
 </script>
 
 <svelte:head>
-	<title>MESAS</title>
+	<title>SIMUNaM</title>
 </svelte:head>
 
 <div class="app">
 	<header class="app-barra">
 		<a class="marca" href="/">
 			<Marca alto={26} />
-			MESAS
+			SIMUNaM
 		</a>
 	</header>
 

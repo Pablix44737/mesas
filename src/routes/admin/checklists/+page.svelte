@@ -14,7 +14,7 @@
 </script>
 
 <svelte:head>
-	<title>Checklists — MESAS</title>
+	<title>Checklists — SIMUNaM</title>
 </svelte:head>
 
 <div class="pagina-cabecera">

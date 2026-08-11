@@ -1,6 +1,6 @@
 {
-	"name": "MESAS — Simulación clínica",
-	"short_name": "MESAS",
+	"name": "SIMUNaM — Simulación clínica",
+	"short_name": "SIMUNaM",
 	"description": "Apoyo a escenarios de simulación clínica: identificación por rol, checklists de observación y devolución formativa.",
 	"lang": "es",
 	"start_url": "/",

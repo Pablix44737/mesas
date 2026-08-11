@@ -5,14 +5,14 @@
 </script>
 
 <svelte:head>
-	<title>{page.status} — MESAS</title>
+	<title>{page.status} — SIMUNaM</title>
 </svelte:head>
 
 <div class="app">
 	<header class="app-barra">
 		<a class="marca" href="/">
 			<Marca alto={26} />
-			MESAS
+			SIMUNaM
 		</a>
 	</header>
 

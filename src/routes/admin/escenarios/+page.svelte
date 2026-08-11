@@ -8,7 +8,7 @@
 </script>
 
 <svelte:head>
-	<title>Escenarios — MESAS</title>
+	<title>Escenarios — SIMUNaM</title>
 </svelte:head>
 
 <div class="pagina-cabecera">

@@ -1,4 +1,9 @@
-# MESAS — Sistema de apoyo a escenarios de simulación clínica
+# SIMUNaM — Sistema de apoyo a escenarios de simulación clínica
+
+> El sistema se llama **SIMUNaM**. «MESAS» aparece en el código sólo como el nombre
+> del modelo pedagógico (Modelo de Entrenamiento con Simulación para el Aprendizaje
+> Significativo), y «mesa» como la entidad del dominio: ninguno de los dos se
+> renombra.
 
 PWA con QR por mesa. SvelteKit + Supabase.
 

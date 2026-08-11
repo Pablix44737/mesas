@@ -21,7 +21,7 @@
 </script>
 
 <svelte:head>
-	<title>{data.escenario.nombre} — MESAS</title>
+	<title>{data.escenario.nombre} — SIMUNaM</title>
 </svelte:head>
 
 <a class="miga" href="/admin/escenarios">

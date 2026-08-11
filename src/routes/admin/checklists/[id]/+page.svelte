@@ -18,7 +18,7 @@
 </script>
 
 <svelte:head>
-	<title>{data.plantilla.nombre} — MESAS</title>
+	<title>{data.plantilla.nombre} — SIMUNaM</title>
 </svelte:head>
 
 <a class="miga" href="/admin/checklists">

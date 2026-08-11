@@ -18,7 +18,7 @@
 </script>
 
 <svelte:head>
-	<title>Mesa {data.mesa.numero} — MESAS</title>
+	<title>Mesa {data.mesa.numero} — SIMUNaM</title>
 </svelte:head>
 
 <a class="miga" href="/admin/mesas">
