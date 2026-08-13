@@ -66,7 +66,7 @@
 		{#if corrida.participaciones.length === 0}
 			<div class="vacio">Nadie se identificó todavía en esta corrida.</div>
 		{:else}
-			<div class="tabla-envoltorio" style="margin: 0">
+			<div class="tabla-envoltorio">
 				<table class="tabla">
 					<thead>
 						<tr>

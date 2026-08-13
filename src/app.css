@@ -394,7 +394,17 @@ a {
 
 /* --- tarjetas --- */
 
+/*
+ * El aire interior lo da el padding de la tarjeta, no márgenes en cada hijo.
+ *
+ * Antes se resolvía con `.tarjeta > * { margin-left/right }`, y eso se rompía de
+ * dos maneras silenciosas: cualquier `style="margin: …"` en un hijo borraba los
+ * laterales y el texto quedaba pegado al borde, y cualquier elemento a lo ancho
+ * (`width: 100%`) se desbordaba y lo recortaba el `overflow: hidden`.
+ * Con padding, ningún hijo puede arruinar el encuadre.
+ */
 .tarjeta {
+	padding: var(--e-5);
 	background: var(--superficie);
 	border: 1px solid var(--borde);
 	border-radius: var(--r-lg);
@@ -403,17 +413,18 @@ a {
 	overflow: hidden;
 }
 
-.tarjeta > :not(.tarjeta-cabecera):not(.tarjeta-pie) {
-	margin-left: var(--e-5);
-	margin-right: var(--e-5);
+/* Que el último hijo no agregue aire de más al padding de abajo. */
+.tarjeta > :last-child:not(.tarjeta-pie):not(.tabla-envoltorio) {
+	margin-bottom: 0;
 }
 
-.tarjeta > :not(.tarjeta-cabecera):first-child {
-	margin-top: var(--e-5);
-}
-
-.tarjeta > :not(.tarjeta-pie):last-child {
-	margin-bottom: var(--e-5);
+/* La cabecera, el pie y las tablas van de borde a borde: se salen del padding.
+   Las celdas de la tabla ya traen su propio aire. */
+.tarjeta-cabecera,
+.tarjeta-pie,
+.tarjeta > .tabla-envoltorio {
+	margin-left: calc(var(--e-5) * -1);
+	margin-right: calc(var(--e-5) * -1);
 }
 
 .tarjeta-cabecera {
@@ -421,9 +432,15 @@ a {
 	align-items: center;
 	justify-content: space-between;
 	gap: var(--e-3);
+	margin-top: calc(var(--e-5) * -1);
+	margin-bottom: var(--e-5);
 	padding: var(--e-4) var(--e-5);
 	background: var(--superficie-baja);
 	border-bottom: 1px solid var(--borde);
+}
+
+.tarjeta > .tabla-envoltorio:last-child {
+	margin-bottom: calc(var(--e-5) * -1);
 }
 
 .tarjeta-cabecera h2,
@@ -434,6 +451,8 @@ a {
 }
 
 .tarjeta-pie {
+	margin-top: var(--e-5);
+	margin-bottom: calc(var(--e-5) * -1);
 	padding: var(--e-4) var(--e-5);
 	background: var(--superficie-baja);
 	border-top: 1px solid var(--borde);
