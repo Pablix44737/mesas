@@ -78,7 +78,50 @@ export const load: PageServerLoad = async ({ params, url }) => {
 				.eq('corrida_id', corridaEnCurso.id)
 		: { data: null };
 
+	// Quiénes entraron a la mesa y con qué rol. Al líder le sirve para saber, sin
+	// andar preguntando, quién ya está y si los observadores enviaron lo suyo.
+	const idsDeCorridas = (corridas ?? []).map((c) => c.id);
+	const [{ data: participaciones }, { data: roles }] = await Promise.all([
+		idsDeCorridas.length > 0
+			? supabase
+					.from('participaciones')
+					.select(
+						`id, dni, corrida_id, rol_codigo,
+						 rol:roles(nombre, orden),
+						 participante:participantes(nombre, apellido),
+						 checklist_instancias(enviada_en)`
+					)
+					.in('corrida_id', idsDeCorridas)
+			: Promise.resolve({ data: null }),
+		supabase.from('roles').select('codigo, nombre, orden').order('orden')
+	]);
+
+	const todasLasParticipaciones = participaciones ?? [];
+
+	const enLaCorridaEnCurso = todasLasParticipaciones
+		.filter((p) => p.corrida_id === corridaEnCurso?.id)
+		.map((p) => ({
+			id: p.id,
+			dni: p.dni,
+			rolCodigo: p.rol_codigo,
+			rolNombre: p.rol?.nombre ?? p.rol_codigo,
+			orden: p.rol?.orden ?? 99,
+			nombre: p.participante ? `${p.participante.nombre} ${p.participante.apellido}` : null,
+			// Sólo los observadores abren checklist; para el resto queda en null.
+			envio: p.checklist_instancias?.enviada_en != null
+		}))
+		.sort(
+			(a, b) => a.orden - b.orden || (a.nombre ?? a.dni).localeCompare(b.nombre ?? b.dni)
+		);
+
+	const ocupados = new Set(enLaCorridaEnCurso.map((p) => p.rolCodigo));
+
 	return {
+		participantes: enLaCorridaEnCurso,
+		// Informativo, no una falta: una mesa puede correr sin asistente, por ejemplo.
+		rolesLibres: (roles ?? []).filter((r) => !ocupados.has(r.codigo)).map((r) => r.nombre),
+		// Personas distintas que pasaron por la mesa, contando todas sus corridas.
+		personasEnLaMesa: new Set(todasLasParticipaciones.map((p) => p.dni)).size,
 		// Para mostrar junto al QR la dirección que codifica, por si alguien
 		// prefiere tipearla en vez de escanear.
 		origen: url.origin,

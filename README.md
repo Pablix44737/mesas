@@ -90,7 +90,9 @@ hasta 20 MB). El checklist del observador de la operación es común a todos los
 escenarios: se muestra, no se elige.
 
 `/mesas` — el líder de mesa da de alta una mesa con su número y uno de los
-escenarios disponibles. `/mesas/<numero>` muestra el material que la mesa hereda
+escenarios disponibles. `/mesas/<numero>` le muestra quiénes se identificaron en la
+corrida en curso y con qué rol —con marca de quién ya envió su checklist y qué roles
+quedaron sin ocupar—, el material que la mesa hereda
 de su escenario —la planificación para el facilitador y los dos checklists, cada
 uno con su cantidad de ítems y su máximo alcanzable— y es donde el líder habilita
 las corridas: la primera, y después cada siguiente, que cierra la anterior.

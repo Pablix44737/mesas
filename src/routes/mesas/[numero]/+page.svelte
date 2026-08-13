@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import Icono from '$lib/Icono.svelte';
 	import BarraSuperior from '$lib/BarraSuperior.svelte';
+	import { mostrarDni } from '$lib/dni';
 	import { mostrarTamano } from '$lib/planificacion';
 
 	let { data, form } = $props();
@@ -201,6 +202,57 @@
 						</li>
 					{/each}
 				</ul>
+			{/if}
+		</div>
+
+		<div class="tarjeta">
+			<div class="tarjeta-cabecera">
+				<h2>Participantes</h2>
+				{#if data.corridaEnCurso}
+					<span class="chip azul sin-punto">
+						{data.participantes.length} en la corrida {data.corridaEnCurso.numero}
+					</span>
+				{/if}
+			</div>
+
+			{#if !data.corridaEnCurso}
+				<p class="detalle" style="margin: 0">
+					Habilitá una corrida para que los participantes puedan identificarse.
+				</p>
+			{:else if data.participantes.length === 0}
+				<p class="detalle" style="margin: 0">
+					Todavía no se identificó nadie en esta corrida. Mostrales el código QR de arriba.
+				</p>
+			{:else}
+				<ul class="lista">
+					{#each data.participantes as participante (participante.id)}
+						<li>
+							<span class="rotulo">{participante.rolNombre}</span>
+							<span class="quien">
+								{#if participante.nombre}
+									{participante.nombre}
+								{:else}
+									<span class="pendiente">DNI {mostrarDni(participante.dni)}</span>
+								{/if}
+							</span>
+							{#if participante.envio}
+								<span class="chip exito">Evaluó</span>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+
+				{#if data.rolesLibres.length > 0}
+					<p class="detalle" style="margin: 12px 0 0">
+						Sin ocupar en esta corrida: {data.rolesLibres.join(', ')}.
+					</p>
+				{/if}
+			{/if}
+
+			{#if data.personasEnLaMesa > data.participantes.length}
+				<p class="detalle" style="margin: 12px 0 0">
+					Por esta mesa pasaron {data.personasEnLaMesa} personas contando todas sus corridas.
+				</p>
 			{/if}
 		</div>
 
