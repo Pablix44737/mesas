@@ -443,6 +443,15 @@ a {
 	margin-bottom: calc(var(--e-5) * -1);
 }
 
+/* Cuando abajo va una tabla, el aire sobra: el encabezado de la tabla tiene el
+   mismo fondo que la cabecera, así que ese hueco se leía como una fila vacía.
+   Sin margen, el `border-bottom` de la cabecera separa a las dos directamente.
+   Va acotado: de los usos de `.tarjeta-cabecera`, la mayoría lleva debajo un
+   formulario, una lista o un párrafo, y ahí el aire sí hace falta. */
+.tarjeta-cabecera:has(+ .tabla-envoltorio) {
+	margin-bottom: 0;
+}
+
 .tarjeta-cabecera h2,
 .tarjeta-cabecera h3 {
 	font-size: 15px;
