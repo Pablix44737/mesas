@@ -51,6 +51,11 @@ export const iconos: Record<string, string[]> = {
 	],
 	resultado: ['M3 3v18h18', 'M7 15l4-4 3 3 5-6'],
 	qr: ['M3 3h7v7H3z', 'M14 3h7v7h-7z', 'M3 14h7v7H3z', 'M14 14h3v3h-3z', 'M18 18h3v3h-3z'],
+	escudo: ['M12 2l8 4v6c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6l8-4z'],
+	candado: [
+		'M5 11h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z',
+		'M8 11V7a4 4 0 0 1 8 0v4'
+	],
 
 	// Roles
 	observador: ['M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z', 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z'],

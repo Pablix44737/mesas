@@ -51,22 +51,35 @@ runtime, así que el build no las necesita.
    | -------- | ----- |
    | `SUPABASE_URL` | `https://ihqirdjsrxqovxjwtoto.supabase.co` |
    | `SUPABASE_SERVICE_ROLE_KEY` | la clave `service_role` del dashboard |
+   | `CLAVE_ADMIN` | opcional: la clave de administración (por defecto `centrosimu123`) |
 
    La `service_role` es secreta y sólo se usa del lado del servidor. Si se cargan
    después del primer deploy, hay que volver a desplegar para que las funciones las
-   tomen.
+   tomen. Cambiar `CLAVE_ADMIN` invalida sola las sesiones abiertas con la anterior.
 
 A partir de ahí, cada `git push` publica una versión nueva.
 
 Los códigos QR se arman con el origen del pedido, así que en cuanto la app esté en
 su dominio los QR van a apuntar solos a la URL correcta — no hay nada que configurar.
 
-> **Antes de cargar el padrón real:** hoy no hay autenticación. Cualquiera con la
-> URL puede entrar a la administración, ver todas las evaluaciones y editar el
-> padrón. Para ensayar el circuito con datos de prueba está bien; **no cargar
-> nombres y DNI de personas reales hasta que exista el ingreso de administrador**.
+> **Sobre el padrón.** La administración —donde se ven todas las evaluaciones y se
+> edita el padrón— pide clave. `/mesas` y `/m/<numero>` no: el líder y los
+> participantes entran sin credenciales, como pasa en el aula. Quien tenga el número
+> de una mesa puede ver su material y registrarse en ella.
 
 ## Lo que hay hoy
+
+`/` — la pantalla de bienvenida. Antes de ver nada, cada quien elige desde dónde va
+a trabajar: participante, líder de mesa o administración. Así nadie se topa con
+funciones que no le tocan.
+
+`/participar` — para quien ya tiene la app abierta y todavía no escaneó. Le presta
+la cámara si el navegador sabe leer códigos, y en cualquier caso le deja escribir el
+número de mesa, que se comprueba antes de llevarlo. Quien escanea el QR con la
+cámara del teléfono no pasa por acá: va derecho a `/m/<numero>`.
+
+`/ingresar` — la clave de administración. Es la única puerta con credenciales del
+sistema.
 
 `/admin/checklists` — el administrador crea un checklist indicando el rol
 observador al que corresponde, le carga sus criterios, decide si ponderarlo y lo da
@@ -146,6 +159,25 @@ tomados del sitio de la institución. El verde de marca sobre blanco da 1.9:1, m
 por debajo del mínimo legible, así que se usa como superficie y acento (chip del
 número de mesa, ítems cumplidos, botón de confirmación con tinta encima) y para
 texto va `--verde-oscuro` `#4d7c0f`, que llega a 4.9:1.
+
+**La clave protege la administración en el servidor, no en la pantalla.** Sacar la
+administración de la bienvenida sólo esconde el enlace: sin guardián alcanzaba con
+escribir `/admin` en la barra del navegador. La comprobación vive en
+`hooks.server.ts`, en un solo lugar, así una sección nueva de administración queda
+protegida sin que haya que acordarse. La sesión viaja firmada (HMAC) en la propia
+cookie y no se guarda nada en memoria: en Vercel cada pedido puede caer en una
+instancia distinta y un registro en memoria se perdería entre pedido y pedido. La
+firma se deriva de la clave, así que cambiarla invalida las cookies viejas sin
+lista de revocación. El `?volverA=` sólo acepta rutas que empiecen con `/admin`,
+para que la pantalla de ingreso no sirva de trampolín a otro sitio.
+
+**El lector de QR es opcional, el número de mesa no.** `BarcodeDetector` está en
+Chrome sobre Android —el teléfono más común en el aula— pero no en Safari/iOS, y la
+cámara se puede denegar. Por eso el botón de cámara aparece sólo si el navegador lo
+soporta y la entrada por número está siempre a la vista, comprobando contra la base
+para poder decir «no existe la mesa 7» en la misma pantalla en vez de mandar a la
+persona a una página de error. De todos modos el camino habitual sigue siendo
+escanear con la cámara del teléfono, que abre la mesa sin pasar por la app.
 
 **El sistema visual viene de una propuesta de Stitch, adaptada.** Se tomó su
 estructura —barra superior fija con el contexto, progreso pegajoso, barra de acción
@@ -325,8 +357,13 @@ src/
     planificacion.ts      formatos y tamaños aceptados
     tipos.ts              tipos de dominio
     server/supabase.ts    cliente de servidor (service_role)
+    server/sesion.ts      clave y cookie firmada de administración
+  hooks.server.ts         guardián: /admin pide sesión
   routes/
-    +page.svelte                                  inicio
+    +page.svelte                                  bienvenida: por dónde entra cada quien
+    ingresar/                                     clave de administración
+    salir/                                        cierre de sesión (POST)
+    participar/                                   lector de QR y entrada por número de mesa
     admin/checklists/                             alta y listado de checklists
     admin/checklists/[id]/                        criterios, ponderación y cierre
     admin/padron/                                 padrón y DNI sin resolver
@@ -352,9 +389,15 @@ supabase/
 
 ## Pendiente
 
-- **Nada tiene autenticación todavía.** Cualquiera que llegue a `/admin` puede
-  preparar escenarios y cualquiera en `/mesas` puede crear mesas. Hay que
-  resolverlo antes de exponer esto fuera de una máquina de desarrollo.
+- **`/mesas` no pide credenciales.** Cualquiera que llegue puede crear una mesa o
+  habilitar corridas. Es deliberado —el líder no tiene por qué recordar una clave
+  en medio de la práctica— pero conviene revisarlo si el sistema se usa fuera del
+  aula.
+- **La clave de administración es una sola y compartida.** No hay usuarios ni
+  registro de quién hizo qué en la administración. Alcanza para un evento; no para
+  auditar.
+- **Nada limita los intentos de clave.** Un ataque por fuerza bruta contra
+  `/ingresar` no encuentra freno más que la latencia de la red.
 - **Del padrón se puede dar de alta y quitar, pero no corregir.** Para arreglar un
   DNI o un nombre mal cargado hay que quitar y volver a incorporar. La base soporta
   la corrección directa —cambiar un DNI reacomoda los registros solo—, falta la

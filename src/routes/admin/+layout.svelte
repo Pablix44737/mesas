@@ -48,6 +48,13 @@
 				SIMUNaM
 			</a>
 			<div class="contexto"></div>
+			<!-- Sin JavaScript el POST navega solo: la salida nunca depende del cliente. -->
+			<form method="POST" action="/salir">
+				<button class="boton fantasma" type="submit">
+					<Icono nombre="candado" tamano={16} />
+					Salir
+				</button>
+			</form>
 		</header>
 
 		<nav class="admin-barra-movil" aria-label="Secciones de administración">

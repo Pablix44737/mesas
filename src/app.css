@@ -604,6 +604,7 @@ label {
 input[type='text'],
 input[type='tel'],
 input[type='number'],
+input[type='password'],
 select,
 textarea {
 	width: 100%;
@@ -1483,6 +1484,196 @@ fieldset.roles.invalido legend {
 	color: var(--tinta-suave);
 	word-break: break-all;
 	user-select: all;
+}
+
+/* --- pantalla de bienvenida: por dónde entra cada quien --- */
+
+.bienvenida {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 100vh;
+	padding: var(--e-8) var(--e-4);
+	/* Trama de puntos de la propuesta de Stitch: da textura sin robar contraste. */
+	background-color: var(--fondo);
+	background-image: radial-gradient(var(--borde) 1px, transparent 1px);
+	background-size: 24px 24px;
+}
+
+.bienvenida-caja {
+	width: 100%;
+	max-width: 480px;
+}
+
+.bienvenida-caja.angosta {
+	max-width: 400px;
+}
+
+.bienvenida-encabezado {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--e-3);
+	margin-bottom: var(--e-8);
+	text-align: center;
+}
+
+.bienvenida-logo {
+	display: grid;
+	place-items: center;
+	width: 80px;
+	height: 80px;
+	margin-bottom: var(--e-1);
+	border-radius: var(--r-lg);
+	background: var(--azul);
+	box-shadow: var(--sombra-md);
+	color: #fff;
+}
+
+.bienvenida h1 {
+	font-size: 32px;
+	line-height: 40px;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	color: var(--azul);
+}
+
+.bienvenida-encabezado p {
+	max-width: 36ch;
+	margin: 0;
+	color: var(--tinta-suave);
+}
+
+.bienvenida-pie {
+	margin-top: var(--e-8);
+	text-align: center;
+	font-size: 12px;
+	color: var(--tinta-tenue);
+}
+
+.accesos {
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-3);
+}
+
+.acceso {
+	display: flex;
+	align-items: center;
+	gap: var(--e-4);
+	padding: var(--e-4) var(--e-5);
+	background: var(--superficie);
+	border: 1px solid var(--borde);
+	border-radius: var(--r-lg);
+	box-shadow: var(--sombra-sm);
+	color: inherit;
+	text-decoration: none;
+	transition:
+		border-color 120ms ease,
+		background-color 120ms ease;
+}
+
+.acceso:hover {
+	background: var(--azul-tenue);
+	border-color: var(--azul);
+}
+
+.acceso .texto {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.acceso .titulo {
+	font-family: var(--fuente-titulo);
+	font-size: 18px;
+	font-weight: 600;
+	line-height: 26px;
+}
+
+.acceso .flecha {
+	color: var(--tinta-tenue);
+}
+
+.acceso:hover .flecha {
+	color: var(--azul);
+}
+
+/* La vía del participante es la que usa casi todo el mundo y la única con
+   apuro: va en el verde de marca y con más cuerpo que las otras dos. */
+.acceso.principal {
+	/* Más alto que las otras dos: es el destino de casi todo el mundo y el que
+	   más se toca con el teléfono en la mano. */
+	padding: var(--e-6) var(--e-5);
+	background: var(--verde);
+	border-color: var(--verde-medio);
+}
+
+.acceso.principal:hover {
+	background: var(--verde-medio);
+	border-color: var(--verde-oscuro);
+}
+
+.acceso.principal .titulo {
+	font-size: 22px;
+	line-height: 30px;
+}
+
+.acceso.principal .avatar-rol {
+	background: rgba(18, 48, 63, 0.12);
+	color: var(--tinta);
+}
+
+/* Sobre el verde no sirve --tinta-suave (2.6:1): la tinta plena llega a 7.2:1 y
+   apenas rebajada, a 4.8:1, que es lo que pide un rótulo de 11px. */
+.acceso.principal .titulo,
+.acceso.principal .flecha {
+	color: var(--tinta);
+}
+
+.acceso.principal .etiqueta {
+	color: var(--tinta);
+	opacity: 0.8;
+}
+
+/* Separador rotulado. La propuesta de Stitch tapaba la línea con un recuadro del
+   color del fondo; acá el fondo tiene trama, así que la línea se corta de verdad
+   en dos mitades y el rótulo queda en el medio. */
+.separador {
+	display: flex;
+	align-items: center;
+	gap: var(--e-3);
+	margin: var(--e-3) 0 var(--e-1);
+}
+
+.separador::before,
+.separador::after {
+	content: '';
+	flex: 1 1 auto;
+	height: 1px;
+	background: var(--borde-fuerte);
+}
+
+/* --- lector de QR del participante --- */
+
+.lector {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--e-3);
+	text-align: center;
+}
+
+.lector video {
+	width: 100%;
+	max-width: 320px;
+	aspect-ratio: 1;
+	object-fit: cover;
+	background: var(--tinta);
+	border: 1px solid var(--borde);
+	border-radius: var(--r-md);
 }
 
 /* --- rejillas --- */
