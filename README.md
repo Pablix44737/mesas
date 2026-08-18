@@ -110,6 +110,11 @@ de su escenario —la planificación para el facilitador y los dos checklists, c
 uno con su cantidad de ítems y su máximo alcanzable— y es donde el líder habilita
 las corridas: la primera, y después cada siguiente, que cierra la anterior.
 
+`/mesas/<numero>/cartel` — el QR en grande, con el número de mesa y el escenario
+arriba, para proyectar o imprimir. Trae su propio botón de impresión, así que sirve
+también desde el teléfono, donde no hay Ctrl+P. En papel se van los botones y el
+marco: quedan el número, el código a 11 cm y la firma del sistema.
+
 `/m/<numero>` — adonde lleva el código QR de la mesa (`/m/<numero>/qr`). El
 participante ingresa su DNI, elige el rol que va a ocupar en la corrida habilitada
 y recibe lo que ese rol necesita: el observador de la operación, el checklist común;
@@ -375,6 +380,7 @@ src/
     admin/escenarios/[id]/planificacion/          descarga del archivo
     mesas/                                        alta y listado de mesas
     mesas/[numero]/                               material heredado y habilitación de corridas
+    mesas/[numero]/cartel/                        el QR grande, para proyectar o imprimir
     mesas/[numero]/planificacion/                 la misma, por la ruta de la mesa
     m/[numero]/                                   identificación del participante (destino del QR)
     m/[numero]/qr/                                SVG del código QR de la mesa

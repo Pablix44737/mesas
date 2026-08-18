@@ -75,12 +75,12 @@
 					<p class="qr-url">{data.origen}/m/{data.mesa.numero}</p>
 					<a
 						class="boton secundario"
-						href="/m/{data.mesa.numero}/qr"
+						href="/mesas/{data.mesa.numero}/cartel"
 						target="_blank"
 						rel="noopener"
 					>
 						<Icono nombre="qr" />
-						Abrirlo solo, para proyectar o imprimir
+						Abrir el cartel, para proyectar o imprimir
 					</a>
 				</div>
 			{/if}

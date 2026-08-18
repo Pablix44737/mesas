@@ -1676,6 +1676,135 @@ fieldset.roles.invalido legend {
 	border-radius: var(--r-md);
 }
 
+/* --- cartel de la mesa: el QR para proyectar, imprimir o dejar sobre la mesa --- */
+
+.cartel-pagina {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--e-4);
+	min-height: 100vh;
+	padding: var(--e-5) var(--e-4) var(--e-8);
+}
+
+.cartel-controles {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: var(--e-2);
+}
+
+.cartel {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 100%;
+	max-width: 520px;
+	padding: var(--e-8) var(--e-5);
+	background: var(--superficie);
+	border: 1px solid var(--borde);
+	border-radius: var(--r-lg);
+	box-shadow: var(--sombra-sm);
+	text-align: center;
+}
+
+.cartel-rotulo {
+	margin: 0;
+	font-size: 15px;
+	color: var(--tinta-suave);
+}
+
+.cartel-numero {
+	margin: 0;
+	font-family: var(--fuente-titulo);
+	font-size: 44px;
+	line-height: 52px;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	color: var(--azul);
+}
+
+.cartel-escenario {
+	max-width: 34ch;
+	margin: var(--e-1) 0 0;
+	font-size: 15px;
+	color: var(--tinta-suave);
+}
+
+.cartel-qr {
+	/* El margen va acá y no bajo el escenario, que es opcional: así el aire sobre
+	   el código es el mismo esté o no el nombre del escenario. */
+	width: min(320px, 72vw);
+	height: auto;
+	aspect-ratio: 1;
+	margin-top: var(--e-6);
+	padding: var(--e-3);
+	background: #fff;
+	border: 1px solid var(--borde);
+	border-radius: var(--r-md);
+}
+
+.cartel-url {
+	margin: var(--e-4) 0 0;
+	font-size: 13px;
+	color: var(--tinta-suave);
+	word-break: break-all;
+	user-select: all;
+}
+
+.cartel-firma {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	margin: var(--e-6) 0 0;
+	font-family: var(--fuente-titulo);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--tinta-tenue);
+}
+
+@media print {
+	/* En papel no hacen falta ni los botones ni el marco de la tarjeta: queda el
+	   número, el código y la firma. */
+	.no-imprimir {
+		display: none !important;
+	}
+
+	.cartel-pagina {
+		min-height: 0;
+		padding: 0;
+	}
+
+	.cartel {
+		max-width: none;
+		padding: 0;
+		border: 0;
+		box-shadow: none;
+	}
+
+	/* Los navegadores no imprimen fondos, así que el azul sobre papel depende de
+	   la tinta de color; en negro se lee en cualquier impresora. */
+	.cartel-numero {
+		color: #000;
+	}
+
+	.cartel-qr {
+		/* En centímetros y no en píxeles: sobre papel lo que importa es que se
+		   pueda escanear desde el otro lado de la mesa. */
+		width: 11cm;
+		margin-top: 1cm;
+		padding: 0;
+		border: 0;
+	}
+
+	@page {
+		margin: 1.5cm;
+	}
+}
+
 /* --- rejillas --- */
 
 .rejilla {
