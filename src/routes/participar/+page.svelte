@@ -122,8 +122,7 @@
 				</div>
 			{:else}
 				<p class="ayuda">
-					El QR está pegado en la mesa. Podés leerlo con la cámara de tu teléfono, que te trae
-					directo acá.
+					El QR está pegado en la mesa. Podés leerlo con la cámara de tu teléfono.
 				</p>
 
 				{#if hayLector}

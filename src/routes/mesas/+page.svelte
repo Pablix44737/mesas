@@ -33,7 +33,7 @@
 		<div class="tarjeta">
 			<div class="tarjeta-cabecera">
 				<h2>Crear una mesa</h2>
-				<Icono nombre="mas" />
+				<!-- <Icono nombre="mas" /> -->
 			</div>
 
 			{#if data.escenarios.length === 0}
@@ -74,7 +74,7 @@
 
 					<div class="campo">
 						<label for="escenarioId">Escenario que se va a practicar</label>
-						<p class="ayuda">La mesa hereda su planificación y sus checklists.</p>
+						<!-- <p class="ayuda">La mesa hereda su planificación y sus checklists.</p> -->
 						<select
 							id="escenarioId"
 							name="escenarioId"
