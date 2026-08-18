@@ -35,7 +35,7 @@
 			alt="Código QR para entrar a la mesa {data.mesa.numero}"
 		/>
 
-		<p class="cartel-url">{data.origen}/m/{data.mesa.numero}</p>
+		<!-- <p class="cartel-url">{data.origen}/m/{data.mesa.numero}</p> -->
 
 		<p class="cartel-firma">
 			<Marca alto={14} />
@@ -43,8 +43,8 @@
 		</p>
 	</div>
 
-	<p class="pie no-imprimir">
+	<!-- <p class="pie no-imprimir">
 		Desde el teléfono, «Imprimir» abre el diálogo del sistema: sirve tanto para mandarlo a una
 		impresora como para guardarlo en PDF.
-	</p>
+	</p> -->
 </div>
