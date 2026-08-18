@@ -96,7 +96,9 @@ cambiarle el DNI.
 `/admin/mesas` — el administrador consulta cómo se desarrolló cada mesa: sus
 corridas, quiénes ocuparon cada rol en cada una y quién llegó a enviar su checklist.
 `/admin/mesas/<numero>/corridas/<numero>` muestra las evaluaciones de esa corrida
-tal como sus observadores las completaron, ítem por ítem, con su resultado.
+tal como sus observadores las completaron, ítem por ítem, con su resultado. Desde el
+listado también puede **eliminar una mesa**, con todo lo que colgó de ella; hay que
+escribir su número para confirmarlo.
 
 `/admin/escenarios` — el administrador da de alta escenarios, les asocia el
 checklist del observador de la técnica y les adjunta la planificación (PDF o Word,
@@ -239,6 +241,29 @@ una persona sus participaciones y evaluaciones quedan intactas —con el DNI, qu
 el dato de base— y sólo pierden el nombre. Vuelven a resolverse solas si esa persona
 se reincorpora. Bloquear el borrado habría sido peor: dejaría el padrón sin forma de
 arreglar una carga equivocada.
+
+**Eliminar una mesa se lleva puesta su rama entera, y nada más.** La cascada ya
+estaba en el esquema base: `mesas → corridas → participaciones → checklist_instancias
+→ checklist_respuestas`, las cuatro con `on delete cascade`. Un `delete from mesas`
+las arrastra sin dejar nada suelto —verificado contando huérfanos en los cuatro
+niveles— y no toca el padrón ni el material: los participantes, el escenario y los
+checklists existen con independencia de la mesa que los usó.
+
+Sorprende que la cascada no choque contra `checklist_respuestas_bloqueo_post_envio`,
+que impide tocar las respuestas de un checklist ya enviado. No choca porque el
+borrado en cascada corre como trigger AFTER sobre la tabla padre: cuando le llega el
+turno a las respuestas, la fila de `checklist_instancias` ya no está, el guardia
+busca su `enviada_en` y no encuentra nada que proteger. Es comportamiento definido de
+Postgres, no suerte, pero conviene decirlo porque leyendo el trigger solo se supondría
+lo contrario.
+
+Aun así el borrado pasa por `borrar_mesa()`, para que contar y borrar ocurran en la
+misma transacción: lo que se informa después es lo que de verdad se destruyó y no una
+foto sacada al dibujar la confirmación. Toma el mismo `for update` sobre la mesa que
+`habilitar_siguiente_corrida()`, así los dos se serializan en vez de cruzarse. Y el
+número contra el que se confirma sale de la base y no del formulario: si viniera del
+cliente, quien manda el pedido elegiría a la vez qué borrar y contra qué se comprueba,
+y la traba no trabaría nada.
 
 **El padrón se busca sin tildes y por palabras sueltas.** Los apellidos reales traen
 Acuña, Benítez, Florentín, y el mismo apellido aparece cargado con tilde y sin ella
