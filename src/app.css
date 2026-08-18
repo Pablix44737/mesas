@@ -664,6 +664,11 @@ input[type='file'] {
 	padding-left: 42px;
 }
 
+/* Un buscador no gana nada con ocupar todo el ancho de la tarjeta. */
+.buscador {
+	max-width: 22rem;
+}
+
 /* --- avisos --- */
 
 .aviso {

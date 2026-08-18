@@ -86,11 +86,12 @@ observador al que corresponde, le carga sus criterios, decide si ponderarlo y lo
 por terminado. Recién ahí queda disponible para asociarse a un escenario y
 presentarse en las mesas.
 
-`/admin/padron` — el administrador ve quiénes están cargados, incorpora a los que
-falten, corrige los que estén mal y quita a los que sobren. Los DNI que ocuparon un
-rol sin estar en el padrón aparecen arriba, con el rol y la corrida donde se usaron;
-incorporarlos resuelve sus registros solo. Cada persona muestra cuántos roles ocupó,
-que es lo que hay que saber antes de quitarla o de cambiarle el DNI.
+`/admin/padron` — el administrador ve quiénes están cargados, los busca por apellido,
+nombre o DNI, incorpora a los que falten, corrige los que estén mal y quita a los que
+sobren. Los DNI que ocuparon un rol sin estar en el padrón aparecen arriba, con el rol
+y la corrida donde se usaron; incorporarlos resuelve sus registros solo. Cada persona
+muestra cuántos roles ocupó, que es lo que hay que saber antes de quitarla o de
+cambiarle el DNI.
 
 `/admin/mesas` — el administrador consulta cómo se desarrolló cada mesa: sus
 corridas, quiénes ocuparon cada rol en cada una y quién llegó a enviar su checklist.
@@ -238,6 +239,18 @@ una persona sus participaciones y evaluaciones quedan intactas —con el DNI, qu
 el dato de base— y sólo pierden el nombre. Vuelven a resolverse solas si esa persona
 se reincorpora. Bloquear el borrado habría sido peor: dejaría el padrón sin forma de
 arreglar una carga equivocada.
+
+**El padrón se busca sin tildes y por palabras sueltas.** Los apellidos reales traen
+Acuña, Benítez, Florentín, y el mismo apellido aparece cargado con tilde y sin ella
+(Ruiz Diaz / Ruiz Díaz): buscar «ruiz diaz» tiene que encontrar a los dos, y nadie
+debería pelearse con la ñ en el teclado del teléfono. Por eso el término se aplana
+—minúsculas y sin diacríticos— antes de comparar. Y se parte en palabras que se
+exigen todas por separado, en cualquier orden, porque casi todo el mundo tiene dos
+nombres: «miriam acuña» no es un tramo seguido de «Acuña, Miriam Elizabeth» ni al
+derecho ni al revés. Los dígitos van contra el DNI tolerando los puntos. El filtro
+corre en el navegador sobre las filas que la página ya trajo: son decenas, no hace
+falta molestar al servidor por cada tecla, y como la tabla se sigue armando entera
+del lado del servidor, sin JavaScript no falta nada — sólo el filtro.
 
 **Corregir un DNI mueve registros, y eso se dice antes y después.** El nombre y el
 apellido son cosméticos, pero el DNI es la llave con que las mesas identifican a la
