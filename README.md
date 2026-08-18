@@ -87,10 +87,10 @@ por terminado. Recién ahí queda disponible para asociarse a un escenario y
 presentarse en las mesas.
 
 `/admin/padron` — el administrador ve quiénes están cargados, incorpora a los que
-falten y quita a los que sobren. Los DNI que ocuparon un rol sin estar en el padrón
-aparecen arriba, con el rol y la corrida donde se usaron; incorporarlos resuelve sus
-registros solo. Cada persona muestra cuántos roles ocupó, que es lo que hay que
-saber antes de quitarla.
+falten, corrige los que estén mal y quita a los que sobren. Los DNI que ocuparon un
+rol sin estar en el padrón aparecen arriba, con el rol y la corrida donde se usaron;
+incorporarlos resuelve sus registros solo. Cada persona muestra cuántos roles ocupó,
+que es lo que hay que saber antes de quitarla o de cambiarle el DNI.
 
 `/admin/mesas` — el administrador consulta cómo se desarrolló cada mesa: sus
 corridas, quiénes ocuparon cada rol en cada una y quién llegó a enviar su checklist.
@@ -238,6 +238,18 @@ una persona sus participaciones y evaluaciones quedan intactas —con el DNI, qu
 el dato de base— y sólo pierden el nombre. Vuelven a resolverse solas si esa persona
 se reincorpora. Bloquear el borrado habría sido peor: dejaría el padrón sin forma de
 arreglar una carga equivocada.
+
+**Corregir un DNI mueve registros, y eso se dice antes y después.** El nombre y el
+apellido son cosméticos, pero el DNI es la llave con que las mesas identifican a la
+persona: cambiarlo dispara el trigger del padrón, que suelta los registros que la
+apuntaban con el DNI viejo y adopta los que estaban esperando el nuevo. Nada se
+borra —los registros quedan con su DNI, sin identificar—, pero el administrador
+vería aparecer y desaparecer filas sin explicación. Así que la fila de edición avisa
+en vivo qué va a pasar, calculándolo de lo que ya está en pantalla, y el mensaje de
+después informa los números reales, contados antes del update: una vez que el
+trigger corrió, son imposibles de reconstruir. El DNI se manda a la base sólo si
+cambió, porque el trigger escucha esa columna y no hay motivo para despertarlo al
+corregir un acento.
 
 **Reordenar criterios no toca las evaluaciones.** Las respuestas apuntan al criterio
 por su id, no por su posición, así que mover un criterio es puramente presentación:
@@ -404,10 +416,6 @@ supabase/
   auditar.
 - **Nada limita los intentos de clave.** Un ataque por fuerza bruta contra
   `/ingresar` no encuentra freno más que la latencia de la red.
-- **Del padrón se puede dar de alta y quitar, pero no corregir.** Para arreglar un
-  DNI o un nombre mal cargado hay que quitar y volver a incorporar. La base soporta
-  la corrección directa —cambiar un DNI reacomoda los registros solo—, falta la
-  pantalla.
 - **Cambiar de rol dentro de una corrida no es posible.** Quien se equivoca al
   elegir vuelve siempre a su registro original. El Gherkin no lo contempla, así que
   no inventé un flujo; si en la práctica pasa seguido, hay que resolverlo.

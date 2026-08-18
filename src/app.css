@@ -1206,6 +1206,21 @@ fieldset.roles.invalido legend {
 
 .tabla-envoltorio {
 	overflow-x: auto;
+	/* Da una unidad con la que medir el ancho visible, no el de la tabla: la usa
+	   `.desplegable` de acá abajo. */
+	container-type: inline-size;
+}
+
+/* Lo que se despliega bajo una fila —confirmar una baja, editar los datos— vive
+   dentro de una tabla que en pantallas angostas es más ancha que la pantalla. Se
+   ancla al borde visible del scroll y se mide contra él, así el formulario queda
+   entero a la vista en vez de irse para el costado con el resto de la tabla. */
+.tabla .desplegable {
+	position: sticky;
+	/* Los mismos --e-5 que sangran cualquier celda, para que quede alineado con
+	   el resto de la tabla esté o no corrido el scroll. */
+	left: var(--e-5);
+	width: calc(100cqw - var(--e-5) * 2);
 }
 
 .tabla {

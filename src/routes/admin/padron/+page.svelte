@@ -6,8 +6,37 @@
 	let { data, form } = $props();
 
 	let incorporando = $state(false);
+	let guardando = $state(false);
 	/** Id de la persona que se está por quitar, mientras se confirma. */
 	let quitando = $state<string | null>(null);
+	/**
+	 * Fila abierta para editar, elegida a mano. Mientras valga `undefined` manda lo
+	 * que devolvió el servidor: así una edición rechazada se reabre con lo tipeado
+	 * aunque no haya JavaScript, y cancelar sigue cerrándola.
+	 */
+	let abiertaAMano = $state<string | null | undefined>(undefined);
+	/** El DNI a medida que se tipea, para avisar antes de guardar qué implica cambiarlo. */
+	let dniTipeado = $state<string | null>(null);
+
+	const editando = $derived(abiertaAMano === undefined ? (form?.editando ?? null) : abiertaAMano);
+	const dniEnEdicion = $derived(dniTipeado ?? (form?.editando ? (form.dni ?? '') : ''));
+
+	/** Los valores del alta no son los de una edición, aunque compartan nombre de campo. */
+	const altaConLoTipeado = $derived(form?.editando ? null : form);
+
+	function abrirEdicion(persona: { id: string; dni: string }) {
+		quitando = null;
+		abiertaAMano = persona.id;
+		dniTipeado = persona.dni;
+	}
+
+	function cerrarEdicion() {
+		abiertaAMano = null;
+		dniTipeado = null;
+	}
+
+	/** Los registros que están esperando este DNI: al guardarlo, quedan resueltos. */
+	const pendienteDe = (dni: string) => data.pendientes.find((p) => p.dni === dni);
 
 	/** Precarga el formulario con un DNI pendiente para no tipearlo de nuevo. */
 	function completarCon(dni: string) {
@@ -101,8 +130,8 @@
 						inputmode="numeric"
 						autocomplete="off"
 						placeholder="30111222"
-						value={form?.dni ?? ''}
-						aria-invalid={form?.campo === 'dni'}
+						value={altaConLoTipeado?.dni ?? ''}
+						aria-invalid={altaConLoTipeado?.campo === 'dni'}
 						required
 					/>
 				</div>
@@ -114,8 +143,8 @@
 					name="nombre"
 					type="text"
 					autocomplete="off"
-					value={form?.nombre ?? ''}
-					aria-invalid={form?.campo === 'nombre'}
+					value={altaConLoTipeado?.nombre ?? ''}
+					aria-invalid={altaConLoTipeado?.campo === 'nombre'}
 					required
 				/>
 			</div>
@@ -126,8 +155,8 @@
 					name="apellido"
 					type="text"
 					autocomplete="off"
-					value={form?.apellido ?? ''}
-					aria-invalid={form?.campo === 'apellido'}
+					value={altaConLoTipeado?.apellido ?? ''}
+					aria-invalid={altaConLoTipeado?.campo === 'apellido'}
 					required
 				/>
 			</div>
@@ -170,26 +199,155 @@
 								{/if}
 							</td>
 							<td class="acciones">
-								{#if quitando === persona.id}
+								{#if editando === persona.id}
+									<button class="enlace" type="button" onclick={cerrarEdicion}>Cancelar</button>
+								{:else if quitando === persona.id}
 									<button class="enlace" type="button" onclick={() => (quitando = null)}>
 										Cancelar
 									</button>
 								{:else}
-									<button
-										class="enlace peligroso"
-										type="button"
-										onclick={() => (quitando = persona.id)}
-									>
-										Quitar
-									</button>
+									<span class="fila">
+										<button class="enlace" type="button" onclick={() => abrirEdicion(persona)}>
+											Editar
+										</button>
+										<button
+											class="enlace peligroso"
+											type="button"
+											onclick={() => {
+												cerrarEdicion();
+												quitando = persona.id;
+											}}
+										>
+											Quitar
+										</button>
+									</span>
 								{/if}
 							</td>
 						</tr>
 
+						{#if editando === persona.id}
+							{@const cambiaElDni = dniEnEdicion !== '' && dniEnEdicion !== persona.dni}
+							{@const esperando = pendienteDe(dniEnEdicion)}
+							<tr>
+								<td colspan="4" style="padding-top: 0">
+									<form
+										class="desplegable"
+										method="POST"
+										action="?/editar"
+										use:enhance={() => {
+											guardando = true;
+											return async ({ update }) => {
+												await update();
+												guardando = false;
+												// Si salió bien la fila se cierra; si no, queda abierta con
+												// lo que el servidor devolvió.
+												abiertaAMano = form?.editando ?? null;
+												dniTipeado = null;
+											};
+										}}
+									>
+										<input type="hidden" name="id" value={persona.id} />
+
+										<div class="rejilla tres">
+											<div class="campo">
+												<label for="editar-dni">DNI</label>
+												<div class="campo-con-icono">
+													<Icono nombre="dni" />
+													<input
+														id="editar-dni"
+														name="dni"
+														type="tel"
+														inputmode="numeric"
+														autocomplete="off"
+														value={dniEnEdicion}
+														oninput={(e) => (dniTipeado = e.currentTarget.value)}
+														aria-invalid={form?.editando === persona.id && form?.campo === 'dni'}
+														required
+													/>
+												</div>
+											</div>
+											<div class="campo">
+												<label for="editar-nombre">Nombre</label>
+												<input
+													id="editar-nombre"
+													name="nombre"
+													type="text"
+													autocomplete="off"
+													value={form?.editando === persona.id
+														? (form.nombre ?? '')
+														: persona.nombre}
+													aria-invalid={form?.editando === persona.id &&
+														form?.campo === 'nombre'}
+													required
+												/>
+											</div>
+											<div class="campo">
+												<label for="editar-apellido">Apellido</label>
+												<input
+													id="editar-apellido"
+													name="apellido"
+													type="text"
+													autocomplete="off"
+													value={form?.editando === persona.id
+														? (form.apellido ?? '')
+														: persona.apellido}
+													aria-invalid={form?.editando === persona.id &&
+														form?.campo === 'apellido'}
+													required
+												/>
+											</div>
+										</div>
+
+										{#if cambiaElDni}
+											<div class="aviso alerta" style="margin: 0 0 16px">
+												<Icono nombre="alerta" />
+												<div>
+													<strong>El DNI es con lo que las mesas identifican a la persona.</strong>
+													{#if persona.registros > 0}
+														Al cambiarlo,
+														{persona.registros === 1
+															? 'el registro que tiene'
+															: `sus ${persona.registros} registros`}
+														en las mesas
+														{persona.registros === 1 ? 'queda' : 'quedan'} sin identificar, con
+														el DNI viejo — no se
+														{persona.registros === 1 ? 'borra' : 'borran'}.
+													{:else}
+														Todavía no ocupó ningún rol, así que no hay registros que se muevan.
+													{/if}
+													{#if esperando}
+														En cambio, {esperando.registros.length === 1
+															? 'queda resuelto 1 registro que está esperando'
+															: `quedan resueltos ${esperando.registros.length} registros que están esperando`}
+														el DNI nuevo.
+													{/if}
+												</div>
+											</div>
+										{/if}
+
+										<div class="confirmacion">
+											<button class="boton" type="submit" disabled={guardando}>
+												<Icono nombre="tilde" tamano={16} />
+												{guardando ? 'Guardando…' : 'Guardar los cambios'}
+											</button>
+											<button
+												class="boton secundario"
+												type="button"
+												onclick={cerrarEdicion}
+												disabled={guardando}
+											>
+												Cancelar
+											</button>
+										</div>
+									</form>
+								</td>
+							</tr>
+						{/if}
+
 						{#if quitando === persona.id}
 							<tr>
 								<td colspan="4" style="padding-top: 0">
-									<div class="aviso alerta" style="margin: 0">
+									<div class="aviso alerta desplegable" style="margin: 0">
 										<Icono nombre="alerta" />
 										<div>
 											{#if persona.registros > 0}
