@@ -669,6 +669,26 @@ input[type='file'] {
 	max-width: 22rem;
 }
 
+/* Renombrar en el lugar del título de la página: el campo ocupa la fila entera y
+   los botones se le acomodan al lado, o debajo cuando no entran. */
+.renombrar {
+	flex: 1 1 100%;
+	min-width: 0;
+}
+
+.renombrar .fila {
+	flex-wrap: wrap;
+	gap: var(--e-2);
+}
+
+.renombrar input {
+	flex: 1 1 16rem;
+	min-width: 0;
+	font-family: var(--fuente-titulo);
+	font-size: 18px;
+	font-weight: 600;
+}
+
 /* --- avisos --- */
 
 .aviso {

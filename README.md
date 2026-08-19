@@ -82,8 +82,8 @@ cámara del teléfono no pasa por acá: va derecho a `/m/<numero>`.
 sistema.
 
 `/admin/checklists` — el administrador crea un checklist indicando el rol
-observador al que corresponde, le carga sus criterios, decide si ponderarlo y lo da
-por terminado. Recién ahí queda disponible para asociarse a un escenario y
+observador al que corresponde, le carga sus criterios, lo renombra si hace falta,
+decide si ponderarlo y lo da por terminado. Recién ahí queda disponible para asociarse a un escenario y
 presentarse en las mesas.
 
 `/admin/padron` — el administrador ve quiénes están cargados, los busca por apellido,
@@ -100,9 +100,9 @@ tal como sus observadores las completaron, ítem por ítem, con su resultado. De
 listado también puede **eliminar una mesa**, con todo lo que colgó de ella; hay que
 escribir su número para confirmarlo.
 
-`/admin/escenarios` — el administrador da de alta escenarios, les asocia el
-checklist del observador de la técnica y les adjunta la planificación (PDF o Word,
-hasta 20 MB). El checklist del observador de la operación es común a todos los
+`/admin/escenarios` — el administrador da de alta escenarios, los renombra si el
+título quedó mal, les asocia el checklist del observador de la técnica y les adjunta
+la planificación (PDF o Word, hasta 20 MB). El checklist del observador de la operación es común a todos los
 escenarios: se muestra, no se elige.
 
 `/mesas` — el líder de mesa da de alta una mesa con su número y uno de los
@@ -277,6 +277,16 @@ derecho ni al revés. Los dígitos van contra el DNI tolerando los puntos. El fi
 corre en el navegador sobre las filas que la página ya trajo: son decenas, no hace
 falta molestar al servidor por cada tecla, y como la tabla se sigue armando entera
 del lado del servidor, sin JavaScript no falta nada — sólo el filtro.
+
+**El título de un escenario o de un checklist se corrige en cualquier momento.** El
+nombre es una etiqueta, no la identidad: esa es el id, y todo lo demás cuelga de él.
+Las mesas guardan `escenario_id`, las evaluaciones leen el nombre de la plantilla, y
+ninguna de las dos cosas se copia al usarse. Así que renombrar alcanza con un update
+y lo ya registrado pasa a mostrar el título corregido — el mismo criterio con el que
+un cambio de peso corre el resultado de las evaluaciones enviadas. En el checklist ya
+en uso se avisa antes de guardar, para que no sorprenda. `escenarios.nombre` es único
+—dos escenarios homónimos serían indistinguibles en el desplegable de crear una
+mesa—, así que ese choque tiene su propio mensaje.
 
 **Corregir un DNI mueve registros, y eso se dice antes y después.** El nombre y el
 apellido son cosméticos, pero el DNI es la llave con que las mesas identifican a la

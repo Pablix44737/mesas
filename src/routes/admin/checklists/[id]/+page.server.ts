@@ -60,6 +60,36 @@ export const load: PageServerLoad = async ({ params }) => {
 };
 
 export const actions: Actions = {
+	/**
+	 * Corregir el título. Vale en cualquier estado, incluso con el checklist ya en
+	 * uso: el nombre es una etiqueta, no la identidad —esa es el id—, y las
+	 * evaluaciones enviadas lo leen de la plantilla, así que pasan a mostrar el
+	 * título corregido. Es el mismo instrumento, bien escrito; misma lógica con la
+	 * que un cambio de peso corre el resultado de lo ya enviado.
+	 */
+	renombrar: async ({ request, params }) => {
+		const plantilla = await traerPlantilla(params.id);
+
+		const formulario = await request.formData();
+		const nombre = String(formulario.get('nombre') ?? '').trim();
+
+		// `renombrando` reabre el campo con lo tipeado aunque no haya JavaScript.
+		const rechazarNombre = (estado: number, mensaje: string) =>
+			fail(estado, { mensaje, exito: null, renombrando: true, nombre });
+
+		if (nombre.length < 3) return rechazarNombre(400, 'El nombre no puede quedar vacío.');
+		if (nombre === plantilla.nombre) return { mensaje: null, exito: 'No había nada que cambiar.' };
+
+		const { error: fallo } = await supabase
+			.from('checklist_plantillas')
+			.update({ nombre })
+			.eq('id', plantilla.id);
+
+		if (fallo) return rechazarNombre(400, 'No se pudo cambiar el nombre. Intentá de nuevo.');
+
+		return { mensaje: null, exito: `El checklist ahora se llama «${nombre}».` };
+	},
+
 	agregarItem: async ({ request, params }) => {
 		const plantilla = await traerPlantilla(params.id);
 

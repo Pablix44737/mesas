@@ -8,6 +8,14 @@
 	let subiendo = $state(false);
 	let guardando = $state(false);
 	let confirmandoQuitar = $state(false);
+	let renombrandoEnCurso = $state(false);
+	/**
+	 * Panel de renombrado abierto a mano. Mientras valga `undefined` manda lo que
+	 * devolvió el servidor: así un rechazo lo reabre con lo tipeado aunque no haya
+	 * JavaScript, y cancelar sigue cerrándolo.
+	 */
+	let abiertoAMano = $state<boolean | undefined>(undefined);
+	const renombrando = $derived(abiertoAMano ?? Boolean(form?.renombrando));
 
 	const subidaEn = $derived(
 		data.escenario.planificacion_subida_en
@@ -30,10 +38,57 @@
 </a>
 
 <div class="pagina-cabecera">
-	<div class="titulo">
-		<h1>{data.escenario.nombre}</h1>
-		<p class="bajada">Material que recibirán las mesas que practiquen este escenario</p>
-	</div>
+	{#if renombrando}
+		<form
+			class="renombrar"
+			method="POST"
+			action="?/renombrar"
+			use:enhance={() => {
+				renombrandoEnCurso = true;
+				return async ({ update }) => {
+					await update({ reset: false });
+					renombrandoEnCurso = false;
+					// Si salió bien el panel se cierra; si no, queda abierto.
+					abiertoAMano = Boolean(form?.renombrando);
+				};
+			}}
+		>
+			<label class="etiqueta" for="nombre-escenario">Nombre del escenario</label>
+			<div class="fila">
+				<!-- svelte-ignore a11y_autofocus -->
+				<input
+					id="nombre-escenario"
+					name="nombre"
+					type="text"
+					autocomplete="off"
+					value={form?.renombrando ? (form.nombre ?? '') : data.escenario.nombre}
+					aria-invalid={Boolean(form?.mensaje)}
+					autofocus
+					required
+				/>
+				<button class="boton" type="submit" disabled={renombrandoEnCurso}>
+					{renombrandoEnCurso ? 'Guardando…' : 'Guardar'}
+				</button>
+				<button
+					class="boton secundario"
+					type="button"
+					onclick={() => (abiertoAMano = false)}
+					disabled={renombrandoEnCurso}
+				>
+					Cancelar
+				</button>
+			</div>
+		</form>
+	{:else}
+		<div class="titulo">
+			<h1>{data.escenario.nombre}</h1>
+			<p class="bajada">Material que recibirán las mesas que practiquen este escenario</p>
+		</div>
+		<button class="boton fantasma" type="button" onclick={() => (abiertoAMano = true)}>
+			<Icono nombre="editar" tamano={16} />
+			Renombrar
+		</button>
+	{/if}
 </div>
 
 {#if form?.mensaje}

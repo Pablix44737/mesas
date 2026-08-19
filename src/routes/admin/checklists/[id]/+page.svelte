@@ -8,6 +8,14 @@
 	let terminando = $state(false);
 	let confirmandoTerminar = $state(false);
 	let editando = $state<string | null>(null);
+	let renombrandoEnCurso = $state(false);
+	/**
+	 * Panel de renombrado abierto a mano. Mientras valga `undefined` manda lo que
+	 * devolvió el servidor: así un rechazo lo reabre con lo tipeado aunque no haya
+	 * JavaScript, y cancelar sigue cerrándolo.
+	 */
+	let abiertoAMano = $state<boolean | undefined>(undefined);
+	const renombrando = $derived(abiertoAMano ?? Boolean(form?.renombrando));
 
 	const enConstruccion = $derived(data.plantilla.estado !== 'disponible');
 	const rotulo: Record<string, string> = {
@@ -27,11 +35,66 @@
 </a>
 
 <div class="pagina-cabecera">
-	<div class="titulo">
-		<h1>{data.plantilla.nombre}</h1>
-		<p class="bajada">{data.plantilla.rol?.nombre}</p>
-	</div>
-	<span class="chip {data.plantilla.estado}">{rotulo[data.plantilla.estado]}</span>
+	{#if renombrando}
+		<form
+			class="renombrar"
+			method="POST"
+			action="?/renombrar"
+			use:enhance={() => {
+				renombrandoEnCurso = true;
+				return async ({ update }) => {
+					await update({ reset: false });
+					renombrandoEnCurso = false;
+					// Si salió bien el panel se cierra; si no, queda abierto.
+					abiertoAMano = Boolean(form?.renombrando);
+				};
+			}}
+		>
+			<label class="etiqueta" for="nombre-checklist">Nombre del checklist</label>
+			<div class="fila">
+				<!-- svelte-ignore a11y_autofocus -->
+				<input
+					id="nombre-checklist"
+					name="nombre"
+					type="text"
+					autocomplete="off"
+					value={form?.renombrando ? (form.nombre ?? '') : data.plantilla.nombre}
+					aria-invalid={Boolean(form?.mensaje)}
+					autofocus
+					required
+				/>
+				<button class="boton" type="submit" disabled={renombrandoEnCurso}>
+					{renombrandoEnCurso ? 'Guardando…' : 'Guardar'}
+				</button>
+				<button
+					class="boton secundario"
+					type="button"
+					onclick={() => (abiertoAMano = false)}
+					disabled={renombrandoEnCurso}
+				>
+					Cancelar
+				</button>
+			</div>
+			{#if !enConstruccion}
+				<p class="ayuda" style="margin: 8px 0 0">
+					Este checklist ya está en uso: el nombre nuevo se va a ver también en las evaluaciones
+					enviadas con él. Es el mismo instrumento, con el título corregido.
+				</p>
+			{/if}
+		</form>
+	{:else}
+		<div class="titulo">
+			<h1>{data.plantilla.nombre}</h1>
+			<p class="bajada">{data.plantilla.rol?.nombre}</p>
+		</div>
+		<span class="fila">
+			<button class="boton fantasma" type="button" onclick={() => (abiertoAMano = true)}>
+				<Icono nombre="editar" tamano={16} />
+				Renombrar
+			</button>
+			<span class="chip {data.plantilla.estado}">{rotulo[data.plantilla.estado]}</span>
+		</span>
+	{/if}
 </div>
 
 {#if form?.mensaje}
