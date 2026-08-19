@@ -56,7 +56,8 @@
 			<Icono nombre="checklist" />
 		</div>
 		<p class="ayuda">
-			Se le presenta al observador de la técnica en las mesas que practiquen este escenario.
+			Se les presenta al observador de la técnica y al facilitador en las mesas que practiquen
+			este escenario.
 		</p>
 
 		{#if data.plantillasDeTecnica.length === 0}

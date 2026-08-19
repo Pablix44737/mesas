@@ -121,9 +121,10 @@ marco: quedan el número, el código a 11 cm y la firma del sistema.
 `/m/<numero>` — adonde lleva el código QR de la mesa (`/m/<numero>/qr`). El
 participante ingresa su DNI, elige el rol que va a ocupar en la corrida habilitada
 y recibe lo que ese rol necesita: el observador de la operación, el checklist común;
-el de la técnica, el del escenario de su mesa; el facilitador, la planificación (o
-el aviso de que no está cargada); el operador y el asistente quedan registrados sin
-material. Los observadores marcan sus ítems durante la corrida —cada marca viaja al
+el de la técnica, el del escenario de su mesa; el facilitador, **las dos cosas** —la
+planificación (o el aviso de que no está cargada) y el mismo checklist de la técnica,
+que completa y envía como cualquier observador—; el operador y el asistente quedan
+registrados sin material. Los observadores marcan sus ítems durante la corrida —cada marca viaja al
 servidor en el momento— y al enviar cierran la evaluación, que queda registrada con
 el observador, su rol, la corrida y la mesa. El resultado se muestra siempre contra
 el máximo alcanzable del checklist: «6 de 11 · 55% de los criterios».
@@ -339,10 +340,25 @@ iguala los pesos existentes cuando el administrador deja de ponderarlo. Así el
 máximo alcanzable sigue siendo la suma de los pesos en todos los casos, sin que cada
 consulta tenga que acordarse de la excepción.
 
+**El facilitador evalúa la técnica, pero no es un rol observador.** Cambio de
+requerimiento posterior: además de la planificación que ya recibía, completa y envía
+el mismo checklist de la técnica que su observador. El de la operación no le
+corresponde. Todo el cambio cabe en una línea de
+`plantilla_de_la_participacion()` —el `case` del rol— porque el resto del sistema
+nunca filtró por rol: el trigger que valida la instancia y la función que la abre
+consultan esa misma función, y las vistas de evaluaciones enviadas y sin enviar
+salen de un join con `roles`, no de una lista de roles permitidos.
+
+Lo que **no** se tocó es `roles.observador`. Ese flag decide de qué rol puede ser
+una plantilla, y el facilitador no tiene una propia: usa prestada la del escenario.
+Marcarlo como observador habilitaría a crear «checklists del facilitador», que es
+justo lo que no se pidió. Por eso en la app conviven `esObservador()` y
+`llevaChecklist()`: la segunda incluye al facilitador, la primera no.
+
 **Qué checklist le toca a cada rol se define una sola vez, en la base.**
 `plantilla_de_la_participacion()` resuelve el checklist común para el observador de
-la operación y el del escenario para el de la técnica, y devuelve null para los
-roles que no observan. La usan el trigger que valida la instancia y la función que
+la operación, y el del escenario para el de la técnica y el facilitador; devuelve
+null para los roles que sólo practican. La usan el trigger que valida la instancia y la función que
 la abre, así que la app no puede abrir un checklist que no corresponda ni aunque
 quisiera. `abrir_instancia_de_checklist()` es idempotente: el observador entra y
 sale sin que se le abra uno nuevo.
@@ -381,8 +397,9 @@ decir «hereda».
 **Los roles son fijos.** Los define el modelo MESAS, no el usuario, así que se
 cargan en la migración y no en el seed: `observador_operacion`,
 `observador_tecnica`, `facilitador`, `operador`, `asistente`. Los dos primeros
-tienen `observador = true` y son los únicos que pueden llevar checklist — lo
-sostiene un trigger, no la UI.
+tienen `observador = true` y son los únicos de los que puede *ser* un checklist —
+lo sostiene un trigger, no la UI—. Quién *completa* uno es otra cosa: ahí también
+entra el facilitador, con el de la técnica prestado del escenario.
 
 **Un solo checklist de operación vigente.** Un índice único parcial sobre
 `rol_codigo` filtrado por `activa and rol_codigo = 'observador_operacion'`

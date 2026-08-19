@@ -117,8 +117,8 @@
 						<div>
 							<strong>
 								{data.sinEnviar.length === 1
-									? 'Hay un observador que todavía no envió su checklist'
-									: `Hay ${data.sinEnviar.length} observadores que todavía no enviaron su checklist`}.
+									? 'Hay alguien que todavía no envió su checklist'
+									: `Hay ${data.sinEnviar.length} personas que todavía no enviaron su checklist`}.
 							</strong>
 							Van a poder terminarlo igual —el sistema se los ofrece cuando vuelvan a escanear
 							el QR—, pero si podés, esperalos.
@@ -281,7 +281,7 @@
 				</div>
 
 				<div>
-					<span class="etiqueta">Checklist de la técnica · para su observador</span>
+					<span class="etiqueta">Checklist de la técnica · para su observador y el facilitador</span>
 					{#if data.checklistDeTecnica}
 						<span>{data.checklistDeTecnica.nombre}</span>
 						<span class="detalle">

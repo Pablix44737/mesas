@@ -36,7 +36,7 @@
 				<h1>Lo registrado sobre tu corrida</h1>
 				<p class="bajada">
 					Si practicaste la técnica en esta mesa, identificate para ver los checklists que
-					enviaron tus observadores.
+					enviaron quienes te evaluaron.
 				</p>
 			</div>
 		</div>

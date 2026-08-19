@@ -4,7 +4,7 @@
 	import BarraSuperior from '$lib/BarraSuperior.svelte';
 	import { mostrarDni } from '$lib/dni';
 	import { mostrarTamano } from '$lib/planificacion';
-	import { esObservador, iconoDeRol, practicaLaTecnica } from '$lib/roles';
+	import { iconoDeRol, llevaChecklist, practicaLaTecnica } from '$lib/roles';
 
 	let { data, form } = $props();
 
@@ -24,8 +24,11 @@
 	let enviando = $state(false);
 
 	const enviada = $derived(data.enviadaEn !== null);
-	const observa = $derived(esObservador(data.participacion.rolCodigo));
 	const practica = $derived(practicaLaTecnica(data.participacion.rolCodigo));
+	const evalua = $derived(llevaChecklist(data.participacion.rolCodigo));
+	// El facilitador es el único que recibe las dos cosas: la planificación para
+	// guiar la corrida y la lista de cotejo de la técnica para evaluarla.
+	const facilita = $derived(data.participacion.rolCodigo === 'facilitador');
 
 	const items = $derived(
 		(data.checklist?.items ?? []).map((item) => ({
@@ -72,7 +75,7 @@
 	<div class="envoltorio">
 		<div class="tarjeta">
 			<div class="fila">
-				<span class="avatar-rol" class:gris={!observa}>
+				<span class="avatar-rol" class:gris={!evalua}>
 					<Icono nombre={iconoDeRol[data.participacion.rolCodigo] ?? 'operador'} tamano={22} />
 				</span>
 				<div class="identidad">
@@ -136,7 +139,7 @@
 			</div>
 		{/each}
 
-		{#if data.participacion.rolCodigo === 'facilitador'}
+		{#if facilita}
 			<div class="tarjeta">
 				<div class="tarjeta-cabecera">
 					<h2>Planificación del escenario</h2>
@@ -165,12 +168,18 @@
 					</div>
 				{/if}
 			</div>
-		{:else if observa}
+		{/if}
+
+		{#if evalua}
 			{#if !data.checklist}
 				<div class="aviso alerta">
 					<Icono nombre="alerta" />
 					<span>
-						El escenario de esta mesa todavía no tiene asociado un checklist de la técnica.
+						{#if data.participacion.rolCodigo === 'observador_operacion'}
+							Todavía no hay un checklist del observador de la operación cargado en el sistema.
+						{:else}
+							El escenario de esta mesa todavía no tiene asociado un checklist de la técnica.
+						{/if}
 						Avisale al líder de mesa.
 					</span>
 				</div>
@@ -283,7 +292,7 @@
 									onclick={() => (confirmandoEnvio = false)}
 									disabled={enviando}
 								>
-									Seguir observando
+									Volver al checklist
 								</button>
 							</div>
 						</div>
