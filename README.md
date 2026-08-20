@@ -98,7 +98,8 @@ corridas, quiénes ocuparon cada rol en cada una y quién llegó a enviar su che
 `/admin/mesas/<numero>/corridas/<numero>` muestra las evaluaciones de esa corrida
 tal como sus observadores las completaron, ítem por ítem, con su resultado. Desde el
 listado también puede **eliminar una mesa**, con todo lo que colgó de ella; hay que
-escribir su número para confirmarlo.
+escribir su número para confirmarlo. Y desde la mesa puede **deshacer una corrida
+habilitada por error**: se elimina la última y la anterior vuelve a quedar en curso.
 
 `/admin/escenarios` — el administrador da de alta escenarios, los renombra si el
 título quedó mal, les asocia el checklist del observador de la técnica y les adjunta
@@ -242,6 +243,26 @@ una persona sus participaciones y evaluaciones quedan intactas —con el DNI, qu
 el dato de base— y sólo pierden el nombre. Vuelven a resolverse solas si esa persona
 se reincorpora. Bloquear el borrado habría sido peor: dejaría el padrón sin forma de
 arreglar una carga equivocada.
+
+**Una corrida habilitada por error se puede deshacer; una con trabajo enviado, no.**
+Habilitar la siguiente es irreversible por diseño —cierra la anterior y corre el
+número— pero el líder puede tocar el botón de más, y hasta ahora la mesa quedaba con
+una corrida vacía y todas las siguientes corridas de número. `borrar_corrida()` la
+elimina y devuelve la anterior a habilitada, en una sola transacción y bajo el mismo
+`for update` sobre la mesa que toma `habilitar_siguiente_corrida()`, así el
+administrador que deshace y el líder que habilita se serializan en vez de cruzarse.
+
+Tres reglas, y las tres viven en la función y no en la pantalla. Sólo la **última**
+corrida: borrar una del medio dejaría un hueco en la numeración y «volver a la
+anterior» no querría decir nada. Sólo si **no tiene ninguna evaluación enviada**: un
+checklist enviado es un registro cerrado del trabajo de alguien, y que se pierda por
+un clic del administrador sería peor que la corrida de más. Y la anterior **vuelve a
+quedar habilitada**, que es el estado en el que la mesa estaba antes del error; si no
+había anterior, la mesa queda sin corridas, como recién creada. Lo que sí se lleva
+puesto son las participaciones de esa corrida y los checklists abiertos sin enviar
+—son de la corrida equivocada—, y el resumen los cuenta antes y los informa después.
+La numeración no queda con huecos: `habilitar_siguiente_corrida()` calcula
+`max(numero) + 1`, así que después de borrar la 2 la siguiente vuelve a ser la 2.
 
 **Eliminar una mesa se lleva puesta su rama entera, y nada más.** La cascada ya
 estaba en el esquema base: `mesas → corridas → participaciones → checklist_instancias

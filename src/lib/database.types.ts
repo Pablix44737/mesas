@@ -458,6 +458,7 @@ export type Database = {
 					isSetofReturn: false;
 				};
 			};
+			borrar_corrida: { Args: { p_corrida_id: string }; Returns: Json };
 			borrar_mesa: { Args: { p_mesa_id: string }; Returns: Json };
 			dar_por_terminado_el_checklist: {
 				Args: { p_plantilla_id: string };

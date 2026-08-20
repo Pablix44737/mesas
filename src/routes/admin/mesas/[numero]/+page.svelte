@@ -1,13 +1,33 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import Icono from '$lib/Icono.svelte';
 	import { mostrarDni } from '$lib/dni';
 	import { iconoDeRol } from '$lib/roles';
 
-	let { data } = $props();
+	let { data, form } = $props();
+
+	/** Corrida que se está por eliminar, mientras se confirma. */
+	let eliminando = $state<string | null>(null);
+	let enCurso = $state(false);
 
 	const sinResolver = $derived(
 		data.corridas.flatMap((c) => c.participaciones).filter((p) => !p.nombre).length
 	);
+
+	/**
+	 * Qué se lleva puesto eliminar la corrida. Se arma acá y no en el marcado
+	 * porque las condiciones pegadas a un literal se comen el espacio entre medio.
+	 */
+	const seVanConElla = (roles: number, sinEnviar: number) => {
+		const ocupados = roles === 1 ? 'el rol que alguien ocupó' : `los ${roles} roles ocupados`;
+		const abiertos =
+			sinEnviar === 0
+				? ''
+				: sinEnviar === 1
+					? ' y un checklist abierto sin enviar'
+					: ` y ${sinEnviar} checklists abiertos sin enviar`;
+		return `Se van con ella ${ocupados}${abiertos}.`;
+	};
 
 	const hora = (fecha: string) =>
 		new Date(fecha).toLocaleTimeString('es-AR', {
@@ -32,6 +52,19 @@
 		<p class="bajada">{data.escenario?.nombre}</p>
 	</div>
 </div>
+
+{#if form?.mensaje}
+	<div class="aviso error" role="alert">
+		<Icono nombre="error" />
+		<span>{form.mensaje}</span>
+	</div>
+{/if}
+{#if form?.exito}
+	<div class="aviso exito" role="status">
+		<Icono nombre="tilde-circulo" />
+		<span>{form.exito}</span>
+	</div>
+{/if}
 
 {#if sinResolver > 0}
 	<div class="aviso alerta">
@@ -114,15 +147,86 @@
 		{/if}
 
 		<div class="tarjeta-pie">
-			{#if corrida.evaluaciones > 0}
-				<a class="boton fantasma" href="/admin/mesas/{data.mesa.numero}/corridas/{corrida.numero}">
-					{corrida.evaluaciones === 1
-						? 'Ver su evaluación'
-						: `Ver sus ${corrida.evaluaciones} evaluaciones`}
-					<Icono nombre="adelante" tamano={16} />
-				</a>
-			{:else}
-				<span class="detalle">Sin evaluaciones asociadas.</span>
+			<div class="fila">
+				{#if corrida.evaluaciones > 0}
+					<a
+						class="boton fantasma"
+						href="/admin/mesas/{data.mesa.numero}/corridas/{corrida.numero}"
+					>
+						{corrida.evaluaciones === 1
+							? 'Ver su evaluación'
+							: `Ver sus ${corrida.evaluaciones} evaluaciones`}
+						<Icono nombre="adelante" tamano={16} />
+					</a>
+				{:else}
+					<span class="detalle">Sin evaluaciones asociadas.</span>
+				{/if}
+
+				{#if corrida.sePuedeEliminar}
+					{#if eliminando === corrida.id}
+						<button
+							class="enlace"
+							type="button"
+							style="margin-left: auto"
+							onclick={() => (eliminando = null)}
+							disabled={enCurso}
+						>
+							Cancelar
+						</button>
+					{:else}
+						<button
+							class="enlace peligroso"
+							type="button"
+							style="margin-left: auto"
+							onclick={() => (eliminando = corrida.id)}
+						>
+							Eliminar esta corrida
+						</button>
+					{/if}
+				{/if}
+			</div>
+
+			{#if corrida.sePuedeEliminar && eliminando === corrida.id}
+				{@const anterior = data.corridas.find((c) => c.numero === corrida.numero - 1)}
+				<div class="aviso alerta" style="margin: 12px 0 0">
+					<Icono nombre="alerta" />
+					<div>
+						<strong>
+							Eliminar la corrida {corrida.numero}
+							{#if anterior}
+								devuelve la mesa a la corrida {anterior.numero}, que vuelve a quedar habilitada.
+							{:else}
+								deja la mesa sin corridas, como recién creada.
+							{/if}
+						</strong>
+						{#if corrida.participaciones.length === 0}
+							Todavía no se identificó nadie en ella, así que no se pierde nada.
+						{:else}
+							{seVanConElla(corrida.participaciones.length, corrida.sinEnviar)} Nadie envió nada,
+							así que no se pierde ninguna evaluación.
+						{/if}
+
+						<form
+							method="POST"
+							action="?/eliminarCorrida"
+							style="margin-top: 12px"
+							use:enhance={() => {
+								enCurso = true;
+								return async ({ update }) => {
+									await update({ reset: false });
+									enCurso = false;
+									eliminando = null;
+								};
+							}}
+						>
+							<input type="hidden" name="corridaId" value={corrida.id} />
+							<button class="boton peligro" type="submit" disabled={enCurso}>
+								<Icono nombre="quitar" />
+								{enCurso ? 'Eliminando…' : `Sí, eliminar la corrida ${corrida.numero}`}
+							</button>
+						</form>
+					</div>
+				</div>
 			{/if}
 		</div>
 	</div>
