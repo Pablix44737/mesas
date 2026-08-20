@@ -102,7 +102,7 @@ escribir su número para confirmarlo.
 
 `/admin/escenarios` — el administrador da de alta escenarios, los renombra si el
 título quedó mal, les asocia el checklist del observador de la técnica y les adjunta
-la planificación (PDF o Word, hasta 20 MB). El checklist del observador de la operación es común a todos los
+la planificación (PDF o Word, hasta 20 MB). El checklist del observador del facilitador es común a todos los
 escenarios: se muestra, no se elige.
 
 `/mesas` — el líder de mesa da de alta una mesa con su número y uno de los
@@ -120,7 +120,7 @@ marco: quedan el número, el código a 11 cm y la firma del sistema.
 
 `/m/<numero>` — adonde lleva el código QR de la mesa (`/m/<numero>/qr`). El
 participante ingresa su DNI, elige el rol que va a ocupar en la corrida habilitada
-y recibe lo que ese rol necesita: el observador de la operación, el checklist común;
+y recibe lo que ese rol necesita: el observador del facilitador, el checklist común;
 el de la técnica, el del escenario de su mesa; el facilitador, **las dos cosas** —la
 planificación (o el aviso de que no está cargada) y el mismo checklist de la técnica,
 que completa y envía como cualquier observador—; el operador y el asistente quedan
@@ -146,7 +146,7 @@ Dos escenarios preparados, cada uno con su checklist de técnica:
 | Manejo inicial del paciente politraumatizado | 5 ítems, ponderado (máximo 11) |
 | Reanimación cardiopulmonar avanzada | 5 ítems, sin ponderar |
 
-Checklist de la operación: 6 ítems, sin ponderar. Padrón: 6 participantes
+Checklist del facilitador: 6 ítems, sin ponderar. Padrón: 6 participantes
 (DNI 30111222 a 30666777).
 
 Además, cargado por la interfaz y no por `seed.sql`: una planificación adjunta al
@@ -155,7 +155,7 @@ cerrada y la 2 en curso y cinco participantes identificados en los cinco roles; 
 la Mesa 2 sobre el escenario de RCP —que no tiene planificación— con su corrida 1
 en curso, útil para ejercitar el aviso al facilitador. En la corrida 2 de la Mesa 1
 hay tres evaluaciones enviadas: Ana 6/11, Bruno 10/11 (los dos de la técnica, con
-los mismos criterios y resultados distintos) y Carla 3/6 (la de la operación). En la
+los mismos criterios y resultados distintos) y Carla 3/6 (la del facilitador). En la
 Mesa 2 hay un checklist abierto con ítems marcados y **sin enviar**, para poder
 distinguir «evaluación en curso» de «evaluación registrada», y una séptima persona
 (Gabriela Nunez, DNI 45123456) que se registró y evaluó antes de estar en el padrón
@@ -338,10 +338,10 @@ observador nunca tocó cuente como no cumplido en vez de desaparecer del cálcul
 
 **Un checklist tiene estado, no un `activa` booleano.** `en_construccion` mientras
 el administrador lo carga, `disponible` cuando lo da por terminado, `reemplazada`
-cuando otro checklist de la operación lo sustituye. Un booleano no alcanzaba para
+cuando otro checklist del facilitador lo sustituye. Un booleano no alcanzaba para
 distinguir «a medio cargar» de «vigente». Un trigger impide asociar a un escenario
 un checklist que todavía no está disponible, y `dar_por_terminado_el_checklist()`
-hace de una sola vez el reemplazo del de la operación —que es único por definición—
+hace de una sola vez el reemplazo del del facilitador —que es único por definición—
 sin dejar a las mesas sin checklist en el medio.
 
 **Sin ponderar, todos los criterios pesan 1 en la base, no sólo en el cálculo.** Un
@@ -352,7 +352,7 @@ consulta tenga que acordarse de la excepción.
 
 **El facilitador evalúa la técnica, pero no es un rol observador.** Cambio de
 requerimiento posterior: además de la planificación que ya recibía, completa y envía
-el mismo checklist de la técnica que su observador. El de la operación no le
+el mismo checklist de la técnica que su observador. El del facilitador no le
 corresponde. Todo el cambio cabe en una línea de
 `plantilla_de_la_participacion()` —el `case` del rol— porque el resto del sistema
 nunca filtró por rol: el trigger que valida la instancia y la función que la abre
@@ -367,7 +367,7 @@ justo lo que no se pidió. Por eso en la app conviven `esObservador()` y
 
 **Qué checklist le toca a cada rol se define una sola vez, en la base.**
 `plantilla_de_la_participacion()` resuelve el checklist común para el observador de
-la operación, y el del escenario para el de la técnica y el facilitador; devuelve
+el facilitador, y el del escenario para el de la técnica y el facilitador; devuelve
 null para los roles que sólo practican. La usan el trigger que valida la instancia y la función que
 la abre, así que la app no puede abrir un checklist que no corresponda ni aunque
 quisiera. `abrir_instancia_de_checklist()` es idempotente: el observador entra y
@@ -385,7 +385,7 @@ habitual. Si alguien vuelve a escanear el QR con su mismo DNI, el sistema lo lle
 al registro que ya tiene en lugar de duplicarlo.
 
 **El material sale del rol, no de una copia.** La pantalla del participante resuelve
-qué mostrar según `rol_codigo`: el checklist de la operación se busca por rol
+qué mostrar según `rol_codigo`: el checklist del facilitador se busca por rol
 (es único y común), el de la técnica sale del escenario de la mesa, y la
 planificación también. Nada se copia al identificarse, así que un cambio en el
 escenario se ve en el acto.
@@ -404,14 +404,25 @@ del escenario, las mesas que lo practican lo ven cambiado — que es lo que quie
 decir «hereda».
 
 
+**`observador_operacion` se muestra como «Observador del facilitador».** Cambio de
+terminología posterior: el rol se llamaba «Observador de la operación» y el término
+correcto del modelo es el otro. Se cambió `roles.nombre`, que es lo único que llega a
+la pantalla, y no `roles.codigo`, que es la clave a la que apuntan
+`participaciones.rol_codigo` y `checklist_plantillas.rol_codigo` —sin
+`on update cascade`— y que además aparece literal en varias funciones y en el índice
+único parcial del checklist vigente. Es la misma convención que con MESAS: el nombre
+viejo sobrevive como identificador interno, nunca como texto. Si algún día molesta,
+renombrarlo es una migración aparte y de tamaño real.
+
 **Los roles son fijos.** Los define el modelo MESAS, no el usuario, así que se
 cargan en la migración y no en el seed: `observador_operacion`,
 `observador_tecnica`, `facilitador`, `operador`, `asistente`. Los dos primeros
-tienen `observador = true` y son los únicos de los que puede *ser* un checklist —
+tienen `observador = true`
+ y son los únicos de los que puede *ser* un checklist —
 lo sostiene un trigger, no la UI—. Quién *completa* uno es otra cosa: ahí también
 entra el facilitador, con el de la técnica prestado del escenario.
 
-**Un solo checklist de operación vigente.** Un índice único parcial sobre
+**Un solo checklist del facilitador vigente.** Un índice único parcial sobre
 `rol_codigo` filtrado por `activa and rol_codigo = 'observador_operacion'`
 garantiza que sea uno solo. Los de técnica no tienen ese límite: hay uno por
 escenario. Por eso los checklists referencian el rol por su código y no por su id.

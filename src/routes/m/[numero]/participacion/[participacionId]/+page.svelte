@@ -176,7 +176,7 @@
 					<Icono nombre="alerta" />
 					<span>
 						{#if data.participacion.rolCodigo === 'observador_operacion'}
-							Todavía no hay un checklist del observador de la operación cargado en el sistema.
+							Todavía no hay un checklist del observador del facilitador cargado en el sistema.
 						{:else}
 							El escenario de esta mesa todavía no tiene asociado un checklist de la técnica.
 						{/if}

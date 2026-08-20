@@ -29,7 +29,7 @@ async function traerMesa(numeroCrudo: string) {
 export const load: PageServerLoad = async ({ params, url }) => {
 	const mesa = await traerMesa(params.numero);
 
-	// El de la operación no cuelga del escenario: es común a todas las mesas.
+	// El del facilitador no cuelga del escenario: es común a todas las mesas.
 	const [{ data: operacion }, { data: corridas }] = await Promise.all([
 		supabase
 			.from('checklist_plantillas')

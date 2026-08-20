@@ -42,7 +42,7 @@ async function traerParticipacion(participacionId: string, numeroMesa: string) {
 }
 
 /**
- * El checklist de la operación es común; el de la técnica sale del escenario y lo
+ * El checklist del facilitador es común; el de la técnica sale del escenario y lo
  * comparten su observador y el facilitador. Espeja a
  * `plantilla_de_la_participacion()` en la base, que es la que manda: si las dos se
  * separaran, la pantalla mostraría un checklist que la función no dejaría abrir.

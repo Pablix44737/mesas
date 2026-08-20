@@ -13,9 +13,9 @@ insert into participantes (dni, nombre, apellido) values
 
 -- Checklists ya terminados: el estado por defecto es 'en_construccion', y uno
 -- en construccion no puede asociarse a un escenario ni presentarse en una mesa.
--- Checklist de la operacion: uno solo, comun a todos los escenarios.
+-- Checklist del facilitador: uno solo, comun a todos los escenarios.
 insert into checklist_plantillas (rol_codigo, nombre, ponderado, estado)
-values ('observador_operacion', 'Checklist del observador de la operacion', false, 'disponible');
+values ('observador_operacion', 'Checklist del observador del facilitador', false, 'disponible');
 
 -- Checklists de la tecnica: uno por escenario.
 insert into checklist_plantillas (rol_codigo, nombre, ponderado, estado) values
@@ -26,12 +26,12 @@ insert into checklist_items (plantilla_id, orden, texto, peso)
 select p.id, v.orden, v.texto, v.peso
 from checklist_plantillas p
 join (values
-  ('Checklist del observador de la operacion', 1, 'El prebriefing establece el contrato de ficcion', 1),
-  ('Checklist del observador de la operacion', 2, 'Los objetivos de aprendizaje se enuncian al inicio', 1),
-  ('Checklist del observador de la operacion', 3, 'El facilitador interviene sin invadir la ejecucion', 1),
-  ('Checklist del observador de la operacion', 4, 'El entorno se mantiene seguro y confidencial', 1),
-  ('Checklist del observador de la operacion', 5, 'El operador recibe consignas claras', 1),
-  ('Checklist del observador de la operacion', 6, 'El cierre se conduce sin emitir juicios de valor', 1),
+  ('Checklist del observador del facilitador', 1, 'El prebriefing establece el contrato de ficcion', 1),
+  ('Checklist del observador del facilitador', 2, 'Los objetivos de aprendizaje se enuncian al inicio', 1),
+  ('Checklist del observador del facilitador', 3, 'El facilitador interviene sin invadir la ejecucion', 1),
+  ('Checklist del observador del facilitador', 4, 'El entorno se mantiene seguro y confidencial', 1),
+  ('Checklist del observador del facilitador', 5, 'El operador recibe consignas claras', 1),
+  ('Checklist del observador del facilitador', 6, 'El cierre se conduce sin emitir juicios de valor', 1),
 
   ('Tecnica: manejo inicial del politraumatizado', 1, 'Realiza la evaluacion primaria segun ABCDE', 3),
   ('Tecnica: manejo inicial del politraumatizado', 2, 'Asegura la via aerea con control cervical', 3),

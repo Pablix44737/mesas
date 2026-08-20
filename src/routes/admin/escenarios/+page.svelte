@@ -62,7 +62,7 @@
 
 	<div class="tarjeta" style="margin: 0">
 		<div class="tarjeta-cabecera">
-			<h2>Checklist de la operación</h2>
+			<h2>Checklist del facilitador</h2>
 			<Icono nombre="checklist" />
 		</div>
 		{#if data.checklistDeOperacion}
@@ -76,7 +76,7 @@
 			<div class="aviso alerta" style="margin: 0">
 				<Icono nombre="alerta" />
 				<span>
-					Todavía no hay un checklist del observador de la operación. Sin él, ese rol no recibe
+					Todavía no hay un checklist del observador del facilitador. Sin él, ese rol no recibe
 					material en ninguna mesa.
 				</span>
 			</div>

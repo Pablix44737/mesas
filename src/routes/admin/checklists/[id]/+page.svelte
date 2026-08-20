@@ -317,7 +317,7 @@
 				<Icono nombre="alerta" />
 				<span>
 					Al darlo por terminado va a reemplazar a <strong>{data.operacionVigente}</strong>, que
-					es el checklist de la operación vigente en todas las mesas. Las evaluaciones ya
+					es el checklist del facilitador vigente en todas las mesas. Las evaluaciones ya
 					enviadas conservan el suyo.
 				</span>
 			</div>

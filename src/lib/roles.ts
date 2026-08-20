@@ -8,7 +8,7 @@ export const iconoDeRol: Record<string, string> = {
 };
 
 export const queHaceElRol: Record<string, string> = {
-	observador_operacion: 'Evaluás el desarrollo del escenario',
+	observador_operacion: 'Evaluás el desempeño del facilitador',
 	observador_tecnica: 'Evaluás la ejecución de la técnica',
 	facilitador: 'Recibís la planificación y evaluás la técnica',
 	operador: 'Practicás la técnica',

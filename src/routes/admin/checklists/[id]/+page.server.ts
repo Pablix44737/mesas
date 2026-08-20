@@ -38,7 +38,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		.eq('plantilla_id', plantilla.id)
 		.order('orden');
 
-	// Si es el de la operación, avisamos a cuál va a reemplazar al terminarlo.
+	// Si es el del facilitador, avisamos a cuál va a reemplazar al terminarlo.
 	const { data: vigente } =
 		plantilla.rol_codigo === 'observador_operacion' && plantilla.estado !== 'disponible'
 			? await supabase

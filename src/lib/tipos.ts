@@ -8,7 +8,7 @@ export type Rol = {
 /**
  * `en_construccion`: el administrador la está cargando, no se usa todavía.
  * `disponible`: terminada, se puede asociar a un escenario y presentar en una mesa.
- * `reemplazada`: fue el checklist de la operación vigente hasta que otro lo sustituyó.
+ * `reemplazada`: fue el checklist del facilitador vigente hasta que otro lo sustituyó.
  */
 export type EstadoDeChecklist = 'en_construccion' | 'disponible' | 'reemplazada';
 

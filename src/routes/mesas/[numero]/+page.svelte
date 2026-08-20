@@ -294,7 +294,7 @@
 				</div>
 
 				<div>
-					<span class="etiqueta">Checklist de la operación · para su observador</span>
+					<span class="etiqueta">Checklist del facilitador · para su observador</span>
 					{#if data.checklistDeOperacion}
 						<span>{data.checklistDeOperacion.nombre}</span>
 						<span class="detalle">
@@ -303,7 +303,7 @@
 							· común a todos los escenarios
 						</span>
 					{:else}
-						<span class="pendiente">No hay checklist del observador de la operación</span>
+						<span class="pendiente">No hay checklist del observador del facilitador</span>
 					{/if}
 				</div>
 			</div>
