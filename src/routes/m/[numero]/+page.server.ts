@@ -1,105 +1,39 @@
-import { error, fail, redirect } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
-import { checklistsSinEnviarDe } from '$lib/server/evaluaciones';
-import { dniValido, normalizarDni } from '$lib/dni';
-import type { Actions, PageServerLoad } from './$types';
+import type { PageServerLoad } from './$types';
 
-async function traerMesaYCorrida(numeroCrudo: string) {
-	const numero = Number(numeroCrudo);
+/**
+ * Los QR viejos, de cuando el número de mesa era único en todo el sistema.
+ *
+ * Ahora la mesa se identifica por curso y número, pero hay carteles impresos con
+ * `/m/<numero>` a secas. Mientras ese número siga siendo de una sola mesa en todo
+ * el sistema, no hay nada ambiguo que resolver y se lo lleva a su URL nueva. En
+ * cuanto un segundo curso estrene ese número, el enlace deja de significar una
+ * cosa sola y hay que decirlo en vez de adivinar.
+ */
+export const load: PageServerLoad = async ({ params }) => {
+	const numero = Number(params.numero);
 	if (!Number.isInteger(numero) || numero <= 0) error(404, 'Mesa inexistente');
 
-	const { data: mesa, error: fallo } = await supabase
+	const { data: mesas, error: fallo } = await supabase
 		.from('mesas')
-		.select('id, numero, escenario:escenarios(nombre)')
-		.eq('numero', numero)
-		.maybeSingle();
+		.select('numero, curso:cursos(codigo, nombre)')
+		.eq('numero', numero);
 
 	if (fallo) error(500, fallo.message);
-	if (!mesa) error(404, `No existe la mesa ${numero}`);
 
-	// Solo se puede declarar rol en la corrida que el líder tenga habilitada.
-	const { data: corrida } = await supabase
-		.from('corridas')
-		.select('id, numero')
-		.eq('mesa_id', mesa.id)
-		.eq('habilitada', true)
-		.maybeSingle();
+	const candidatas = (mesas ?? []).filter((m) => m.curso !== null);
 
-	return { mesa, corrida };
-}
-
-export const load: PageServerLoad = async ({ params }) => {
-	const { mesa, corrida } = await traerMesaYCorrida(params.numero);
-
-	const { data: roles } = await supabase
-		.from('roles')
-		.select('codigo, nombre, observador')
-		.order('orden');
-
-	return { mesa, corrida, roles: roles ?? [] };
-};
-
-export const actions: Actions = {
-	default: async ({ request, params }) => {
-		const formulario = await request.formData();
-		const dni = normalizarDni(String(formulario.get('dni') ?? ''));
-		const rolCodigo = String(formulario.get('rolCodigo') ?? '');
-
-		const valores = { dni, rolCodigo };
-		const rechazar = (estado: number, mensaje: string, campo: string) =>
-			fail(estado, { ...valores, mensaje, campo, pendientes: null, rolNombre: null });
-
-		if (!dniValido(dni)) return rechazar(400, 'Ingresá tu DNI, sin puntos.', 'dni');
-		if (!rolCodigo) return rechazar(400, 'Elegí el rol que vas a ocupar.', 'rolCodigo');
-
-		const { mesa, corrida } = await traerMesaYCorrida(params.numero);
-		if (!corrida) {
-			return rechazar(409, 'La mesa no tiene ninguna corrida habilitada.', '');
-		}
-
-		// Si ya se identificó en esta corrida, vuelve a lo suyo en vez de duplicar:
-		// pudo haber cerrado la pestaña o escaneado el QR de nuevo.
-		const { data: existente } = await supabase
-			.from('participaciones')
-			.select('id')
-			.eq('corrida_id', corrida.id)
-			.eq('dni', dni)
-			.maybeSingle();
-
-		if (existente) redirect(303, `/m/${params.numero}/participacion/${existente.id}`);
-
-		// Si dejó un checklist a medias en una corrida anterior, se lo ofrecemos
-		// antes de registrarlo acá: si no, el QR se lo tapa y la observación que ya
-		// hizo queda inalcanzable.
-		if (formulario.get('continuar') !== 'true') {
-			const pendientes = await checklistsSinEnviarDe(mesa.id, dni, corrida.id);
-			if (pendientes.length > 0) {
-				const { data: rol } = await supabase
-					.from('roles')
-					.select('nombre')
-					.eq('codigo', rolCodigo)
-					.maybeSingle();
-
-				return {
-					...valores,
-					mensaje: null,
-					campo: '',
-					pendientes,
-					rolNombre: rol?.nombre ?? rolCodigo
-				};
-			}
-		}
-
-		const { data: participacion, error: fallo } = await supabase
-			.from('participaciones')
-			.insert({ corrida_id: corrida.id, dni, rol_codigo: rolCodigo })
-			.select('id')
-			.single();
-
-		if (fallo || !participacion) {
-			return rechazar(400, 'No se pudo registrar tu rol. Intentá de nuevo.', '');
-		}
-
-		redirect(303, `/m/${params.numero}/participacion/${participacion.id}`);
+	if (candidatas.length === 0) error(404, `No hay ninguna mesa ${numero}`);
+	if (candidatas.length === 1) {
+		redirect(308, `/m/${candidatas[0].curso?.codigo}/${numero}`);
 	}
+
+	return {
+		numero,
+		cursos: candidatas.map((m) => ({
+			codigo: m.curso?.codigo ?? '',
+			nombre: m.curso?.nombre ?? ''
+		}))
+	};
 };

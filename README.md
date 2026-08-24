@@ -74,9 +74,9 @@ a trabajar: participante, líder de mesa o administración. Así nadie se topa c
 funciones que no le tocan.
 
 `/participar` — para quien ya tiene la app abierta y todavía no escaneó. Le presta
-la cámara si el navegador sabe leer códigos, y en cualquier caso le deja escribir el
-número de mesa, que se comprueba antes de llevarlo. Quien escanea el QR con la
-cámara del teléfono no pasa por acá: va derecho a `/m/<numero>`.
+la cámara si el navegador sabe leer códigos, y en cualquier caso le deja elegir su
+curso y escribir el número de mesa, que se comprueba antes de llevarlo. Quien escanea
+el QR con la cámara del teléfono no pasa por acá: va derecho a `/m/<curso>/<numero>`.
 
 `/ingresar` — la clave de administración. Es la única puerta con credenciales del
 sistema.
@@ -99,9 +99,9 @@ donde se elimina una. Archivar un curso no borra nada: lo saca del frente para q
 las ediciones viejas no compitan con la que está en marcha, y deja de ofrecerse al
 líder cuando crea una mesa.
 
-`/admin/mesas/<numero>` — el administrador consulta cómo se desarrolló cada mesa: sus
+`/admin/cursos/<curso>/mesas/<numero>` — el administrador consulta cómo se desarrolló cada mesa: sus
 corridas, quiénes ocuparon cada rol en cada una y quién llegó a enviar su checklist.
-`/admin/mesas/<numero>/corridas/<numero>` muestra las evaluaciones de esa corrida
+`.../corridas/<numero>` muestra las evaluaciones de esa corrida
 tal como sus observadores las completaron, ítem por ítem, con su resultado. Desde el
 curso puede **eliminar una mesa**, con todo lo que colgó de ella; hay que escribir su
 número para confirmarlo. Y desde la mesa puede **deshacer una corrida
@@ -115,19 +115,19 @@ la planificación (PDF o Word, hasta 20 MB). El checklist del observador del fac
 escenarios: se muestra, no se elige.
 
 `/mesas` — el líder de mesa da de alta una mesa con su número y uno de los
-escenarios disponibles. `/mesas/<numero>` le muestra quiénes se identificaron en la
+escenarios disponibles. `/mesas/<curso>/<numero>` le muestra quiénes se identificaron en la
 corrida en curso y con qué rol —con marca de quién ya envió su checklist y qué roles
 quedaron sin ocupar—, el material que la mesa hereda
 de su escenario —la planificación para el facilitador y los dos checklists, cada
 uno con su cantidad de ítems y su máximo alcanzable— y es donde el líder habilita
 las corridas: la primera, y después cada siguiente, que cierra la anterior.
 
-`/mesas/<numero>/cartel` — el QR en grande, con el número de mesa y el escenario
-arriba, para proyectar o imprimir. Trae su propio botón de impresión, así que sirve
+`/mesas/<curso>/<numero>/cartel` — el QR en grande, con el curso, el número de mesa
+y el escenario arriba, para proyectar o imprimir. Trae su propio botón de impresión, así que sirve
 también desde el teléfono, donde no hay Ctrl+P. En papel se van los botones y el
 marco: quedan el número, el código a 11 cm y la firma del sistema.
 
-`/m/<numero>` — adonde lleva el código QR de la mesa (`/m/<numero>/qr`). El
+`/m/<curso>/<numero>` — adonde lleva el código QR de la mesa (`/m/<curso>/<numero>/qr`). El
 participante ingresa su DNI, elige el rol que va a ocupar en la corrida habilitada
 y recibe lo que ese rol necesita: el observador del facilitador, el checklist común;
 el de la técnica, el del escenario de su mesa; el facilitador, **las dos cosas** —la
@@ -138,12 +138,12 @@ servidor en el momento— y al enviar cierran la evaluación, que queda registra
 el observador, su rol, la corrida y la mesa. El resultado se muestra siempre contra
 el máximo alcanzable del checklist: «6 de 11 · 55% de los criterios».
 
-`/m/<numero>/consulta` — quien practicó la técnica se identifica con su DNI una vez
+`/m/<curso>/<numero>/consulta` — quien practicó la técnica se identifica con su DNI una vez
 terminada la corrida y accede a los checklists que enviaron sus observadores, ítem
 por ítem y con su resultado. Solo para quien ocupó el rol de operador o de asistente.
 
 La planificación va a un bucket privado y se sirve por endpoints del servidor
-(`/admin/escenarios/<id>/planificacion` y `/mesas/<numero>/planificacion`), nunca
+(`/admin/escenarios/<id>/planificacion` y `/mesas/<curso>/<numero>/planificacion`), nunca
 por URL directa.
 
 ### Datos de prueba
@@ -298,11 +298,25 @@ edición, y separarlos obligaría a recargarlos— ni el padrón, que es el caso
 y queda pendiente a propósito: con dos cohortes conviviendo, el buscador va a mostrar
 a todos mezclados.
 
-`cursos.codigo` todavía no se usa. Es para cuando el QR pase a ser
-`/m/<codigo>/<numero>` y los números de mesa vuelvan a empezar en 1 en cada curso;
-se agregó ahora para no volver a migrar la tabla. Se deriva del nombre —sin tildes,
-sin espacios, hasta 40 caracteres— porque va a estar impreso en los carteles y nadie
-debería tener que inventarlo.
+**El número de mesa vuelve a empezar en 1 en cada curso, y por eso el QR lleva el
+curso.** Era único en todo el sistema, así que la segunda edición habría tenido que
+arrancar en la mesa 10. Ahora lo único que se exige es `unique (curso_id, numero)`,
+que es lo que se ve en el aula. La contracara es que `/m/<numero>` dejó de
+identificar una mesa, así que todas las rutas de mesa —la del participante, la del
+líder y la del administrador— llevan el código del curso adelante. `cursos.codigo` se
+deriva del nombre —sin tildes, sin espacios, hasta 40 caracteres— porque queda impreso
+en los carteles y nadie debería tener que inventarlo.
+
+Las tres zonas resuelven la mesa por `mesaDelCurso()`, una sola función, que además
+distingue «ese curso no existe» de «ese curso no tiene esa mesa»: para quien escanea
+son dos errores distintos.
+
+`/m/<numero>` sigue existiendo, para los carteles impresos antes del cambio. Mientras
+ese número sea de una sola mesa en todo el sistema no hay nada ambiguo y redirige con
+un 308 a su URL nueva; en cuanto un segundo curso estrena ese número, deja de
+significar una cosa sola y ofrece elegir el curso en vez de adivinar. El cartel nuevo
+imprime el curso arriba del número por el mismo motivo: dos «Mesa 4» en el mismo
+edificio serían iguales.
 
 **Eliminar una mesa se lleva puesta su rama entera, y nada más.** La cascada ya
 estaba en el esquema base: `mesas → corridas → participaciones → checklist_instancias
@@ -512,6 +526,7 @@ src/
     tipos.ts              tipos de dominio
     server/supabase.ts    cliente de servidor (service_role)
     server/sesion.ts      clave y cookie firmada de administración
+    server/mesas.ts       resolver una mesa por su curso y su número
   hooks.server.ts         guardián: /admin pide sesión
   routes/
     +page.svelte                                  bienvenida: por dónde entra cada quien
@@ -522,22 +537,22 @@ src/
     admin/checklists/[id]/                        criterios, ponderación y cierre
     admin/padron/                                 padrón y DNI sin resolver
     admin/cursos/                                 grilla de ediciones
-    admin/cursos/[id]/                            las mesas de un curso, y su baja
-    admin/mesas/                                  redirige a cursos
-    admin/mesas/[numero]/                         corridas y quién ocupó cada rol
-    admin/mesas/[numero]/corridas/[corrida]/      evaluaciones de esa corrida
+    admin/cursos/[curso]/                         las mesas de un curso, y su baja
+    admin/cursos/[curso]/mesas/[numero]/          corridas y quién ocupó cada rol
+    admin/cursos/[curso]/mesas/[numero]/corridas/[corrida]/   evaluaciones de esa corrida
     admin/escenarios/                             alta y listado de escenarios
     admin/escenarios/[id]/                        checklist de técnica y planificación
     admin/escenarios/[id]/planificacion/          descarga del archivo
     mesas/                                        alta y listado de mesas
-    mesas/[numero]/                               material heredado y habilitación de corridas
-    mesas/[numero]/cartel/                        el QR grande, para proyectar o imprimir
-    mesas/[numero]/planificacion/                 la misma, por la ruta de la mesa
-    m/[numero]/                                   identificación del participante (destino del QR)
-    m/[numero]/qr/                                SVG del código QR de la mesa
-    m/[numero]/planificacion/                     la planificación, para el facilitador
-    m/[numero]/participacion/[id]/                material, checklist y resultado
-    m/[numero]/consulta/                          devolución a quien practicó la técnica
+    mesas/[curso]/[numero]/                       material heredado y habilitación de corridas
+    mesas/[curso]/[numero]/cartel/                el QR grande, para proyectar o imprimir
+    mesas/[curso]/[numero]/planificacion/         la misma, por la ruta de la mesa
+    m/[numero]/                                   carteles viejos: redirige o hace elegir curso
+    m/[curso]/[numero]/                           identificación del participante (destino del QR)
+    m/[curso]/[numero]/qr/                        SVG del código QR de la mesa
+    m/[curso]/[numero]/planificacion/             la planificación, para el facilitador
+    m/[curso]/[numero]/participacion/[id]/        material, checklist y resultado
+    m/[curso]/[numero]/consulta/                  devolución a quien practicó la técnica
     favicon.ico/                                  redirige al icono real
 supabase/
   migrations/             historial completo, incluida la baja del modelo anterior

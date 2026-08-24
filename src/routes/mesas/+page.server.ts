@@ -10,7 +10,7 @@ export const load: PageServerLoad = async () => {
 		supabase
 			.from('mesas')
 			.select(
-				'id, numero, curso:cursos(id, nombre), escenario:escenarios(id, nombre), corridas(numero, habilitada)'
+				'id, numero, curso:cursos(id, codigo, nombre), escenario:escenarios(id, nombre), corridas(numero, habilitada)'
 			)
 			.order('numero'),
 		// El líder solo dispone de los escenarios que el administrador dejó disponibles.
@@ -83,16 +83,18 @@ export const actions: Actions = {
 			return rechazar(409, 'Ese escenario ya no está disponible.', 'escenarioId');
 		}
 
-		const { error: fallo } = await supabase
+		const { data: creada, error: fallo } = await supabase
 			.from('mesas')
-			.insert({ numero, escenario_id: escenarioId, curso_id: cursoId });
+			.insert({ numero, escenario_id: escenarioId, curso_id: cursoId })
+			.select('numero, curso:cursos(codigo)')
+			.maybeSingle();
 
 		if (fallo) {
 			return fallo.code === '23505'
-				? rechazar(409, `El número ${numero} ya está en uso por otra mesa.`, 'numero')
+				? rechazar(409, `El curso ya tiene una mesa ${numero}.`, 'numero')
 				: rechazar(500, 'No se pudo crear la mesa. Intentá de nuevo.', '');
 		}
 
-		redirect(303, `/mesas/${numero}`);
+		redirect(303, `/mesas/${creada?.curso?.codigo}/${numero}`);
 	}
 };

@@ -101,7 +101,7 @@
 
 {#snippet tarjetaDeCurso(curso: (typeof data.cursos)[number])}
 	<div class="curso" class:archivado={curso.archivado}>
-		<a class="curso-cuerpo" href="/admin/cursos/{curso.id}">
+		<a class="curso-cuerpo" href="/admin/cursos/{curso.codigo}">
 			<span class="curso-marca"><Icono nombre="escenario" tamano={22} /></span>
 			<span class="curso-nombre">{curso.nombre}</span>
 			<span class="detalle">Desde el {fecha(curso.creado_en)}</span>

@@ -123,7 +123,7 @@
 		<h2 class="etiqueta" style="margin: 24px 0 8px">Mesas creadas</h2>
 
 		{#each data.mesas as mesa (mesa.id)}
-			<a class="tarjeta-enlace" href="/mesas/{mesa.numero}">
+			<a class="tarjeta-enlace" href="/mesas/{mesa.curso?.codigo}/{mesa.numero}">
 				<span class="numero-mesa">{mesa.numero}</span>
 				<span class="texto">
 					<span class="titulo">{mesa.escenario?.nombre}</span>

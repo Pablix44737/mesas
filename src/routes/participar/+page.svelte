@@ -5,7 +5,7 @@
 	import Icono from '$lib/Icono.svelte';
 	import BarraSuperior from '$lib/BarraSuperior.svelte';
 
-	let { form } = $props();
+	let { data, form } = $props();
 
 	/**
 	 * El camino natural es escanear el QR con la cámara del teléfono, que abre la
@@ -35,12 +35,17 @@
 		flujo = null;
 	});
 
-	/** El QR de la mesa lleva la URL completa; también se acepta un número pelado. */
+	/**
+	 * El QR de la mesa lleva la URL completa, con el código del curso adelante del
+	 * número. Se siguen aceptando los carteles viejos —`/m/<numero>` a secas—: esa
+	 * ruta existe y resuelve sola mientras ese número sea de una sola mesa.
+	 */
 	function rutaDeMesa(texto: string) {
 		const limpio = texto.trim();
-		const enLaUrl = limpio.match(/\/m\/(\d+)\/?$/);
-		if (enLaUrl) return `/m/${enLaUrl[1]}`;
-		if (/^\d+$/.test(limpio)) return `/m/${limpio}`;
+		const conCurso = limpio.match(/\/m\/([a-z0-9-]+)\/(\d+)\/?$/i);
+		if (conCurso) return `/m/${conCurso[1]}/${conCurso[2]}`;
+		const viejo = limpio.match(/\/m\/(\d+)\/?$/);
+		if (viejo) return `/m/${viejo[1]}`;
 		return null;
 	}
 
@@ -155,8 +160,31 @@
 			{/if}
 
 			<form method="POST" use:enhance>
-				<div class="campo">
-					<label for="numero">Número de mesa</label>
+				{#if data.cursos.length === 0}
+					<div class="aviso alerta" style="margin: 0">
+						<Icono nombre="alerta" />
+						<span>No hay ningún curso en marcha. Avisale al líder de mesa.</span>
+					</div>
+				{:else}
+					<div class="campo">
+						<label for="cursoId">Tu curso</label>
+						<select id="cursoId" name="cursoId" required>
+							{#if data.cursos.length > 1}
+								<option value="" disabled selected={!form?.cursoId}>Elegí el curso</option>
+							{/if}
+							{#each data.cursos as curso (curso.id)}
+								<option
+									value={curso.id}
+									selected={form?.cursoId === curso.id || data.cursos.length === 1}
+								>
+									{curso.nombre}
+								</option>
+							{/each}
+						</select>
+					</div>
+
+					<div class="campo">
+						<label for="numero">Número de mesa</label>
 					<p class="ayuda">El que figura en el cartel, junto al código QR.</p>
 					<input
 						id="numero"
@@ -173,10 +201,11 @@
 					/>
 				</div>
 
-				<button class="boton bloque" type="submit">
-					Ir a la mesa
-					<Icono nombre="adelante" tamano={16} />
-				</button>
+					<button class="boton bloque" type="submit">
+						Ir a la mesa
+						<Icono nombre="adelante" tamano={16} />
+					</button>
+				{/if}
 			</form>
 		</div>
 

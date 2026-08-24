@@ -1850,6 +1850,17 @@ fieldset.roles.invalido legend {
 	text-align: center;
 }
 
+.cartel-curso {
+	max-width: 34ch;
+	margin: 0 0 var(--e-4);
+	font-family: var(--fuente-titulo);
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 20px;
+	color: var(--azul);
+	text-wrap: balance;
+}
+
 .cartel-rotulo {
 	margin: 0;
 	font-size: 15px;
@@ -1929,7 +1940,8 @@ fieldset.roles.invalido legend {
 
 	/* Los navegadores no imprimen fondos, así que el azul sobre papel depende de
 	   la tinta de color; en negro se lee en cualquier impresora. */
-	.cartel-numero {
+	.cartel-numero,
+	.cartel-curso {
 		color: #000;
 	}
 
