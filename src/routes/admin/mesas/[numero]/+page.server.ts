@@ -1,5 +1,6 @@
 import { error, fail } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
+import { mostrarDni } from '$lib/dni';
 import type { Actions, PageServerLoad } from './$types';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -159,6 +160,50 @@ export const actions: Actions = {
 				(resumen.vuelve_a !== null
 					? `La mesa vuelve a la corrida ${resumen.vuelve_a}, que quedó habilitada de nuevo.`
 					: 'La mesa queda sin corridas: el líder puede habilitar la primera cuando corresponda.')
+		};
+	},
+
+	/**
+	 * Dar de baja el registro de quien entró con el rol equivocado, para que pueda
+	 * volver a escanear y elegir bien. `unique (corrida_id, dni)` es lo que hace
+	 * falta liberar: mientras el registro exista, el sistema lo lleva siempre al
+	 * que ya tiene en lugar de dejarlo elegir de nuevo.
+	 */
+	eliminarParticipacion: async ({ request }) => {
+		const formulario = await request.formData();
+		const id = String(formulario.get('participacionId') ?? '');
+
+		const rechazar = (estado: number, mensaje: string) => fail(estado, { mensaje, exito: null });
+
+		if (!UUID.test(id)) return rechazar(400, 'Registro inválido.');
+
+		const { data, error: fallo } = await supabase.rpc('borrar_participacion', {
+			p_participacion_id: id
+		});
+
+		if (fallo) {
+			if (fallo.message.includes('ya no existe')) {
+				return rechazar(404, 'Ese registro ya no existe: alguien lo eliminó antes.');
+			}
+			if (fallo.message.includes('ya envio su checklist')) {
+				return rechazar(
+					409,
+					'Esa persona ya envió su checklist, así que su registro no se puede eliminar. Su evaluación quedó hecha con ese rol.'
+				);
+			}
+			return rechazar(500, 'No se pudo eliminar el registro. Intentá de nuevo.');
+		}
+
+		const resumen = data as unknown as { dni: string; rol: string; corrida: number; marcas: number };
+
+		return {
+			mensaje: null,
+			exito:
+				`El DNI ${mostrarDni(resumen.dni)} dejó de estar registrado como ${resumen.rol} en la corrida ${resumen.corrida}` +
+				(resumen.marcas > 0
+					? `, y con eso se fueron ${cuantas(resumen.marcas, 'marca que había hecho', 'marcas que había hecho')} con ese rol`
+					: '') +
+				'. Ya puede volver a escanear el QR y entrar con el rol correcto.'
 		};
 	}
 };

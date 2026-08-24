@@ -8,6 +8,8 @@
 
 	/** Corrida que se está por eliminar, mientras se confirma. */
 	let eliminando = $state<string | null>(null);
+	/** Registro de participación que se está por dar de baja, mientras se confirma. */
+	let dandoDeBaja = $state<string | null>(null);
 	let enCurso = $state(false);
 
 	const sinResolver = $derived(
@@ -107,6 +109,7 @@
 							<th>Participante</th>
 							<th>Padrón</th>
 							<th>Evaluación</th>
+							<th class="acciones"></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -139,7 +142,78 @@
 										<span class="detalle">—</span>
 									{/if}
 								</td>
+								<td class="acciones">
+									{#if participacion.evaluo}
+										<!-- Sin botón: su checklist ya está enviado y ese registro no se toca. -->
+										<span class="detalle">—</span>
+									{:else if dandoDeBaja === participacion.id}
+										<button
+											class="enlace"
+											type="button"
+											onclick={() => (dandoDeBaja = null)}
+											disabled={enCurso}
+										>
+											Cancelar
+										</button>
+									{:else}
+										<button
+											class="enlace peligroso"
+											type="button"
+											onclick={() => {
+												eliminando = null;
+												dandoDeBaja = participacion.id;
+											}}
+										>
+											Dar de baja
+										</button>
+									{/if}
+								</td>
 							</tr>
+
+							{#if dandoDeBaja === participacion.id}
+								<tr>
+									<td colspan="5" style="padding-top: 0">
+										<div class="aviso alerta desplegable" style="margin: 0">
+											<Icono nombre="alerta" />
+											<div>
+												<strong>
+													{participacion.nombre ?? `El DNI ${mostrarDni(participacion.dni)}`}
+													deja de estar registrado como {participacion.rolNombre} en la corrida
+													{corrida.numero}.
+												</strong>
+												Es lo que hay que hacer cuando alguien eligió mal el rol: mientras su
+												registro exista, el sistema lo lleva siempre al que ya tiene. Al darlo de
+												baja puede volver a escanear el QR y elegir el rol correcto. Lo único que
+												se pierde son las marcas que haya hecho con el rol equivocado.
+
+												<form
+													method="POST"
+													action="?/eliminarParticipacion"
+													style="margin-top: 12px"
+													use:enhance={() => {
+														enCurso = true;
+														return async ({ update }) => {
+															await update({ reset: false });
+															enCurso = false;
+															dandoDeBaja = null;
+														};
+													}}
+												>
+													<input
+														type="hidden"
+														name="participacionId"
+														value={participacion.id}
+													/>
+													<button class="boton peligro" type="submit" disabled={enCurso}>
+														<Icono nombre="quitar" />
+														{enCurso ? 'Dando de baja…' : 'Sí, dar de baja este registro'}
+													</button>
+												</form>
+											</div>
+										</div>
+									</td>
+								</tr>
+							{/if}
 						{/each}
 					</tbody>
 				</table>
@@ -178,7 +252,10 @@
 							class="enlace peligroso"
 							type="button"
 							style="margin-left: auto"
-							onclick={() => (eliminando = corrida.id)}
+							onclick={() => {
+								dandoDeBaja = null;
+								eliminando = corrida.id;
+							}}
 						>
 							Eliminar esta corrida
 						</button>

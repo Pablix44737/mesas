@@ -99,7 +99,9 @@ corridas, quiénes ocuparon cada rol en cada una y quién llegó a enviar su che
 tal como sus observadores las completaron, ítem por ítem, con su resultado. Desde el
 listado también puede **eliminar una mesa**, con todo lo que colgó de ella; hay que
 escribir su número para confirmarlo. Y desde la mesa puede **deshacer una corrida
-habilitada por error**: se elimina la última y la anterior vuelve a quedar en curso.
+habilitada por error** —se elimina la última y la anterior vuelve a quedar en curso—
+o **dar de baja el registro de quien entró con el rol equivocado**, para que vuelva a
+escanear y elija bien.
 
 `/admin/escenarios` — el administrador da de alta escenarios, los renombra si el
 título quedó mal, les asocia el checklist del observador de la técnica y les adjunta
@@ -243,6 +245,22 @@ una persona sus participaciones y evaluaciones quedan intactas —con el DNI, qu
 el dato de base— y sólo pierden el nombre. Vuelven a resolverse solas si esa persona
 se reincorpora. Bloquear el borrado habría sido peor: dejaría el padrón sin forma de
 arreglar una carga equivocada.
+
+**Elegir mal el rol se arregla dando de baja el registro, no editándolo.** Quien se
+equivoca al elegir vuelve siempre al registro que ya tiene: `unique (corrida_id, dni)`
+lo impide duplicar y la pantalla lo lleva al suyo en lugar de dejarlo elegir de nuevo.
+Eso es lo que hay que liberar. `borrar_participacion()` da de baja el registro y con
+él las marcas que hubiera hecho con el rol equivocado —que no le sirven a nadie—, y
+ese DNI queda otra vez libre en la corrida para escanear y elegir bien. Se resolvió
+así y no cambiando `rol_codigo` porque el rol decide qué checklist le toca: mutarlo
+dejaría una instancia abierta contra la plantilla del rol viejo, y el trigger que
+valida la coherencia rechazaría el cambio o quedaría con una marca a mitad de camino.
+Dar de baja y volver a entrar pasa por el mismo camino que cualquier participante, sin
+estados intermedios que nadie más produce.
+
+La única regla: si esa persona **ya envió** su checklist, no se borra. Ahí no hay un
+rol mal elegido que corregir sino una evaluación hecha, y perderla por un clic sería
+peor que el rol equivocado, que además se ve en la pantalla de la corrida.
 
 **Una corrida habilitada por error se puede deshacer; una con trabajo enviado, no.**
 Habilitar la siguiente es irreversible por diseño —cierra la anterior y corre el
@@ -513,9 +531,10 @@ supabase/
   auditar.
 - **Nada limita los intentos de clave.** Un ataque por fuerza bruta contra
   `/ingresar` no encuentra freno más que la latencia de la red.
-- **Cambiar de rol dentro de una corrida no es posible.** Quien se equivoca al
-  elegir vuelve siempre a su registro original. El Gherkin no lo contempla, así que
-  no inventé un flujo; si en la práctica pasa seguido, hay que resolverlo.
+- **Cambiar de rol lo tiene que destrabar el administrador.** Quien se equivoca al
+  elegir vuelve siempre a su registro original; para corregirlo, el administrador da
+  de baja ese registro y la persona escanea de nuevo. Alcanza para el aula, pero
+  depende de que haya alguien en la administración en ese momento.
 - **Los criterios siguen siendo editables después de terminado el checklist.** Es
   a propósito: la feature «Resultado de una evaluación» pide que un cambio de peso
   se refleje en las evaluaciones ya enviadas. Pero agregar o quitar criterios de un
