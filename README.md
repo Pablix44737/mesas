@@ -93,12 +93,18 @@ y la corrida donde se usaron; incorporarlos resuelve sus registros solo. Cada pe
 muestra cuántos roles ocupó, que es lo que hay que saber antes de quitarla o de
 cambiarle el DNI.
 
-`/admin/mesas` — el administrador consulta cómo se desarrolló cada mesa: sus
+`/admin/cursos` — la grilla de ediciones. Cada tarjeta es un curso con sus mesas,
+corridas y evaluaciones; al entrar, `/admin/cursos/<id>` lista sus mesas y es desde
+donde se elimina una. Archivar un curso no borra nada: lo saca del frente para que
+las ediciones viejas no compitan con la que está en marcha, y deja de ofrecerse al
+líder cuando crea una mesa.
+
+`/admin/mesas/<numero>` — el administrador consulta cómo se desarrolló cada mesa: sus
 corridas, quiénes ocuparon cada rol en cada una y quién llegó a enviar su checklist.
 `/admin/mesas/<numero>/corridas/<numero>` muestra las evaluaciones de esa corrida
 tal como sus observadores las completaron, ítem por ítem, con su resultado. Desde el
-listado también puede **eliminar una mesa**, con todo lo que colgó de ella; hay que
-escribir su número para confirmarlo. Y desde la mesa puede **deshacer una corrida
+curso puede **eliminar una mesa**, con todo lo que colgó de ella; hay que escribir su
+número para confirmarlo. Y desde la mesa puede **deshacer una corrida
 habilitada por error** —se elimina la última y la anterior vuelve a quedar en curso—
 o **dar de baja el registro de quien entró con el rol equivocado**, para que vuelva a
 escanear y elija bien.
@@ -281,6 +287,22 @@ puesto son las participaciones de esa corrida y los checklists abiertos sin envi
 —son de la corrida equivocada—, y el resumen los cuenta antes y los informa después.
 La numeración no queda con huecos: `habilitar_siguiente_corrida()` calcula
 `max(numero) + 1`, así que después de borrar la 2 la siguiente vuelve a ser la 2.
+
+**Una mesa pertenece a un curso; los instrumentos, a la institución.** Al querer usar
+el sistema para una cohorte nueva, las mesas de las dos ediciones se mezclarían en la
+misma lista. `cursos` las agrupa, con `mesas.curso_id` obligatorio y
+`on delete restrict`: borrar un curso no puede llevarse por delante sus mesas sin que
+alguien lo diga mesa por mesa. Lo que **no** cuelga del curso son los escenarios ni
+los checklists —son instrumentos institucionales que se reusan tal cual en cada
+edición, y separarlos obligaría a recargarlos— ni el padrón, que es el caso discutible
+y queda pendiente a propósito: con dos cohortes conviviendo, el buscador va a mostrar
+a todos mezclados.
+
+`cursos.codigo` todavía no se usa. Es para cuando el QR pase a ser
+`/m/<codigo>/<numero>` y los números de mesa vuelvan a empezar en 1 en cada curso;
+se agregó ahora para no volver a migrar la tabla. Se deriva del nombre —sin tildes,
+sin espacios, hasta 40 caracteres— porque va a estar impreso en los carteles y nadie
+debería tener que inventarlo.
 
 **Eliminar una mesa se lleva puesta su rama entera, y nada más.** La cascada ya
 estaba en el esquema base: `mesas → corridas → participaciones → checklist_instancias
@@ -499,7 +521,9 @@ src/
     admin/checklists/                             alta y listado de checklists
     admin/checklists/[id]/                        criterios, ponderación y cierre
     admin/padron/                                 padrón y DNI sin resolver
-    admin/mesas/                                  consulta de mesas
+    admin/cursos/                                 grilla de ediciones
+    admin/cursos/[id]/                            las mesas de un curso, y su baja
+    admin/mesas/                                  redirige a cursos
     admin/mesas/[numero]/                         corridas y quién ocupó cada rol
     admin/mesas/[numero]/corridas/[corrida]/      evaluaciones de esa corrida
     admin/escenarios/                             alta y listado de escenarios

@@ -4,39 +4,102 @@
 
 	let { data, form } = $props();
 
+	let renombrandoEnCurso = $state(false);
 	/**
-	 * Mesa que se está por eliminar, mientras se confirma. Arranca de lo que
-	 * devolvió el servidor para que un rechazo reabra el panel aunque no haya
-	 * JavaScript; `undefined` significa «todavía manda el servidor».
+	 * Panel de renombrado abierto a mano. Mientras valga `undefined` manda lo que
+	 * devolvió el servidor: así un rechazo lo reabre con lo tipeado aunque no haya
+	 * JavaScript, y cancelar sigue cerrándolo.
 	 */
-	let abiertaAMano = $state<string | null | undefined>(undefined);
+	let abiertoAMano = $state<boolean | undefined>(undefined);
+	const renombrando = $derived(abiertoAMano ?? Boolean(form?.renombrando));
+
+	/**
+	 * Mesa que se está por eliminar. Mismo centinela: mientras valga `undefined`
+	 * manda el servidor, así un rechazo reabre el panel sin JavaScript.
+	 */
+	let bajaAMano = $state<string | null | undefined>(undefined);
 	let confirmacion = $state('');
 	let eliminando = $state(false);
 
-	const porEliminar = $derived(
-		abiertaAMano === undefined ? (form?.eliminando ?? null) : abiertaAMano
-	);
+	const porEliminar = $derived(bajaAMano === undefined ? (form?.eliminando ?? null) : bajaAMano);
 
 	function abrir(id: string) {
-		abiertaAMano = id;
+		bajaAMano = id;
 		confirmacion = '';
 	}
 
 	function cerrar() {
-		abiertaAMano = null;
+		bajaAMano = null;
 		confirmacion = '';
 	}
 </script>
 
 <svelte:head>
-	<title>Mesas — SIMUNaM</title>
+	<title>{data.curso.nombre} — SIMUNaM</title>
 </svelte:head>
 
+<a class="miga" href="/admin/cursos">
+	<Icono nombre="atras" tamano={16} />
+	Todos los cursos
+</a>
+
 <div class="pagina-cabecera">
-	<div class="titulo">
-		<h1>Mesas</h1>
-		<p class="bajada">Cómo se desarrolló el trabajo de cada mesa</p>
-	</div>
+	{#if renombrando}
+		<form
+			class="renombrar"
+			method="POST"
+			action="?/renombrar"
+			use:enhance={() => {
+				renombrandoEnCurso = true;
+				return async ({ update }) => {
+					await update({ reset: false });
+					renombrandoEnCurso = false;
+					// Si salió bien el panel se cierra; si no, queda abierto.
+					abiertoAMano = Boolean(form?.renombrando);
+				};
+			}}
+		>
+			<label class="etiqueta" for="nombre-curso">Nombre del curso</label>
+			<div class="fila">
+				<!-- svelte-ignore a11y_autofocus -->
+				<input
+					id="nombre-curso"
+					name="nombre"
+					type="text"
+					autocomplete="off"
+					value={form?.renombrando ? (form.nombre ?? '') : data.curso.nombre}
+					aria-invalid={Boolean(form?.mensaje)}
+					autofocus
+					required
+				/>
+				<button class="boton" type="submit" disabled={renombrandoEnCurso}>
+					{renombrandoEnCurso ? 'Guardando…' : 'Guardar'}
+				</button>
+				<button
+					class="boton secundario"
+					type="button"
+					onclick={() => (abiertoAMano = false)}
+					disabled={renombrandoEnCurso}
+				>
+					Cancelar
+				</button>
+			</div>
+		</form>
+	{:else}
+		<div class="titulo">
+			<h1>{data.curso.nombre}</h1>
+			<p class="bajada">Las mesas de esta edición</p>
+		</div>
+		<span class="fila">
+			<button class="boton fantasma" type="button" onclick={() => (abiertoAMano = true)}>
+				<Icono nombre="editar" tamano={16} />
+				Renombrar
+			</button>
+			{#if data.curso.archivado}
+				<span class="chip neutro">Archivado</span>
+			{/if}
+		</span>
+	{/if}
 </div>
 
 {#if form?.mensaje}
@@ -54,12 +117,14 @@
 
 <div class="tarjeta">
 	<div class="tarjeta-cabecera">
-		<h2>Mesas del evento</h2>
+		<h2>Mesas del curso</h2>
 		<span class="detalle">{data.mesas.length}</span>
 	</div>
 
 	{#if data.mesas.length === 0}
-		<div class="vacio">Todavía no hay mesas creadas.</div>
+		<div class="vacio">
+			Este curso todavía no tiene mesas. Las crea el líder de mesa desde su pantalla.
+		</div>
 	{:else}
 		<div class="tabla-envoltorio">
 			<table class="tabla">
@@ -73,7 +138,7 @@
 					</tr>
 				</thead>
 				<tbody>
-					{#each data.mesas as mesa (mesa.numero)}
+					{#each data.mesas as mesa (mesa.id)}
 						<tr>
 							<td class="principal">{mesa.numero}</td>
 							<td>{mesa.escenario}</td>
@@ -96,11 +161,7 @@
 											Consultar
 											<Icono nombre="adelante" tamano={16} />
 										</a>
-										<button
-											class="enlace peligroso"
-											type="button"
-											onclick={() => abrir(mesa.id)}
-										>
+										<button class="enlace peligroso" type="button" onclick={() => abrir(mesa.id)}>
 											Eliminar
 										</button>
 									</span>
@@ -137,7 +198,7 @@
 														await update();
 														eliminando = false;
 														// Si salió bien no hay fila que reabrir; si no, queda abierta.
-														abiertaAMano = form?.eliminando ?? null;
+														bajaAMano = form?.eliminando ?? null;
 														confirmacion = '';
 													};
 												}}

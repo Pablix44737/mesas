@@ -233,26 +233,60 @@ export type Database = {
 					}
 				];
 			};
+			cursos: {
+				Row: {
+					archivado: boolean;
+					codigo: string;
+					creado_en: string;
+					id: string;
+					nombre: string;
+				};
+				Insert: {
+					archivado?: boolean;
+					codigo: string;
+					creado_en?: string;
+					id?: string;
+					nombre: string;
+				};
+				Update: {
+					archivado?: boolean;
+					codigo?: string;
+					creado_en?: string;
+					id?: string;
+					nombre?: string;
+				};
+				Relationships: [];
+			};
 			mesas: {
 				Row: {
 					creada_en: string;
+					curso_id: string;
 					escenario_id: string;
 					id: string;
 					numero: number;
 				};
 				Insert: {
 					creada_en?: string;
+					curso_id: string;
 					escenario_id: string;
 					id?: string;
 					numero: number;
 				};
 				Update: {
 					creada_en?: string;
+					curso_id?: string;
 					escenario_id?: string;
 					id?: string;
 					numero?: number;
 				};
 				Relationships: [
+					{
+						foreignKeyName: 'mesas_curso_id_fkey';
+						columns: ['curso_id'];
+						isOneToOne: false;
+						referencedRelation: 'cursos';
+						referencedColumns: ['id'];
+					},
 					{
 						foreignKeyName: 'mesas_escenario_id_fkey';
 						columns: ['escenario_id'];

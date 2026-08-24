@@ -43,9 +43,9 @@
 	<title>Mesa {data.mesa.numero} — SIMUNaM</title>
 </svelte:head>
 
-<a class="miga" href="/admin/mesas">
+<a class="miga" href={data.curso ? `/admin/cursos/${data.curso.id}` : '/admin/cursos'}>
 	<Icono nombre="atras" tamano={16} />
-	Todas las mesas
+	{data.curso?.nombre ?? 'Todos los cursos'}
 </a>
 
 <div class="pagina-cabecera">

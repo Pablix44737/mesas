@@ -11,7 +11,7 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	const { data: mesa, error: fallo } = await supabase
 		.from('mesas')
-		.select('id, numero, creada_en, escenario:escenarios(id, nombre)')
+		.select('id, numero, creada_en, escenario:escenarios(id, nombre), curso:cursos(id, nombre)')
 		.eq('numero', numero)
 		.maybeSingle();
 
@@ -62,6 +62,7 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	return {
 		mesa: { numero: mesa.numero, creada_en: mesa.creada_en },
+		curso: mesa.curso,
 		escenario: mesa.escenario,
 		corridas: (corridas ?? []).map((corrida) => ({
 			id: corrida.id,

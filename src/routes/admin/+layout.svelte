@@ -8,7 +8,7 @@
 	const secciones = [
 		{ href: '/admin/escenarios', nombre: 'Escenarios', icono: 'escenario' },
 		{ href: '/admin/checklists', nombre: 'Checklists', icono: 'checklist' },
-		{ href: '/admin/mesas', nombre: 'Mesas', icono: 'mesa' },
+		{ href: '/admin/cursos', nombre: 'Cursos', icono: 'mesa' },
 		{ href: '/admin/padron', nombre: 'Padrón', icono: 'padron' }
 	];
 

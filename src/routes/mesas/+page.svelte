@@ -36,12 +36,17 @@
 				<!-- <Icono nombre="mas" /> -->
 			</div>
 
-			{#if data.escenarios.length === 0}
+			{#if data.escenarios.length === 0 || data.cursos.length === 0}
 				<div class="aviso alerta" style="margin: 0">
 					<Icono nombre="alerta" />
 					<span>
-						Todavía no hay escenarios preparados. El administrador tiene que dejar al menos uno
-						disponible antes de que puedas crear una mesa.
+						{#if data.cursos.length === 0}
+							Todavía no hay ningún curso en marcha. El administrador tiene que crear uno antes
+							de que puedas crear una mesa.
+						{:else}
+							Todavía no hay escenarios preparados. El administrador tiene que dejar al menos uno
+							disponible antes de que puedas crear una mesa.
+						{/if}
 					</span>
 				</div>
 			{:else}
@@ -70,6 +75,24 @@
 							aria-invalid={form?.campo === 'numero'}
 							required
 						/>
+					</div>
+
+					<div class="campo">
+						<label for="cursoId">Curso al que pertenece</label>
+						<p class="ayuda">Separa las mesas de esta edición de las de cualquier otra.</p>
+						<select id="cursoId" name="cursoId" aria-invalid={form?.campo === 'cursoId'} required>
+							{#if data.cursos.length > 1}
+								<option value="" disabled selected={!form?.cursoId}>Elegí un curso</option>
+							{/if}
+							{#each data.cursos as curso (curso.id)}
+								<option
+									value={curso.id}
+									selected={form?.cursoId === curso.id || data.cursos.length === 1}
+								>
+									{curso.nombre}
+								</option>
+							{/each}
+						</select>
 					</div>
 
 					<div class="campo">
