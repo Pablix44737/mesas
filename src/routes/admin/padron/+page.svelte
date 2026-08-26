@@ -264,26 +264,41 @@
 									{/if}
 								</td>
 								<td class="acciones">
-									{#if editando === persona.id}
-										<button class="enlace" type="button" onclick={cerrarEdicion}>Cancelar</button>
-									{:else if quitando === persona.id}
-										<button class="enlace" type="button" onclick={() => (quitando = null)}>
-											Cancelar
+									{#if editando === persona.id || quitando === persona.id}
+										<button
+											class="icono-boton"
+											type="button"
+											title="Cancelar"
+											onclick={() => {
+												cerrarEdicion();
+												quitando = null;
+											}}
+										>
+											<Icono nombre="cerrar" tamano={18} />
+											<span class="visualmente-oculto">Cancelar</span>
 										</button>
 									{:else}
-										<span class="fila">
-											<button class="enlace" type="button" onclick={() => abrirEdicion(persona)}>
-												Editar
+										<span class="acciones-fila">
+											<button
+												class="icono-boton"
+												type="button"
+												title="Editar"
+												onclick={() => abrirEdicion(persona)}
+											>
+												<Icono nombre="editar" tamano={18} />
+												<span class="visualmente-oculto">Editar</span>
 											</button>
 											<button
-												class="enlace peligroso"
+												class="icono-boton peligroso"
 												type="button"
+												title="Quitar del padrón"
 												onclick={() => {
 													cerrarEdicion();
 													quitando = persona.id;
 												}}
 											>
-												Quitar
+												<Icono nombre="quitar" tamano={18} />
+												<span class="visualmente-oculto">Quitar del padrón</span>
 											</button>
 										</span>
 									{/if}

@@ -256,6 +256,31 @@ a {
 
 /* --- botón de icono --- */
 
+/* Texto sólo para lectores de pantalla: el nombre de una acción que en la
+   pantalla se representa con un icono. Vivía scopeada dentro de la pantalla de
+   checklists, así que no servía en ninguna otra; el patrón se usa en varias. */
+.visualmente-oculto {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+/**
+ * Acciones que actúan sobre la fila en la que están —editar, quitar, mover— van
+ * como iconos, en toda la administración. Con etiqueta harían crecer la columna
+ * y competirían por la atención con el dato de la fila, que es lo que se lee.
+ * Las acciones que llevan a otra pantalla ("Consultar", "Preparar") sí van con
+ * texto: no son lo mismo y conviene que se distingan.
+ */
+.acciones-fila {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+}
+
 .icono-boton {
 	display: inline-grid;
 	place-items: center;

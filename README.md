@@ -197,6 +197,15 @@ para poder decir «no existe la mesa 7» en la misma pantalla en vez de mandar a
 persona a una página de error. De todos modos el camino habitual sigue siendo
 escanear con la cámara del teléfono, que abre la mesa sin pasar por la app.
 
+**Las acciones sobre una fila van como iconos; las que llevan a otra pantalla, con
+texto.** Editar, quitar y mover actúan sobre la fila en la que están: con etiqueta
+harían crecer la columna y competirían por la atención con el dato de la fila, que es
+lo que se lee. Consultar o Preparar llevan a otro lado y sí van con texto, para que
+se distingan de un vistazo. Cada icono lleva su `title` y un texto sólo para lectores
+de pantalla, porque un icono solo no dice qué hace. La clase que lo esconde vivía
+scopeada dentro de la pantalla de checklists —la única que usaba el patrón—, así que
+al querer repetirlo en el padrón no aplicaba: ahora está en el sistema visual.
+
 **El sistema visual viene de una propuesta de Stitch, adaptada.** Se tomó su
 estructura —barra superior fija con el contexto, progreso pegajoso, barra de acción
 fija abajo, sidebar de administración, tablas con chips de estado, tarjetas de rol—

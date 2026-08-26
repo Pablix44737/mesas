@@ -153,19 +153,31 @@
 							</td>
 							<td class="detalle">{mesa.evaluaciones}</td>
 							<td class="acciones">
-								{#if porEliminar === mesa.id}
-									<button class="enlace" type="button" onclick={cerrar}>Cancelar</button>
-								{:else}
-									<span class="fila">
-										<a class="boton fantasma" href="/admin/cursos/{data.curso.codigo}/mesas/{mesa.numero}">
-											Consultar
-											<Icono nombre="adelante" tamano={16} />
-										</a>
-										<button class="enlace peligroso" type="button" onclick={() => abrir(mesa.id)}>
-											Eliminar
+								<span class="acciones-fila">
+									<a
+										class="boton fantasma"
+										href="/admin/cursos/{data.curso.codigo}/mesas/{mesa.numero}"
+									>
+										Consultar
+										<Icono nombre="adelante" tamano={16} />
+									</a>
+									{#if porEliminar === mesa.id}
+										<button class="icono-boton" type="button" title="Cancelar" onclick={cerrar}>
+											<Icono nombre="cerrar" tamano={18} />
+											<span class="visualmente-oculto">Cancelar</span>
 										</button>
-									</span>
-								{/if}
+									{:else}
+										<button
+											class="icono-boton peligroso"
+											type="button"
+											title="Eliminar la mesa"
+											onclick={() => abrir(mesa.id)}
+										>
+											<Icono nombre="quitar" tamano={18} />
+											<span class="visualmente-oculto">Eliminar la mesa</span>
+										</button>
+									{/if}
+								</span>
 							</td>
 						</tr>
 

@@ -148,23 +148,27 @@
 										<span class="detalle">—</span>
 									{:else if dandoDeBaja === participacion.id}
 										<button
-											class="enlace"
+											class="icono-boton"
 											type="button"
+											title="Cancelar"
 											onclick={() => (dandoDeBaja = null)}
 											disabled={enCurso}
 										>
-											Cancelar
+											<Icono nombre="cerrar" tamano={18} />
+											<span class="visualmente-oculto">Cancelar</span>
 										</button>
 									{:else}
 										<button
-											class="enlace peligroso"
+											class="icono-boton peligroso"
 											type="button"
+											title="Dar de baja este registro"
 											onclick={() => {
 												eliminando = null;
 												dandoDeBaja = participacion.id;
 											}}
 										>
-											Dar de baja
+											<Icono nombre="quitar" tamano={18} />
+											<span class="visualmente-oculto">Dar de baja este registro</span>
 										</button>
 									{/if}
 								</td>
