@@ -144,9 +144,47 @@ export const actions: Actions = {
 	},
 
 	/**
-	 * Mueve un criterio un lugar arriba o abajo. El intercambio de órdenes lo hace
-	 * `mover_criterio()` en la base, de una sola vez: `(plantilla_id, orden)` es
-	 * único y dos updates sueltos chocarían entre sí.
+	 * Guarda el orden completo de los criterios, en un solo viaje.
+	 *
+	 * La pantalla reacomoda la lista localmente —con las flechas o arrastrando— y
+	 * recién manda el orden final. Antes cada flecha era una llamada, así que
+	 * llevar el último criterio al primer lugar costaba N-1 viajes a la base.
+	 *
+	 * `reordenar_criterios()` comprueba que la lista sea exactamente la del
+	 * checklist: si alguien agregó o quitó un criterio mientras tanto, rechaza en
+	 * vez de aplicar un orden que ya no corresponde.
+	 */
+	reordenarItems: async ({ request, params }) => {
+		const plantilla = await traerPlantilla(params.id);
+
+		const formulario = await request.formData();
+		const orden = String(formulario.get('orden') ?? '')
+			.split(',')
+			.filter(Boolean);
+
+		if (orden.length === 0) return rechazar(400, 'No llegó ningún orden que guardar.');
+		if (!orden.every((id) => UUID.test(id))) return rechazar(400, 'Orden inválido.');
+
+		const { error: fallo } = await supabase.rpc('reordenar_criterios', {
+			p_plantilla_id: plantilla.id,
+			p_items: orden
+		});
+
+		if (fallo) {
+			return rechazar(
+				409,
+				'Los criterios cambiaron mientras reordenabas. Recargá la página y probá de nuevo.'
+			);
+		}
+
+		// Sin aviso de éxito: el orden nuevo ya se ve en la lista.
+		return { mensaje: null, exito: null };
+	},
+
+	/**
+	 * Mueve un criterio un lugar arriba o abajo. Queda para cuando no hay
+	 * JavaScript: con JavaScript la pantalla reacomoda localmente y guarda el
+	 * orden entero con `reordenarItems`, en un viaje en vez de uno por flecha.
 	 */
 	moverItem: async ({ request, params }) => {
 		const plantilla = await traerPlantilla(params.id);

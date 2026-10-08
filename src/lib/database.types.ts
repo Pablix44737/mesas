@@ -516,6 +516,10 @@ export type Database = {
 				Args: { p_participacion_id: string };
 				Returns: string;
 			};
+			reordenar_criterios: {
+				Args: { p_items: string[]; p_plantilla_id: string };
+				Returns: undefined;
+			};
 			mover_criterio: {
 				Args: { p_item_id: string; p_hacia: string };
 				Returns: undefined;

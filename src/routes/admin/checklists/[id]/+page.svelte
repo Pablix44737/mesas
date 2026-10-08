@@ -17,6 +17,72 @@
 	let abiertoAMano = $state<boolean | undefined>(undefined);
 	const renombrando = $derived(abiertoAMano ?? Boolean(form?.renombrando));
 
+	/**
+	 * El orden mientras se está acomodando, antes de guardarlo.
+	 *
+	 * Con las flechas o arrastrando, la lista se reacomoda acá y recién después
+	 * de medio segundo sin tocar nada viaja el orden completo, una sola vez. Antes
+	 * cada flecha era un viaje a la base: llevar el último criterio al primer
+	 * lugar costaba N-1 idas y vueltas. En `null` manda el orden del servidor.
+	 */
+	let ordenLocal = $state<string[] | null>(null);
+	let guardandoOrden = $state(false);
+	let falloDeOrden = $state<string | null>(null);
+	let arrastrando = $state<string | null>(null);
+
+	let formularioDeOrden: HTMLFormElement;
+	let temporizador: ReturnType<typeof setTimeout> | null = null;
+
+	const items = $derived(
+		ordenLocal
+			? ordenLocal
+					.map((id) => data.items.find((i) => i.id === id))
+					.filter((i) => i !== undefined)
+			: data.items
+	);
+
+	function programarGuardado() {
+		if (temporizador) clearTimeout(temporizador);
+		// Medio segundo: alcanza para encadenar varios movimientos en un guardado
+		// y no se siente como una espera.
+		temporizador = setTimeout(() => formularioDeOrden?.requestSubmit(), 500);
+	}
+
+	function reacomodar(desde: number, hasta: number) {
+		if (hasta < 0 || hasta >= items.length || desde === hasta) return;
+		const ids = items.map((i) => i.id);
+		const [movido] = ids.splice(desde, 1);
+		ids.splice(hasta, 0, movido);
+		ordenLocal = ids;
+		falloDeOrden = null;
+		programarGuardado();
+	}
+
+	/** Arrastrar con el puntero: anda igual con mouse y con el dedo. */
+	function tomar(evento: PointerEvent, id: string) {
+		evento.preventDefault();
+		arrastrando = id;
+		(evento.target as HTMLElement).setPointerCapture(evento.pointerId);
+	}
+
+	function arrastrar(evento: PointerEvent) {
+		if (!arrastrando) return;
+		const filas = [...document.querySelectorAll<HTMLElement>('[data-criterio]')];
+		// Sobre qué fila está el puntero: se compara contra el centro de cada una,
+		// así el intercambio ocurre al cruzar la mitad y no al rozar el borde.
+		const destino = filas.findIndex((fila) => {
+			const r = fila.getBoundingClientRect();
+			return evento.clientY >= r.top && evento.clientY <= r.bottom;
+		});
+		if (destino < 0) return;
+		const actual = items.findIndex((i) => i.id === arrastrando);
+		if (actual >= 0 && actual !== destino) reacomodar(actual, destino);
+	}
+
+	function soltar() {
+		arrastrando = null;
+	}
+
 	const enConstruccion = $derived(data.plantilla.estado !== 'disponible');
 	const rotulo: Record<string, string> = {
 		en_construccion: 'En construcción',
@@ -195,12 +261,45 @@
 
 {#if data.items.length > 1}
 	<p class="ayuda" style="margin-bottom: 12px">
-		Con las flechas cambiás el orden en que los observadores van a ver los criterios.
+		Arrastrá un criterio del asa, o usá las flechas, para cambiar el orden en que los
+		observadores los van a ver. El orden se guarda solo.
 	</p>
 {/if}
 
+{#if falloDeOrden}
+	<div class="aviso error" role="alert">
+		<Icono nombre="error" />
+		<span>{falloDeOrden}</span>
+	</div>
+{/if}
+
+<!-- El orden viaja entero y una sola vez, cuando se deja de mover. Sin
+     JavaScript este formulario nunca se envía: ahí mandan las flechas. -->
+<form
+	bind:this={formularioDeOrden}
+	method="POST"
+	action="?/reordenarItems"
+	class="visualmente-oculto"
+	use:enhance={() => {
+		guardandoOrden = true;
+		return async ({ update, result }) => {
+			await update({ reset: false });
+			guardandoOrden = false;
+			// Pase lo que pase vuelve a mandar el servidor: si salió bien ya tiene
+			// el orden nuevo, y si falló hay que mostrar el que de verdad quedó.
+			ordenLocal = null;
+			falloDeOrden =
+				result.type === 'failure'
+					? 'No se pudo guardar el orden. La lista volvió a como estaba.'
+					: null;
+		};
+	}}
+>
+	<input type="hidden" name="orden" value={items.map((i) => i.id).join(',')} />
+</form>
+
 <div class="items">
-	{#each data.items as item, i (item.id)}
+	{#each items as item, i (item.id)}
 		{#if editando === item.id}
 			<div class="tarjeta" style="margin: 0">
 				<form
@@ -239,7 +338,21 @@
 				</form>
 			</div>
 		{:else}
-			<div class="criterio">
+			<div class="criterio" class:tomado={arrastrando === item.id} data-criterio={item.id}>
+				<!-- El asa es lo único que arrastra: así se puede seleccionar el texto
+				     del criterio sin que la fila se empiece a mover. -->
+				<button
+					class="asa"
+					type="button"
+					title="Arrastrar para reordenar"
+					onpointerdown={(e) => tomar(e, item.id)}
+					onpointermove={arrastrar}
+					onpointerup={soltar}
+					onpointercancel={soltar}
+				>
+					<Icono nombre="asa" tamano={18} />
+					<span class="visualmente-oculto">Arrastrar para reordenar</span>
+				</button>
 				<!-- La posición se cuenta acá y no se lee de `orden`: al quitar criterios
 				     el orden guardado deja huecos, y mostrarlos confundiría. -->
 				<span class="orden">{i + 1}</span>
@@ -251,7 +364,10 @@
 					<form
 						method="POST"
 						action="?/moverItem"
-						use:enhance={() => async ({ update }) => await update({ reset: false })}
+						use:enhance={({ cancel }) => {
+							cancel();
+							reacomodar(i, i - 1);
+						}}
 					>
 						<input type="hidden" name="itemId" value={item.id} />
 						<input type="hidden" name="hacia" value="arriba" />
@@ -263,7 +379,10 @@
 					<form
 						method="POST"
 						action="?/moverItem"
-						use:enhance={() => async ({ update }) => await update({ reset: false })}
+						use:enhance={({ cancel }) => {
+							cancel();
+							reacomodar(i, i + 1);
+						}}
 					>
 						<input type="hidden" name="itemId" value={item.id} />
 						<input type="hidden" name="hacia" value="abajo" />

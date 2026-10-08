@@ -384,6 +384,20 @@ trigger corrió, son imposibles de reconstruir. El DNI se manda a la base sólo 
 cambió, porque el trigger escucha esa columna y no hay motivo para despertarlo al
 corregir un acento.
 
+**El orden se acomoda en pantalla y se guarda una sola vez.** Antes cada flecha era
+una llamada a la base: llevar el último criterio al primer lugar en una lista de 18
+costaba 17 idas y vueltas, y se sentían todas. Ahora la pantalla reacomoda localmente
+—arrastrando del asa o con las flechas— y manda el orden completo medio segundo
+después del último movimiento, en un viaje. `reordenar_criterios()` lo aplica entero
+y comprueba que la lista sea exactamente la del checklist: si alguien agregó o quitó
+un criterio mientras tanto, rechaza en vez de aplicar un orden que ya no corresponde.
+Si el guardado falla, la lista vuelve al orden del servidor y se avisa; no queda una
+pantalla mostrando algo que la base no tiene.
+
+Las flechas siguen posteando a `moverItem` cuando no hay JavaScript —ahí sí, un viaje
+por flecha— y el arrastre usa eventos de puntero, así que funciona con el dedo y con
+el mouse sin dos implementaciones.
+
 **Reordenar criterios no toca las evaluaciones.** Las respuestas apuntan al criterio
 por su id, no por su posición, así que mover un criterio es puramente presentación:
 una evaluación ya enviada sigue mostrando lo que su observador marcó. El intercambio

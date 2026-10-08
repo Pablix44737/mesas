@@ -92,6 +92,10 @@ export const iconos: Record<string, string[]> = {
 	descargar: ['M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4', 'M7 10l5 5 5-5', 'M12 15V3'],
 	cerrar: ['M18 6L6 18', 'M6 6l12 12'],
 	menu: ['M3 12h18', 'M3 6h18', 'M3 18h18'],
+	asa: [
+		'M9 5h.01', 'M9 12h.01', 'M9 19h.01',
+		'M15 5h.01', 'M15 12h.01', 'M15 19h.01'
+	],
 	buscar: ['M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', 'M21 21l-4.35-4.35']
 };
 

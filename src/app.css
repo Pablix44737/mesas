@@ -1170,6 +1170,39 @@ fieldset.roles.invalido legend {
 }
 
 /* Cuatro botones de icono: el hueco lo dan ellos mismos, no el gap. */
+/* El asa de arrastre. `touch-action: none` es lo que hace que en el teléfono el
+   gesto mueva el criterio en vez de desplazar la página. */
+.criterio .asa {
+	display: grid;
+	place-items: center;
+	width: 28px;
+	height: 32px;
+	flex: 0 0 auto;
+	margin-left: calc(var(--e-2) * -1);
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--borde-fuerte);
+	cursor: grab;
+	touch-action: none;
+}
+
+.criterio .asa:hover {
+	color: var(--tinta-suave);
+}
+
+/* Mientras se arrastra, el criterio se levanta del resto de la lista. */
+.criterio.tomado {
+	background: var(--azul-tenue);
+	border-color: var(--azul);
+	box-shadow: var(--sombra-md);
+}
+
+.criterio.tomado .asa {
+	cursor: grabbing;
+	color: var(--azul);
+}
+
 .criterio .acciones {
 	display: flex;
 	align-items: center;
