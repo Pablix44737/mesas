@@ -108,7 +108,6 @@
 	<div class="tarjeta" style="margin: 0">
 		<div class="tarjeta-cabecera">
 			<h2>Checklist de la técnica</h2>
-			<Icono nombre="checklist" />
 		</div>
 		<p class="ayuda">
 			Se les presenta al observador de la técnica y al facilitador en las mesas que practiquen
@@ -163,7 +162,6 @@
 	<div class="tarjeta" style="margin: 0">
 		<div class="tarjeta-cabecera">
 			<h2>Planificación</h2>
-			<Icono nombre="planificacion" />
 		</div>
 		<p class="ayuda">Se le presenta al facilitador de las mesas que practiquen este escenario.</p>
 

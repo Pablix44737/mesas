@@ -113,7 +113,6 @@
 		<div class="tarjeta">
 			<div class="tarjeta-cabecera">
 				<h2>Escaneá el QR de tu mesa</h2>
-				<Icono nombre="qr" />
 			</div>
 
 			{#if escaneando}
@@ -149,7 +148,6 @@
 		<div class="tarjeta">
 			<div class="tarjeta-cabecera">
 				<h2>O entrá por el número</h2>
-				<Icono nombre="mesa" />
 			</div>
 
 			{#if form?.mensaje}

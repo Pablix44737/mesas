@@ -52,7 +52,6 @@
 	<div class="tarjeta">
 		<div class="tarjeta-cabecera">
 			<h2>Nuevo curso</h2>
-			<Icono nombre="mas" />
 		</div>
 		<form
 			method="POST"

@@ -134,7 +134,6 @@
 <div class="tarjeta">
 	<div class="tarjeta-cabecera">
 		<h2>Incorporar a una persona</h2>
-		<Icono nombre="padron" />
 	</div>
 	<form
 		method="POST"

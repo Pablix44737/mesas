@@ -1741,6 +1741,16 @@ fieldset.roles.invalido legend {
 	border-radius: var(--r-md);
 }
 
+/* Dos grupos que antes iban dentro de una tarjeta: el checklist que alguien dejó
+   a medias y el cierre de un checklist en construcción. En los dos casos lo que
+   va adentro —un aviso, un botón— ya trae su propio marco, así que la tarjeta
+   sumaba un recuadro sin agrupar nada que no se entendiera solo. Queda el
+   espaciado, que es lo único que hacía falta. */
+.pendiente-sin-enviar,
+.cerrar-checklist {
+	margin-bottom: var(--e-4);
+}
+
 /* --- cursos: la grilla de tarjetas, una por edición --- */
 
 .cursos {

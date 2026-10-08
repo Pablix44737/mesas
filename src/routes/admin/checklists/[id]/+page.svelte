@@ -114,7 +114,6 @@
 	<div class="tarjeta" style="margin: 0">
 		<div class="tarjeta-cabecera">
 			<h2>Ponderación</h2>
-			<Icono nombre="resultado" />
 		</div>
 		<form
 			method="POST"
@@ -145,7 +144,6 @@
 	<div class="tarjeta" style="margin: 0">
 		<div class="tarjeta-cabecera">
 			<h2>Agregar un criterio</h2>
-			<Icono nombre="mas" />
 		</div>
 		<form
 			method="POST"
@@ -306,12 +304,9 @@
 </div>
 
 {#if enConstruccion}
-	<div class="tarjeta">
-		<div class="tarjeta-cabecera">
-			<h2>Dar por terminado</h2>
-			<Icono nombre="tilde-circulo" />
-		</div>
-
+	<!-- Sin tarjeta alrededor: el aviso ya trae su marco y el botón es un botón.
+	     Envolverlos sumaba un recuadro que no agrupaba nada que no se entendiera. -->
+	<div class="cerrar-checklist">
 		{#if data.operacionVigente}
 			<div class="aviso alerta">
 				<Icono nombre="alerta" />

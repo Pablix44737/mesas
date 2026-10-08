@@ -29,7 +29,6 @@
 	<div class="tarjeta" style="margin: 0">
 		<div class="tarjeta-cabecera">
 			<h2>Preparar un escenario</h2>
-			<Icono nombre="mas" />
 		</div>
 		<form
 			method="POST"
@@ -63,7 +62,6 @@
 	<div class="tarjeta" style="margin: 0">
 		<div class="tarjeta-cabecera">
 			<h2>Checklist del facilitador</h2>
-			<Icono nombre="checklist" />
 		</div>
 		{#if data.checklistDeOperacion}
 			<div class="identidad">

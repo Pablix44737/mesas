@@ -89,7 +89,6 @@
 		<div class="tarjeta">
 			<div class="tarjeta-cabecera">
 				<h2>Corridas</h2>
-				<Icono nombre="corrida" />
 			</div>
 
 			{#if data.corridaEnCurso}
@@ -259,7 +258,6 @@
 		<div class="tarjeta">
 			<div class="tarjeta-cabecera">
 				<h2>Material que hereda del escenario</h2>
-				<Icono nombre="escenario" />
 			</div>
 
 			<div class="material">

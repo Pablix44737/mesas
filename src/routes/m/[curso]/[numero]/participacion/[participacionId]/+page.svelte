@@ -120,7 +120,7 @@
 		{/if}
 
 		{#each data.pendientes as pendiente (pendiente.participacionId)}
-			<div class="tarjeta">
+			<div class="pendiente-sin-enviar">
 				<div class="aviso alerta" style="margin: 0 0 12px">
 					<Icono nombre="alerta" />
 					<span>
@@ -143,7 +143,6 @@
 			<div class="tarjeta">
 				<div class="tarjeta-cabecera">
 					<h2>Planificación del escenario</h2>
-					<Icono nombre="planificacion" />
 				</div>
 				{#if data.escenario?.planificacion_archivo}
 					<a
@@ -314,7 +313,6 @@
 			<div class="tarjeta">
 				<div class="tarjeta-cabecera">
 					<h2>Durante la corrida</h2>
-					<Icono nombre="reloj" />
 				</div>
 				<p>Tu rol es practicar la técnica: no vas a usar el sistema mientras la ejecutás.</p>
 				<a class="boton secundario bloque" href="/m/{data.curso?.codigo}/{data.mesa.numero}/consulta">
