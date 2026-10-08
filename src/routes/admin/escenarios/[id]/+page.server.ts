@@ -1,4 +1,4 @@
-import { error, fail } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
 import {
 	TAMANO_MAXIMO,
@@ -51,8 +51,16 @@ export const load: PageServerLoad = async ({ params }) => {
 		conteo.set(item.plantilla_id, (conteo.get(item.plantilla_id) ?? 0) + 1);
 	}
 
+	// Las mesas que lo practican son lo único que impide darlo de baja. Se cuenta
+	// acá para poder decir por qué no se puede, en vez de ofrecer un botón que falla.
+	const { count: mesas } = await supabase
+		.from('mesas')
+		.select('id', { count: 'exact', head: true })
+		.eq('escenario_id', escenario.id);
+
 	return {
 		escenario,
+		mesasQueLoPractican: mesas ?? 0,
 		plantillasDeTecnica: (plantillas ?? []).map((p) => ({
 			...p,
 			items: conteo.get(p.id) ?? 0
@@ -61,6 +69,44 @@ export const load: PageServerLoad = async ({ params }) => {
 };
 
 export const actions: Actions = {
+	/**
+	 * Dar de baja un escenario. `borrar_escenario()` rechaza si alguna mesa lo
+	 * practica: borrarlo dejaría a esas mesas sin material y a sus corridas y
+	 * evaluaciones colgando de la nada.
+	 *
+	 * La planificación vive en el bucket, no en la base, así que la función
+	 * devuelve su ruta y el archivo se borra acá. Si fallara ese borrado el
+	 * escenario igual se fue: queda un archivo sin nada que lo referencie, que es
+	 * mejor que dejar a medias el borrado de la fila.
+	 */
+	eliminar: async ({ params }) => {
+		const escenario = await traerEscenario(params.id);
+
+		const { data, error: fallo } = await supabase.rpc('borrar_escenario', {
+			p_escenario_id: escenario.id
+		});
+
+		if (fallo) {
+			if (fallo.message.includes('ya no existe')) {
+				return rechazar(404, 'Ese escenario ya no existe: alguien lo eliminó antes.');
+			}
+			if (fallo.message.includes('lo practican')) {
+				return rechazar(
+					409,
+					'Hay mesas que practican este escenario, así que no se puede eliminar. Eliminá primero esas mesas.'
+				);
+			}
+			return rechazar(500, 'No se pudo eliminar el escenario. Intentá de nuevo.');
+		}
+
+		const resumen = data as unknown as { nombre: string; planificacion_ruta: string | null };
+		if (resumen.planificacion_ruta) {
+			await supabase.storage.from(BUCKET).remove([resumen.planificacion_ruta]);
+		}
+
+		redirect(303, '/admin/escenarios');
+	},
+
 	/**
 	 * Corregir el título. Las mesas guardan `escenario_id` y no una copia del
 	 * nombre, así que las que ya lo practican pasan a mostrar el corregido sin que

@@ -9,6 +9,8 @@
 	let guardando = $state(false);
 	let confirmandoQuitar = $state(false);
 	let renombrandoEnCurso = $state(false);
+	let confirmandoBaja = $state(false);
+	let borrando = $state(false);
 	/**
 	 * Panel de renombrado abierto a mano. Mientras valga `undefined` manda lo que
 	 * devolvió el servidor: así un rechazo lo reabre con lo tipeado aunque no haya
@@ -264,3 +266,51 @@
 		</form>
 	</div>
 </div>
+
+{#if data.mesasQueLoPractican === 0}
+	<div class="dar-de-baja">
+		{#if confirmandoBaja}
+			<div class="aviso error">
+				<Icono nombre="alerta" />
+				<div>
+					<strong>Eliminar el escenario «{data.escenario.nombre}» no se puede deshacer.</strong>
+					Se va con él su planificación adjunta. El checklist asociado no se toca: es un instrumento aparte y lo pueden usar otros escenarios.
+					<form
+						method="POST"
+						action="?/eliminar"
+						style="margin-top: 12px"
+						use:enhance={() => {
+							borrando = true;
+							return async ({ update }) => {
+								await update({ reset: false });
+								borrando = false;
+							};
+						}}
+					>
+						<div class="confirmacion">
+							<button class="boton peligro" type="submit" disabled={borrando}>
+								<Icono nombre="quitar" />
+								{borrando ? 'Eliminando…' : 'Sí, eliminarlo'}
+							</button>
+							<button
+								class="boton secundario"
+								type="button"
+								onclick={() => (confirmandoBaja = false)}
+								disabled={borrando}
+							>
+								Cancelar
+							</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		{:else}
+			<button class="boton peligro" type="button" onclick={() => (confirmandoBaja = true)}>
+				<Icono nombre="quitar" tamano={16} />
+				Eliminar el escenario
+			</button>
+		{/if}
+	</div>
+{:else}
+	<p class="ayuda dar-de-baja">Este escenario no se puede eliminar porque {data.mesasQueLoPractican === 1 ? 'hay una mesa que lo practica' : `hay ${data.mesasQueLoPractican} mesas que lo practican`}. Eliminá primero esas mesas.</p>
+{/if}

@@ -1,4 +1,4 @@
-import { error, fail } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -51,8 +51,23 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	const criterios = (items ?? []).map((i) => ({ ...i, peso: Number(i.peso) }));
 
+	// Lo que impide darlo de baja: estar asociado a un escenario, o que alguien
+	// ya lo haya abierto. Se cuenta acá para decir por qué no se puede.
+	const [{ count: escenarios }, { count: instancias }] = await Promise.all([
+		supabase
+			.from('escenarios')
+			.select('id', { count: 'exact', head: true })
+			.eq('checklist_tecnica_id', plantilla.id),
+		supabase
+			.from('checklist_instancias')
+			.select('id', { count: 'exact', head: true })
+			.eq('plantilla_id', plantilla.id)
+	]);
+
 	return {
 		plantilla,
+		escenariosQueLoUsan: escenarios ?? 0,
+		vecesQueSeUso: instancias ?? 0,
 		items: criterios,
 		maximo: criterios.reduce((total, i) => total + i.peso, 0),
 		operacionVigente: vigente?.nombre ?? null
@@ -154,6 +169,40 @@ export const actions: Actions = {
 	 * checklist: si alguien agregó o quitó un criterio mientras tanto, rechaza en
 	 * vez de aplicar un orden que ya no corresponde.
 	 */
+	/**
+	 * Dar de baja un checklist. `borrar_checklist()` rechaza si está asociado a un
+	 * escenario o si alguien lo abrió alguna vez: una instancia es el trabajo de
+	 * una persona, aunque no lo haya enviado. Sus criterios caen por cascada.
+	 */
+	eliminar: async ({ params }) => {
+		const plantilla = await traerPlantilla(params.id);
+
+		const { error: fallo } = await supabase.rpc('borrar_checklist', {
+			p_plantilla_id: plantilla.id
+		});
+
+		if (fallo) {
+			if (fallo.message.includes('ya no existe')) {
+				return rechazar(404, 'Ese checklist ya no existe: alguien lo eliminó antes.');
+			}
+			if (fallo.message.includes('asociado')) {
+				return rechazar(
+					409,
+					'Hay escenarios que usan este checklist. Desasociálo de ellos antes de eliminarlo.'
+				);
+			}
+			if (fallo.message.includes('se uso')) {
+				return rechazar(
+					409,
+					'Alguien ya completó este checklist en una mesa, así que no se puede eliminar: se perdería ese trabajo.'
+				);
+			}
+			return rechazar(500, 'No se pudo eliminar el checklist. Intentá de nuevo.');
+		}
+
+		redirect(303, '/admin/checklists');
+	},
+
 	reordenarItems: async ({ request, params }) => {
 		const plantilla = await traerPlantilla(params.id);
 

@@ -516,6 +516,8 @@ export type Database = {
 				Args: { p_participacion_id: string };
 				Returns: string;
 			};
+			borrar_escenario: { Args: { p_escenario_id: string }; Returns: Json };
+			borrar_checklist: { Args: { p_plantilla_id: string }; Returns: Json };
 			reordenar_criterios: {
 				Args: { p_items: string[]; p_plantilla_id: string };
 				Returns: undefined;

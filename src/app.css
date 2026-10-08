@@ -1172,6 +1172,14 @@ fieldset.roles.invalido legend {
 /* Cuatro botones de icono: el hueco lo dan ellos mismos, no el gap. */
 /* El asa de arrastre. `touch-action: none` es lo que hace que en el teléfono el
    gesto mueva el criterio en vez de desplazar la página. */
+/* La baja de un escenario o un checklist: va al final de su pantalla, separada
+   del resto, porque no es parte de prepararlo sino de deshacerlo. */
+.dar-de-baja {
+	margin-top: var(--e-8);
+	padding-top: var(--e-5);
+	border-top: 1px solid var(--borde);
+}
+
 .criterio .asa {
 	display: grid;
 	place-items: center;

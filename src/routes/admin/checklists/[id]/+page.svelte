@@ -9,6 +9,8 @@
 	let confirmandoTerminar = $state(false);
 	let editando = $state<string | null>(null);
 	let renombrandoEnCurso = $state(false);
+	let confirmandoBaja = $state(false);
+	let borrando = $state(false);
 	/**
 	 * Panel de renombrado abierto a mano. Mientras valga `undefined` manda lo que
 	 * devolvió el servidor: así un rechazo lo reabre con lo tipeado aunque no haya
@@ -489,4 +491,52 @@
 			Este checklist está disponible: se puede asociar a un escenario y se presenta en las mesas.
 		</span>
 	</div>
+{/if}
+
+{#if data.escenariosQueLoUsan === 0 && data.vecesQueSeUso === 0}
+	<div class="dar-de-baja">
+		{#if confirmandoBaja}
+			<div class="aviso error">
+				<Icono nombre="alerta" />
+				<div>
+					<strong>Eliminar el checklist «{data.plantilla.nombre}» no se puede deshacer.</strong>
+					Se van con él sus {data.items.length} criterios. Nadie lo completó todavía, así que no se pierde ninguna evaluación.
+					<form
+						method="POST"
+						action="?/eliminar"
+						style="margin-top: 12px"
+						use:enhance={() => {
+							borrando = true;
+							return async ({ update }) => {
+								await update({ reset: false });
+								borrando = false;
+							};
+						}}
+					>
+						<div class="confirmacion">
+							<button class="boton peligro" type="submit" disabled={borrando}>
+								<Icono nombre="quitar" />
+								{borrando ? 'Eliminando…' : 'Sí, eliminarlo'}
+							</button>
+							<button
+								class="boton secundario"
+								type="button"
+								onclick={() => (confirmandoBaja = false)}
+								disabled={borrando}
+							>
+								Cancelar
+							</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		{:else}
+			<button class="boton peligro" type="button" onclick={() => (confirmandoBaja = true)}>
+				<Icono nombre="quitar" tamano={16} />
+				Eliminar el checklist
+			</button>
+		{/if}
+	</div>
+{:else}
+	<p class="ayuda dar-de-baja">Este checklist no se puede eliminar: {data.vecesQueSeUso > 0 ? 'alguien ya lo completó en una mesa y se perdería ese trabajo' : (data.escenariosQueLoUsan === 1 ? 'hay un escenario que lo usa' : `hay ${data.escenariosQueLoUsan} escenarios que lo usan`)}.</p>
 {/if}
