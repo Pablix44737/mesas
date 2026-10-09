@@ -136,7 +136,10 @@ que completa y envía como cualquier observador—; el operador y el asistente q
 registrados sin material. Los observadores marcan sus ítems durante la corrida —cada marca viaja al
 servidor en el momento— y al enviar cierran la evaluación, que queda registrada con
 el observador, su rol, la corrida y la mesa. El resultado se muestra siempre contra
-el máximo alcanzable del checklist: «6 de 11 · 55% de los criterios».
+el máximo alcanzable del checklist: «6 de 11 · 55% de los criterios». Enviado el
+checklist, la misma pantalla ofrece **avanzar a la corrida siguiente** eligiendo nada
+más que el rol nuevo: el DNI sale de la participación que ya existe, así que rotar no
+obliga a volver a escanear el QR ni a tipearlo de nuevo.
 
 `/m/<curso>/<numero>/consulta` — quien practicó la técnica se identifica con su DNI una vez
 terminada la corrida y accede a los checklists que enviaron sus observadores, ítem
@@ -253,6 +256,16 @@ búsqueda de «ya me identifiqué» está acotada a la corrida habilitada— y p
 declarar otro rol. Los registros de las corridas previas quedan intactos y cada
 evaluación cuelga de su corrida. Verificado en la Mesa 1: Ana pasó de observadora
 de la técnica (corrida 2) a operadora (corrida 3), y Elena hizo el camino inverso.
+
+**Avanzar de corrida no vuelve a pedir el DNI, y tampoco lo pasea por la URL.** El
+atajo podría haber sido un enlace con el DNI en la query, pero eso lo deja en el
+historial, en los logs y a la vista de quien mire la pantalla. En su lugar la acción
+`avanzar` lo lee de la participación que el enlace ya identifica: lo único que viaja
+en el formulario es el rol nuevo. De paso sale gratis la regla de que desde ahí uno
+avanza a sí mismo y no puede declarar a otro. La acción rechaza si la corrida
+habilitada sigue siendo la propia —una pantalla vieja no inventa una corrida— y, si
+la persona ya se declaró en la nueva desde otro lado, la lleva a su lugar en vez de
+duplicarla.
 
 **Quitar a alguien del padrón no borra lo que hizo.** La clave está en el FK:
 `participaciones.participante_id` tiene `on delete set null`, así que al quitar a

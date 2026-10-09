@@ -1,4 +1,4 @@
-import { error, fail } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
 import { checklistsSinEnviarDe } from '$lib/server/evaluaciones';
 import type { ResultadoDeEvaluacion } from '$lib/tipos';
@@ -88,7 +88,7 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	const plantilla = await plantillaDe(participacion);
 
-	const [{ data: instancia }, { data: items }] = await Promise.all([
+	const [{ data: instancia }, { data: items }, { data: vigente }] = await Promise.all([
 		supabase
 			.from('checklist_instancias')
 			.select('id, enviada_en')
@@ -100,8 +100,18 @@ export const load: PageServerLoad = async ({ params }) => {
 					.select('id, orden, texto, peso')
 					.eq('plantilla_id', plantilla.id)
 					.order('orden')
-			: Promise.resolve({ data: null })
+			: Promise.resolve({ data: null }),
+		// La corrida que el líder tiene habilitada ahora, que puede ser más nueva
+		// que esta: de ahí sale si desde acá se puede avanzar.
+		supabase
+			.from('corridas')
+			.select('id, numero')
+			.eq('mesa_id', mesa.id)
+			.eq('habilitada', true)
+			.maybeSingle()
 	]);
+
+	const siguiente = vigente && vigente.id !== participacion.corrida?.id ? vigente : null;
 
 	// El resultado sale de la vista, que lo calcula contra los pesos vigentes.
 	const [{ data: respuestas }, { data: calculado }] = instancia
@@ -121,11 +131,22 @@ export const load: PageServerLoad = async ({ params }) => {
 	const marcados = new Map((respuestas ?? []).map((r) => [r.item_id, r.cumplido]));
 
 	// Lo que dejó a medias en otra corrida de esta mesa: desde acá siempre vuelve.
-	const pendientes = await checklistsSinEnviarDe(
-		mesa.id,
-		participacion.dni,
-		participacion.corrida?.id
-	);
+	// Y, si hay una corrida más nueva, con qué roles puede entrar a ella —o, si ya
+	// se declaró, cuál es su lugar ahí, para llevarlo en vez de pedirle un rol.
+	const [pendientes, { data: yaDeclarado }, { data: roles }] = await Promise.all([
+		checklistsSinEnviarDe(mesa.id, participacion.dni, participacion.corrida?.id),
+		siguiente
+			? supabase
+					.from('participaciones')
+					.select('id')
+					.eq('corrida_id', siguiente.id)
+					.eq('dni', participacion.dni)
+					.maybeSingle()
+			: Promise.resolve({ data: null }),
+		siguiente
+			? supabase.from('roles').select('codigo, nombre, observador').order('orden')
+			: Promise.resolve({ data: null })
+	]);
 
 	const maximo = Number(calculado?.maximo ?? 0);
 	const resultado: ResultadoDeEvaluacion | null = calculado
@@ -157,6 +178,14 @@ export const load: PageServerLoad = async ({ params }) => {
 		mesa: { numero: mesa.numero },
 		curso: mesa.curso,
 		escenario: mesa.escenario,
+		siguienteCorrida: siguiente
+			? {
+					numero: siguiente.numero,
+					// Su participación en esa corrida, si ya la tenía.
+					participacionId: yaDeclarado?.id ?? null
+				}
+			: null,
+		roles: roles ?? [],
 		pendientes,
 		enviadaEn: instancia?.enviada_en ?? null,
 		resultado,
@@ -237,5 +266,76 @@ export const actions: Actions = {
 		if (fallo) return rechazar(400, 'No se pudo enviar el checklist. Probá de nuevo.');
 
 		return { mensaje: null };
+	},
+
+	/**
+	 * Entrar a la corrida que el líder tenga habilitada ahora, sin pasar otra vez
+	 * por el QR y el DNI.
+	 *
+	 * El DNI sale de esta participación y no del formulario: desde acá se avanza
+	 * uno mismo, no se declara a otro. Lo único que viaja es el rol, porque en la
+	 * corrida nueva suele ser otro —de eso se trata rotar.
+	 *
+	 * Avanzar con el checklist de esta corrida a medias no lo pierde: queda sin
+	 * enviar y la pantalla de la corrida nueva lo ofrece de vuelta, como cuando se
+	 * vuelve a escanear el QR.
+	 */
+	avanzar: async ({ request, params }) => {
+		const { participacion, mesa } = await traerParticipacion(
+			params.participacionId,
+			params.curso,
+			params.numero
+		);
+
+		const formulario = await request.formData();
+		const rolCodigo = String(formulario.get('rolCodigo') ?? '');
+
+		if (!rolCodigo) return rechazar(400, 'Elegí el rol que vas a ocupar en la corrida nueva.');
+
+		const [{ data: rol }, { data: vigente }] = await Promise.all([
+			supabase.from('roles').select('codigo').eq('codigo', rolCodigo).maybeSingle(),
+			supabase
+				.from('corridas')
+				.select('id, numero')
+				.eq('mesa_id', mesa.id)
+				.eq('habilitada', true)
+				.maybeSingle()
+		]);
+
+		if (!rol) return rechazar(400, 'Ese rol no existe.');
+		if (!vigente) return rechazar(409, 'La mesa no tiene ninguna corrida habilitada.');
+
+		// Pudo haber quedado abierta esta pantalla desde antes de que el líder
+		// habilitara la corrida siguiente —o sin que la habilitara nunca.
+		if (vigente.id === participacion.corrida?.id) {
+			return rechazar(
+				409,
+				`El líder todavía no habilitó la corrida siguiente: la ${vigente.numero} sigue siendo la abierta.`
+			);
+		}
+
+		// Pudo declararse desde otra pantalla mientras esta esperaba.
+		const { data: existente } = await supabase
+			.from('participaciones')
+			.select('id')
+			.eq('corrida_id', vigente.id)
+			.eq('dni', participacion.dni)
+			.maybeSingle();
+
+		if (existente) {
+			redirect(303, `/m/${params.curso}/${params.numero}/participacion/${existente.id}`);
+		}
+
+		const { data: nueva, error: fallo } = await supabase
+			.from('participaciones')
+			.insert({ corrida_id: vigente.id, dni: participacion.dni, rol_codigo: rolCodigo })
+			.select('id')
+			.single();
+
+		if (fallo || !nueva) {
+			return rechazar(400, 'No se pudo registrarte en la corrida nueva. Intentá de nuevo.');
+		}
+
+		redirect(303, `/m/${params.curso}/${params.numero}/participacion/${nueva.id}`);
 	}
 };

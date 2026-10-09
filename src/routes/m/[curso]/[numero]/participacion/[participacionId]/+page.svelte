@@ -4,7 +4,7 @@
 	import BarraSuperior from '$lib/BarraSuperior.svelte';
 	import { mostrarDni } from '$lib/dni';
 	import { mostrarTamano } from '$lib/planificacion';
-	import { iconoDeRol, llevaChecklist, practicaLaTecnica } from '$lib/roles';
+	import { iconoDeRol, llevaChecklist, practicaLaTecnica, queHaceElRol } from '$lib/roles';
 
 	let { data, form } = $props();
 
@@ -22,6 +22,7 @@
 	let falloDeMarca = $state<string | null>(null);
 	let confirmandoEnvio = $state(false);
 	let enviando = $state(false);
+	let avanzando = $state(false);
 
 	const enviada = $derived(data.enviadaEn !== null);
 	const practica = $derived(practicaLaTecnica(data.participacion.rolCodigo));
@@ -319,6 +320,82 @@
 					<Icono nombre="resultado" />
 					Ver lo registrado sobre tu corrida
 				</a>
+			</div>
+		{/if}
+
+		<!-- Enviado el checklist, lo que sigue es la corrida siguiente. Sin esto había
+		     que volver a escanear el QR y tipear el DNI de nuevo para rotar de rol. -->
+		{#if enviada}
+			<div class="avanzar">
+				{#if !data.siguienteCorrida}
+					<h2 class="t-sub">La corrida {data.corrida.numero} es la que sigue abierta</h2>
+					<p class="detalle" style="margin-bottom: 12px">
+						Cuando el líder de mesa habilite la siguiente, vas a poder entrar desde acá sin
+						volver a escanear el QR.
+					</p>
+					<a
+						class="boton secundario bloque"
+						href="/m/{data.curso?.codigo}/{data.mesa.numero}/participacion/{data.participacion.id}"
+						data-sveltekit-reload
+					>
+						<Icono nombre="reloj" />
+						Buscar de nuevo
+					</a>
+				{:else if data.siguienteCorrida.participacionId}
+					<h2 class="t-sub">Ya estás en la corrida {data.siguienteCorrida.numero}</h2>
+					<p class="detalle" style="margin-bottom: 12px">
+						El líder la habilitó y vos ya declaraste tu rol ahí.
+					</p>
+					<a
+						class="boton bloque"
+						href="/m/{data.curso?.codigo}/{data.mesa.numero}/participacion/{data.siguienteCorrida
+							.participacionId}"
+					>
+						Ir a la corrida {data.siguienteCorrida.numero}
+						<Icono nombre="adelante" />
+					</a>
+				{:else}
+					<h2 class="t-sub">Avanzar a la corrida {data.siguienteCorrida.numero}</h2>
+					<p class="detalle" style="margin-bottom: 12px">
+						Te identificamos por el DNI que ya ingresaste: solo elegí el rol que vas a ocupar
+						ahora.
+					</p>
+					<form
+						method="POST"
+						action="?/avanzar"
+						use:enhance={() => {
+							avanzando = true;
+							return async ({ update }) => {
+								await update({ reset: false });
+								avanzando = false;
+							};
+						}}
+					>
+						<fieldset class="roles">
+							<legend>El rol que vas a ocupar en la corrida {data.siguienteCorrida.numero}</legend>
+							{#each data.roles as rol (rol.codigo)}
+								<label class="rol">
+									<input type="radio" name="rolCodigo" value={rol.codigo} required />
+									<span class="avatar-rol" class:gris={!rol.observador}>
+										<Icono nombre={iconoDeRol[rol.codigo] ?? 'operador'} />
+									</span>
+									<span class="texto">
+										<span class="rol-nombre">{rol.nombre}</span>
+										<span class="detalle">{queHaceElRol[rol.codigo] ?? ''}</span>
+									</span>
+									<Icono nombre="tilde-circulo" clase="marca-elegido" />
+								</label>
+							{/each}
+						</fieldset>
+
+						<div class="barra-accion">
+							<button class="boton bloque" type="submit" disabled={avanzando}>
+								{avanzando ? 'Registrando…' : `Entrar a la corrida ${data.siguienteCorrida.numero}`}
+								{#if !avanzando}<Icono nombre="adelante" />{/if}
+							</button>
+						</div>
+					</form>
+				{/if}
 			</div>
 		{/if}
 	</div>

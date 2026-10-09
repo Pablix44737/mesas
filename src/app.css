@@ -1174,7 +1174,11 @@ fieldset.roles.invalido legend {
    gesto mueva el criterio en vez de desplazar la página. */
 /* La baja de un escenario o un checklist: va al final de su pantalla, separada
    del resto, porque no es parte de prepararlo sino de deshacerlo. */
-.dar-de-baja {
+/* Un bloque que no es parte de lo que la pantalla viene haciendo sino de lo que
+   sigue después —deshacerlo, o pasar a la corrida siguiente—, separado con una
+   línea para que no se lea como un paso más de lo de arriba. */
+.dar-de-baja,
+.avanzar {
 	margin-top: var(--e-8);
 	padding-top: var(--e-5);
 	border-top: 1px solid var(--borde);
