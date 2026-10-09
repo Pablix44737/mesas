@@ -133,7 +133,8 @@ En un curso de alumnos la misma pantalla suma **quién conduce la mesa**: ahí e
 facilita es el docente, no un alumno, así que deja su documento una vez y el sistema
 le abre su lugar de facilitador en cada corrida que habilite. Desde ahí entra a la
 pantalla del facilitador de siempre —la planificación y la lista de cotejo de la
-técnica—, que no se duplica acá.
+técnica—, que no se duplica acá, y vuelve con un botón: es la única persona del
+sistema que tiene que ir y venir entre las dos pantallas.
 
 `/mesas/<curso>/<numero>/cartel` — el QR en grande, con el curso, el número de mesa
 y el escenario arriba, para proyectar o imprimir. Trae su propio botón de impresión, así que sirve

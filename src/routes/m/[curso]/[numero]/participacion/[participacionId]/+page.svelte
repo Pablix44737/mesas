@@ -64,7 +64,7 @@
 
 <div class="app">
 	<BarraSuperior
-		volverA="/m/{data.curso?.codigo}/{data.mesa.numero}"
+		volverA={data.volverA}
 		titulo="Mesa {data.mesa.numero}"
 		sub={data.escenario?.nombre ?? ''}
 	>
@@ -324,9 +324,24 @@
 			</div>
 		{/if}
 
-		<!-- Enviado el checklist, lo que sigue es la corrida siguiente. Sin esto había
-		     que volver a escanear el QR y tipear el DNI de nuevo para rotar de rol. -->
-		{#if enviada}
+		<!-- El docente no rota: su lugar de facilitador se le abre en cada corrida que
+		     habilite. Lo que necesita es volver a conducir la mesa, y sin esto quedaba
+		     encerrado acá con la sola flecha de la barra. -->
+		{#if data.conduceLaMesa}
+			<div class="avanzar">
+				<h2 class="t-sub">Seguís conduciendo la mesa</h2>
+				<p class="detalle" style="margin-bottom: 12px">
+					No tenés que volver a declararte: al habilitar la corrida siguiente, tu lugar de
+					facilitador se abre solo y el checklist nuevo te espera acá.
+				</p>
+				<a class="boton bloque" href="/mesas/{data.curso?.codigo}/{data.mesa.numero}">
+					<Icono nombre="atras" />
+					Volver a conducir la mesa
+				</a>
+			</div>
+		{:else if enviada}
+			<!-- Enviado el checklist, lo que sigue es la corrida siguiente. Sin esto había
+			     que volver a escanear el QR y tipear el DNI de nuevo para rotar de rol. -->
 			<div class="avanzar">
 				{#if !data.siguienteCorrida}
 					<h2 class="t-sub">La corrida {data.corrida.numero} es la que sigue abierta</h2>

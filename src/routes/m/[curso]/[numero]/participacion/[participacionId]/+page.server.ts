@@ -26,7 +26,7 @@ async function traerParticipacion(
 			 corrida:corridas(
 				id, numero, habilitada,
 				mesa:mesas(
-					id, numero,
+					id, numero, docente_dni,
 					curso:cursos(codigo, nombre, destinado_a),
 					escenario:escenarios(
 						id, nombre, planificacion_archivo, planificacion_tamano,
@@ -115,6 +115,15 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	const siguiente = vigente && vigente.id !== participacion.corrida?.id ? vigente : null;
 
+	/**
+	 * Esta participación es la del docente que conduce la mesa, no la de alguien
+	 * que escaneó el QR. Cambia dos cosas: a dónde vuelve —a su pantalla de líder,
+	 * no al formulario de DNI, donde no tendría nada que hacer— y que no se le
+	 * ofrezca elegir rol para la corrida siguiente, porque el suyo se le abre solo.
+	 */
+	const conduceLaMesa =
+		mesa.curso?.destinado_a === 'alumnos' && mesa.docente_dni === participacion.dni;
+
 	// El resultado sale de la vista, que lo calcula contra los pesos vigentes.
 	const [{ data: respuestas }, { data: calculado }] = instancia
 		? await Promise.all([
@@ -145,7 +154,7 @@ export const load: PageServerLoad = async ({ params }) => {
 					.eq('dni', participacion.dni)
 					.maybeSingle()
 			: Promise.resolve({ data: null }),
-		siguiente
+		siguiente && !conduceLaMesa
 			? rolesQueSeEligen(mesa.curso?.destinado_a ?? '')
 			: Promise.resolve([])
 	]);
@@ -181,6 +190,12 @@ export const load: PageServerLoad = async ({ params }) => {
 		},
 		mesa: { numero: mesa.numero },
 		curso: mesa.curso,
+		conduceLaMesa,
+		// Adónde lleva la flecha de la barra: quien escaneó vuelve a la mesa; el
+		// docente, a la pantalla desde la que la conduce.
+		volverA: conduceLaMesa
+			? `/mesas/${mesa.curso?.codigo}/${mesa.numero}`
+			: `/m/${mesa.curso?.codigo}/${mesa.numero}`,
 		escenario: mesa.escenario,
 		siguienteCorrida: siguiente
 			? {

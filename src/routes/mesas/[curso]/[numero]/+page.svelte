@@ -177,38 +177,61 @@
 						</p>
 					{/if}
 
-					<div class="acciones-fila" style="margin-top: 12px">
-						<button class="enlace" type="button" onclick={() => (declarandoDocente = true)}>
-							Cambiar el documento
-						</button>
-						{#if confirmandoQuitarDocente}
-							<form
-								method="POST"
-								action="?/quitarDocente"
-								use:enhance={() => async ({ update }) => {
-									await update({ reset: false });
-									confirmandoQuitarDocente = false;
-								}}
-							>
-								<button class="enlace peligro" type="submit">Sí, sacarlo</button>
-							</form>
+					<!-- Dos acciones que no son el camino principal —ése es completar la
+					     técnica—, pero que tienen que decir qué hacen sin que haya que
+					     probarlas. Mismo patrón que quitar la planificación de un escenario:
+					     un botón, y la confirmación recién al tocarlo. -->
+					{#if confirmandoQuitarDocente}
+						<div class="aviso alerta" style="margin: 16px 0 0">
+							<Icono nombre="alerta" />
+							<div>
+								<strong>La mesa va a quedar sin nadie que la conduzca.</strong>
+								Lo que {data.docente.nombre ?? 'esa persona'} ya evaluó queda registrado; lo que
+								deja de pasar es que se le abra lugar de facilitador en las corridas nuevas.
+								<div class="confirmacion" style="margin-top: 12px">
+									<form
+										method="POST"
+										action="?/quitarDocente"
+										use:enhance={() => async ({ update }) => {
+											await update({ reset: false });
+											confirmandoQuitarDocente = false;
+										}}
+									>
+										<button class="boton peligro" type="submit">
+											<Icono nombre="quitar" />
+											Sí, dejarla sin docente
+										</button>
+									</form>
+									<button
+										class="boton secundario"
+										type="button"
+										onclick={() => (confirmandoQuitarDocente = false)}
+									>
+										Cancelar
+									</button>
+								</div>
+							</div>
+						</div>
+					{:else}
+						<div class="acciones-docente">
 							<button
-								class="enlace"
+								class="boton secundario"
 								type="button"
-								onclick={() => (confirmandoQuitarDocente = false)}
+								onclick={() => (declarandoDocente = true)}
 							>
-								Cancelar
+								<Icono nombre="editar" tamano={16} />
+								La conduce otra persona
 							</button>
-						{:else}
 							<button
-								class="enlace"
+								class="boton secundario"
 								type="button"
 								onclick={() => (confirmandoQuitarDocente = true)}
 							>
-								Sacarlo
+								<Icono nombre="quitar" tamano={16} />
+								Dejarla sin docente
 							</button>
-						{/if}
-					</div>
+						</div>
+					{/if}
 				{/if}
 			</div>
 		{/if}

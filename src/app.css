@@ -1174,6 +1174,21 @@ fieldset.roles.invalido legend {
    gesto mueva el criterio en vez de desplazar la página. */
 /* La baja de un escenario o un checklist: va al final de su pantalla, separada
    del resto, porque no es parte de prepararlo sino de deshacerlo. */
+/* Las dos acciones secundarias de quién conduce la mesa. Se envuelven en el
+   teléfono en vez de apretarse: antes compartían `.acciones-fila`, que está hecha
+   para botones de icono de 40px en una fila de tabla, y con texto los dejaba a 2px
+   uno del otro, leyéndose como un solo enlace. */
+.acciones-docente {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--e-2);
+	margin-top: var(--e-4);
+}
+
+.acciones-docente .boton {
+	flex: 1 1 auto;
+}
+
 /* Un bloque que no es parte de lo que la pantalla viene haciendo sino de lo que
    sigue después —deshacerlo, o pasar a la corrida siguiente—, separado con una
    línea para que no se lea como un paso más de lo de arriba. */
