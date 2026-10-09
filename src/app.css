@@ -1174,6 +1174,145 @@ fieldset.roles.invalido legend {
    gesto mueva el criterio en vez de desplazar la página. */
 /* La baja de un escenario o un checklist: va al final de su pantalla, separada
    del resto, porque no es parte de prepararlo sino de deshacerlo. */
+/* --- recorrido de la mesa: personas por roles --- */
+
+/* Las columnas son los roles y no las corridas. Así son siempre las mismas cuatro
+   o cinco, no importa cuántas corridas lleve la mesa, y «qué le falta a esta
+   persona» se contesta mirando el hueco en vez de leyendo. */
+.tabla.recorrido th[scope='col'] {
+	/* El resto de las tablas no deja cortar los encabezados, pero acá son nombres
+	   de rol largos y la alternativa serían columnas de media pantalla. */
+	white-space: normal;
+	min-width: 5.5rem;
+}
+
+/* El nombre entero queda en el `title`, pero sin subrayado punteado: acá no es una
+   sigla que haya que descifrar, es el mismo nombre un poco más corto. */
+.tabla.recorrido th[scope='col'] abbr {
+	text-decoration: none;
+	cursor: inherit;
+}
+
+/* El encabezado de la primera columna se fija con ella: si no, los nombres de rol
+   se corren por encima del lugar donde quedaron los de las personas. */
+.tabla.recorrido thead th:first-child {
+	position: sticky;
+	left: 0;
+	z-index: 2;
+	background: var(--superficie-baja);
+	border-right: 1px solid var(--borde);
+}
+
+/* La primera columna queda fija mientras las demás se corren: el nombre y lo que
+   le falta son justamente lo que hay que tener a la vista al mirar cualquier rol. */
+.tabla.recorrido th[scope='row'] {
+	position: sticky;
+	left: 0;
+	z-index: 1;
+	min-width: 11rem;
+	padding: var(--e-4) var(--e-5);
+	background: var(--superficie);
+	border-right: 1px solid var(--borde);
+	border-bottom: 1px solid var(--borde);
+	font-size: 15px;
+	font-weight: 400;
+	letter-spacing: normal;
+	text-transform: none;
+	color: inherit;
+}
+
+.tabla.recorrido tbody tr:last-child th[scope='row'] {
+	border-bottom: 0;
+}
+
+/* Sin esto la celda fija se queda blanca mientras el resto de la fila se ilumina. */
+.tabla.recorrido tbody tr:hover th[scope='row'] {
+	background: var(--azul-tenue);
+}
+
+.recorrido-quien {
+	display: block;
+	font-weight: 600;
+}
+
+.recorrido-falta {
+	display: block;
+	margin-top: 2px;
+	font-size: 13px;
+	line-height: 18px;
+	color: var(--tinta-suave);
+}
+
+/* Cada corrida en que ocupó ese rol. Dos marcas en una celda es alguien que lo
+   repitió; ninguna, un rol que todavía no hizo. */
+.corrida-marca {
+	display: inline-grid;
+	place-items: center;
+	min-width: 26px;
+	height: 26px;
+	padding: 0 6px;
+	margin: 2px 4px 2px 0;
+	border: 1px solid var(--borde);
+	border-radius: var(--r-sm);
+	background: var(--superficie-baja);
+	font-size: 13px;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+/* La corrida en curso, para separar lo que está pasando de lo que ya pasó. */
+.corrida-marca.ahora {
+	border-color: var(--azul);
+	background: var(--azul-tenue);
+	color: var(--azul);
+}
+
+.sin-ocupar {
+	color: var(--borde-fuerte);
+}
+
+/* En el teléfono, con los anchos de arriba entraba una sola columna de rol por
+   vez y había que barrer la tabla entera para contestar algo. Apretando la
+   columna fija y las de rol entran tres, que alcanzan para leer una fila de un
+   vistazo. Los encabezados se parten en varias líneas y está bien: son los
+   nombres de los roles, no texto que haya que seguir. */
+@media (max-width: 719px) {
+	.tabla.recorrido th[scope='row'] {
+		min-width: 8.5rem;
+		padding-left: var(--e-4);
+		padding-right: var(--e-4);
+	}
+
+	/* El tope va en el contenido y no en la celda: en una tabla de ancho automático
+	   `width` sobre un `th` es apenas una sugerencia y la columna igual se estira
+	   hasta el nombre más largo, comiéndose el lugar de los roles. Acotando lo de
+	   adentro, el nombre se parte en dos líneas, que en una columna fija no molesta. */
+	.recorrido-quien,
+	.recorrido-falta {
+		max-width: 8.5rem;
+	}
+
+	.tabla.recorrido th[scope='col'] {
+		min-width: 4.5rem;
+		padding-left: var(--e-3);
+		padding-right: var(--e-3);
+	}
+
+	.tabla.recorrido td {
+		padding-left: var(--e-3);
+		padding-right: var(--e-3);
+	}
+
+	.recorrido-quien {
+		font-size: 14px;
+	}
+
+	.recorrido-falta {
+		font-size: 12px;
+		line-height: 16px;
+	}
+}
+
 /* Las dos acciones secundarias de quién conduce la mesa. Se envuelven en el
    teléfono en vez de apretarse: antes compartían `.acciones-fila`, que está hecha
    para botones de icono de 40px en una fila de tabla, y con texto los dejaba a 2px

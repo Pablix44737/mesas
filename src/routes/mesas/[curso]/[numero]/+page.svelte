@@ -15,6 +15,14 @@
 
 	const siguiente = $derived((data.corridas[0]?.numero ?? 0) + 1);
 
+	/**
+	 * «Observador» es la palabra más larga de la tabla de recorrido y es la que fija
+	 * el ancho mínimo de tres de sus columnas: abreviarla es la diferencia entre ver
+	 * un rol por vez en el teléfono y ver dos. Sólo en el encabezado, donde la
+	 * columna ya dice de qué se trata; en el resto del sistema el rol va entero.
+	 */
+	const abreviado = (rol: string) => rol.replace(/^Observador /, 'Obs. ');
+
 	const hora = (fecha: string) =>
 		new Date(fecha).toLocaleTimeString('es-AR', {
 			hour: '2-digit',
@@ -402,6 +410,94 @@
 				<p class="detalle" style="margin: 12px 0 0">
 					Por esta mesa pasaron {data.personasEnLaMesa} personas contando todas sus corridas.
 				</p>
+			{/if}
+		</div>
+
+		<!-- Lo que el modelo MESAS no resuelve solo: con más o menos de cinco personas
+		     la rotación en sentido de las agujas del reloj no cierra, alguien repite
+		     rol y alguien nunca llega a otro. Esto no decide por el líder, le muestra
+		     de qué decidir. -->
+		<div class="tarjeta">
+			<div class="tarjeta-cabecera">
+				<h2>Recorrido de la mesa</h2>
+				{#if data.recorrido.length > 0}
+					<span class="detalle">
+						{data.recorrido.length}
+						{data.recorrido.length === 1 ? 'persona' : 'personas'}
+					</span>
+				{/if}
+			</div>
+
+			{#if data.recorrido.length === 0}
+				<p class="detalle" style="margin: 0">
+					Todavía no pasó nadie por esta mesa. Cuando se identifiquen vas a ver acá qué rol
+					ocupó cada uno en cada corrida.
+				</p>
+			{:else}
+				<p class="ayuda">
+					En qué corridas ocupó cada rol. El hueco es lo que le falta, y es por donde conviene
+					seguir la rotación.
+				</p>
+
+				<div class="tabla-envoltorio">
+					<table class="tabla recorrido">
+						<thead>
+							<tr>
+								<th scope="col">Persona</th>
+								{#each data.rolesDeLaMesa as rol (rol.codigo)}
+									<th scope="col"><abbr title={rol.nombre}>{abreviado(rol.nombre)}</abbr></th>
+								{/each}
+							</tr>
+						</thead>
+						<tbody>
+							{#each data.recorrido as persona (persona.dni)}
+								<tr>
+									<th scope="row">
+										<span class="recorrido-quien">
+											{#if persona.nombre}
+												{persona.nombre}
+											{:else}
+												<span class="pendiente">DNI {mostrarDni(persona.dni)}</span>
+											{/if}
+										</span>
+										{#if persona.conduceLaMesa}
+											<span class="recorrido-falta">Conduce la mesa, no rota</span>
+										{:else if persona.faltan.length > 0}
+											<span class="recorrido-falta">
+												Le falta: {persona.faltan.join(', ')}
+											</span>
+										{:else}
+											<span class="recorrido-falta">Ya ocupó todos los roles</span>
+										{/if}
+									</th>
+									{#each persona.porRol as celda (celda.codigo)}
+										<td>
+											{#if celda.numeros.length === 0}
+												<span class="visualmente-oculto">Nunca</span>
+												<span class="sin-ocupar" aria-hidden="true">—</span>
+											{:else}
+												{#each celda.numeros as numero (numero)}
+													<span
+														class="corrida-marca"
+														class:ahora={numero === data.corridaEnCurso?.numero}
+													>
+														{numero}
+													</span>
+												{/each}
+											{/if}
+										</td>
+									{/each}
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+
+				{#if data.nadieLosOcupo.length > 0}
+					<p class="detalle" style="margin: 12px 0 0">
+						En esta mesa nadie ocupó todavía: {data.nadieLosOcupo.join(', ')}.
+					</p>
+				{/if}
 			{/if}
 		</div>
 

@@ -129,6 +129,10 @@ de su escenario —la planificación para el facilitador y los dos checklists, c
 uno con su cantidad de ítems y su máximo alcanzable— y es donde el líder habilita
 las corridas: la primera, y después cada siguiente, que cierra la anterior.
 
+Y el **recorrido de la mesa**: una fila por persona, una columna por rol, y en cada
+celda las corridas en que lo ocupó. Es lo que el líder necesita para decidir la
+rotación siguiente, y lo que hasta ahora no tenía: sólo veía la corrida en curso.
+
 En un curso de alumnos la misma pantalla suma **quién conduce la mesa**: ahí el que
 facilita es el docente, no un alumno, así que deja su documento una vez y el sistema
 le abre su lugar de facilitador en cada corrida que habilite. Desde ahí entra a la
@@ -271,6 +275,23 @@ búsqueda de «ya me identifiqué» está acotada a la corrida habilitada— y p
 declarar otro rol. Los registros de las corridas previas quedan intactos y cada
 evaluación cuelga de su corrida. Verificado en la Mesa 1: Ana pasó de observadora
 de la técnica (corrida 2) a operadora (corrida 3), y Elena hizo el camino inverso.
+
+**Las columnas del recorrido son los roles, no las corridas.** Es el punto flojo del
+modelo MESAS: con cinco personas la rotación en sentido de las agujas del reloj cierra
+en el papel, pero con seis —o con cuatro— alguien repite rol y alguien nunca llega a
+otro, y el líder no tenía cómo saber cuál. Poner una columna por corrida haría crecer
+la tabla sin techo y en el teléfono no entraría; con una por rol son siempre las mismas
+cuatro o cinco, y «qué le falta a esta persona» se contesta mirando el hueco en vez de
+leyendo. La columna de nombres queda fija al desplazar, con lo que le falta debajo del
+nombre: es lo que hay que tener a la vista mirando cualquier rol.
+
+Que esto hacía falta lo dicen los propios datos. En la Mesa 6 de la Diplomatura la
+rotación fue la ideal —cinco personas, cinco corridas, cinco roles— y aun así **los
+cinco repitieron observador del facilitador y ninguno fue asistente nunca**. En todo
+el sistema el rol de asistente se ocupó **una sola vez**. Nadie podía verlo.
+
+No cuesta ninguna consulta: las participaciones de todas las corridas ya se cargaban
+para contar cuánta gente pasó por la mesa.
 
 **El mismo modelo se juega distinto según a quién esté destinado el curso.** Con
 docentes o instructores, uno de ellos facilita y otro lo evalúa. Con alumnos eso no

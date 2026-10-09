@@ -119,6 +119,74 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	const ocupados = new Set(enLaCorridaEnCurso.map((p) => p.rolCodigo));
 
 	/**
+	 * El recorrido de la mesa: una fila por persona, una columna por rol, y en cada
+	 * celda las corridas en que lo ocupó.
+	 *
+	 * Es el punto flojo del modelo MESAS. Con cinco personas la rotación cierra en
+	 * el papel, pero en cuanto son seis —o cuatro— hay quien repite rol y quien
+	 * nunca llega a alguno, y el líder no tenía forma de saber cuál. Hoy sólo ve la
+	 * corrida en curso.
+	 *
+	 * Las columnas son roles y no corridas a propósito: así son siempre las mismas
+	 * cuatro o cinco, no importa cuántas corridas lleve la mesa, y la pregunta «qué
+	 * le falta» se contesta sin leer nada, porque es el hueco.
+	 *
+	 * No cuesta ninguna consulta: las participaciones de todas las corridas ya
+	 * estaban cargadas para contar cuánta gente pasó por la mesa.
+	 */
+	const numeroDeCorrida = new Map((corridas ?? []).map((c) => [c.id, c.numero]));
+
+	const porPersona = new Map<
+		string,
+		{ dni: string; nombre: string | null; porRol: Map<string, number[]> }
+	>();
+
+	for (const participacion of todasLasParticipaciones) {
+		const numero = numeroDeCorrida.get(participacion.corrida_id);
+		if (numero === undefined) continue;
+
+		let persona = porPersona.get(participacion.dni);
+		if (!persona) {
+			persona = {
+				dni: participacion.dni,
+				nombre: participacion.participante
+					? `${participacion.participante.nombre} ${participacion.participante.apellido}`
+					: null,
+				porRol: new Map()
+			};
+			porPersona.set(participacion.dni, persona);
+		}
+
+		const suyas = persona.porRol.get(participacion.rol_codigo) ?? [];
+		suyas.push(numero);
+		persona.porRol.set(participacion.rol_codigo, suyas);
+	}
+
+	const recorrido = [...porPersona.values()]
+		.map((persona) => ({
+			dni: persona.dni,
+			nombre: persona.nombre,
+			enLaCorridaEnCurso: enLaCorridaEnCurso.some((p) => p.dni === persona.dni),
+			corridas: [...persona.porRol.values()].reduce((total, n) => total + n.length, 0),
+			porRol: roles.map((rol) => ({
+				codigo: rol.codigo,
+				numeros: (persona.porRol.get(rol.codigo) ?? []).sort((a, b) => a - b)
+			})),
+			// El docente de un curso de alumnos no rota: facilita en todas. Decirle que
+			// le falta ser observador sería recomendarle algo que no va a hacer.
+			conduceLaMesa: curso.destinado_a === 'alumnos' && persona.dni === mesa.docente_dni,
+			// Lo que le falta por ocupar: es la recomendación para la corrida que viene.
+			faltan: roles.filter((rol) => !persona.porRol.has(rol.codigo)).map((rol) => rol.nombre)
+		}))
+		.sort((a, b) => (a.nombre ?? a.dni).localeCompare(b.nombre ?? b.dni));
+
+	// Roles que en esta mesa no ocupó nadie, nunca. Pasa más de lo que parece: el
+	// asistente se ocupó una sola vez en todo el sistema.
+	const nadieLosOcupo = roles
+		.filter((rol) => !todasLasParticipaciones.some((p) => p.rol_codigo === rol.codigo))
+		.map((rol) => rol.nombre);
+
+	/**
 	 * En un curso de alumnos el docente hace dos cosas: conduce la mesa y facilita.
 	 * Ningún alumno puede ser facilitador, así que ese rol no sale del QR sino de
 	 * acá: se declara una vez por mesa y el sistema le abre su lugar en cada
@@ -155,6 +223,10 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		participantes: enLaCorridaEnCurso,
 		// Informativo, no una falta: una mesa puede correr sin asistente, por ejemplo.
 		rolesLibres: roles.filter((r) => !ocupados.has(r.codigo)).map((r) => r.nombre),
+		// Las columnas del recorrido: los roles que ocupa este curso, en su orden.
+		rolesDeLaMesa: roles.map((r) => ({ codigo: r.codigo, nombre: r.nombre })),
+		recorrido,
+		nadieLosOcupo,
 		// Personas distintas que pasaron por la mesa, contando todas sus corridas.
 		personasEnLaMesa: new Set(todasLasParticipaciones.map((p) => p.dni)).size,
 		// Para mostrar junto al QR la dirección que codifica, por si alguien
