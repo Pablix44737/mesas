@@ -16,7 +16,7 @@ import { supabase } from './supabase';
 export async function cursoPorCodigo(codigo: string) {
 	const { data, error: fallo } = await supabase
 		.from('cursos')
-		.select('id, codigo, nombre, archivado')
+		.select('id, codigo, nombre, archivado, destinado_a')
 		.eq('codigo', codigo)
 		.maybeSingle();
 

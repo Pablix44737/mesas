@@ -11,7 +11,7 @@ async function traerPlantilla(id: string) {
 
 	const { data, error: fallo } = await supabase
 		.from('checklist_plantillas')
-		.select('id, nombre, rol_codigo, ponderado, estado, rol:roles(nombre)')
+		.select('id, nombre, rol_codigo, ponderado, estado, rol:roles(nombre, checklist)')
 		.eq('id', id)
 		.maybeSingle();
 
@@ -38,13 +38,14 @@ export const load: PageServerLoad = async ({ params }) => {
 		.eq('plantilla_id', plantilla.id)
 		.order('orden');
 
-	// Si es el del facilitador, avisamos a cuál va a reemplazar al terminarlo.
+	// Los checklists comunes tienen uno solo vigente por rol, así que al terminar
+	// éste el que esté en uso queda reemplazado. Se avisa cuál antes, no después.
 	const { data: vigente } =
-		plantilla.rol_codigo === 'observador_operacion' && plantilla.estado !== 'disponible'
+		plantilla.rol?.checklist === 'comun' && plantilla.estado !== 'disponible'
 			? await supabase
 					.from('checklist_plantillas')
 					.select('nombre')
-					.eq('rol_codigo', 'observador_operacion')
+					.eq('rol_codigo', plantilla.rol_codigo)
 					.eq('estado', 'disponible')
 					.maybeSingle()
 			: { data: null };

@@ -1,6 +1,7 @@
 /** Cómo se representa cada rol del modelo MESAS en la interfaz. */
 export const iconoDeRol: Record<string, string> = {
 	observador_operacion: 'escenario',
+	observador_proceso: 'corrida',
 	observador_tecnica: 'observador',
 	facilitador: 'facilitador',
 	operador: 'operador',
@@ -9,26 +10,31 @@ export const iconoDeRol: Record<string, string> = {
 
 export const queHaceElRol: Record<string, string> = {
 	observador_operacion: 'Evaluás el desempeño del facilitador',
+	observador_proceso: 'Evaluás cómo se desarrolla la simulación',
 	observador_tecnica: 'Evaluás la ejecución de la técnica',
 	facilitador: 'Recibís la planificación y evaluás la técnica',
 	operador: 'Practicás la técnica',
 	asistente: 'Acompañás al operador durante la técnica'
 };
 
-/** Los observadores llevan checklist; el resto, no. */
-export const esObservador = (rolCodigo: string) =>
-	rolCodigo === 'observador_operacion' || rolCodigo === 'observador_tecnica';
+/**
+ * De dónde sale la lista de cotejo que completa cada rol. Espeja `roles.checklist`
+ * en la base, que es la que manda:
+ *
+ *   `comun`          una plantilla propia del rol, la misma para todas las mesas
+ *   `del_escenario`  la lista de cotejo de la técnica que trae el escenario
+ *   `null`           el rol no evalúa
+ */
+export type OrigenDelChecklist = 'comun' | 'del_escenario' | null;
 
 /**
- * Quiénes completan una lista de cotejo durante la corrida.
+ * Quién evalúa durante la corrida, a partir de lo que dijo la base.
  *
- * No es lo mismo que `esObservador`: el facilitador también evalúa la técnica
- * —con el mismo checklist del escenario que usa su observador— pero no es un rol
- * observador. Esa distinción importa porque `roles.observador` decide de qué rol
- * puede ser una plantilla, y el facilitador no tiene una propia: usa la prestada.
+ * Se recibe el origen en vez de deducirlo del código del rol porque los roles son
+ * datos: el observador del proceso nació sin tocar una línea de esta función, y el
+ * que venga después tampoco debería tener que tocarla.
  */
-export const llevaChecklist = (rolCodigo: string) =>
-	esObservador(rolCodigo) || rolCodigo === 'facilitador';
+export const llevaChecklist = (origen: OrigenDelChecklist) => origen !== null;
 
 export const practicaLaTecnica = (rolCodigo: string) =>
 	rolCodigo === 'operador' || rolCodigo === 'asistente';

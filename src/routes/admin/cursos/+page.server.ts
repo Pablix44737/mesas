@@ -22,13 +22,23 @@ function codigoDesde(nombre: string) {
 }
 
 export const load: PageServerLoad = async () => {
-	const [{ data: cursos, error: fallo }, { data: mesas }, { data: corridas }, { data: enviadas }] =
-		await Promise.all([
-			supabase.from('cursos').select('*').order('archivado').order('creado_en', { ascending: false }),
-			supabase.from('mesas').select('id, curso_id'),
-			supabase.from('corridas').select('mesa_id'),
-			supabase.from('evaluaciones_enviadas').select('mesa_id')
-		]);
+	const [
+		{ data: cursos, error: fallo },
+		{ data: mesas },
+		{ data: corridas },
+		{ data: enviadas },
+		{ data: destinatarios },
+		{ data: rolesPorDestinatario }
+	] = await Promise.all([
+		supabase.from('cursos').select('*').order('archivado').order('creado_en', { ascending: false }),
+		supabase.from('mesas').select('id, curso_id'),
+		supabase.from('corridas').select('mesa_id'),
+		supabase.from('evaluaciones_enviadas').select('mesa_id'),
+		supabase.from('destinatarios').select('*').order('orden'),
+		supabase
+			.from('roles_por_destinatario')
+			.select('destinatario, lo_elige_el_participante, rol:roles(nombre, orden)')
+	]);
 
 	if (fallo) error(500, fallo.message);
 
@@ -50,9 +60,23 @@ export const load: PageServerLoad = async () => {
 		mesasPorCurso.set(mesa.curso_id, (mesasPorCurso.get(mesa.curso_id) ?? 0) + 1);
 	}
 
+	// Qué roles ocupa cada destinatario, para que el administrador elija sabiendo
+	// qué va a ver el participante en vez de adivinarlo por el nombre.
+	const nombreDelDestinatario = new Map((destinatarios ?? []).map((d) => [d.codigo, d.nombre]));
+
 	return {
+		destinatarios: (destinatarios ?? []).map((destinatario) => ({
+			...destinatario,
+			roles: (rolesPorDestinatario ?? [])
+				.filter((r) => r.destinatario === destinatario.codigo && r.lo_elige_el_participante)
+				.map((r) => r.rol)
+				.filter((rol) => rol !== null)
+				.sort((a, b) => a.orden - b.orden)
+				.map((rol) => rol.nombre)
+		})),
 		cursos: (cursos ?? []).map((curso) => ({
 			...curso,
+			destinatario: nombreDelDestinatario.get(curso.destinado_a) ?? curso.destinado_a,
 			mesas: mesasPorCurso.get(curso.id) ?? 0,
 			corridas: corridasPorCurso.get(curso.id) ?? 0,
 			evaluaciones: evaluacionesPorCurso.get(curso.id) ?? 0
@@ -64,11 +88,13 @@ export const actions: Actions = {
 	crear: async ({ request }) => {
 		const formulario = await request.formData();
 		const nombre = String(formulario.get('nombre') ?? '').trim();
+		const destinadoA = String(formulario.get('destinadoA') ?? '');
 
 		const rechazar = (estado: number, mensaje: string) =>
-			fail(estado, { nombre, mensaje, exito: null });
+			fail(estado, { nombre, destinadoA, mensaje, exito: null });
 
 		if (nombre.length < 4) return rechazar(400, 'Escribí el nombre del curso.');
+		if (!destinadoA) return rechazar(400, 'Elegí a quién está destinado el curso.');
 
 		// El código se deriva del nombre; si ya está tomado, se le suma un número.
 		const { data: existentes } = await supabase.from('cursos').select('codigo');
@@ -77,15 +103,23 @@ export const actions: Actions = {
 		let codigo = base;
 		for (let n = 2; tomados.has(codigo); n++) codigo = `${base.slice(0, 38)}-${n}`;
 
-		const { error: fallo } = await supabase.from('cursos').insert({ nombre, codigo });
+		const { error: fallo } = await supabase
+			.from('cursos')
+			.insert({ nombre, codigo, destinado_a: destinadoA });
 
 		if (fallo) {
-			return fallo.code === '23505'
-				? rechazar(409, `Ya hay un curso que se llama «${nombre}».`)
-				: rechazar(500, 'No se pudo crear el curso. Intentá de nuevo.');
+			if (fallo.code === '23505') return rechazar(409, `Ya hay un curso que se llama «${nombre}».`);
+			// Clave foránea: el destinatario que llegó no es ninguno de los cargados.
+			if (fallo.code === '23503') return rechazar(400, 'Ese destinatario no existe.');
+			return rechazar(500, 'No se pudo crear el curso. Intentá de nuevo.');
 		}
 
-		return { nombre: '', mensaje: null, exito: `«${nombre}» quedó creado. Ya podés darle mesas.` };
+		return {
+			nombre: '',
+			destinadoA: '',
+			mensaje: null,
+			exito: `«${nombre}» quedó creado. Ya podés darle mesas.`
+		};
 	},
 
 	/**
@@ -99,7 +133,7 @@ export const actions: Actions = {
 		const archivado = formulario.get('archivado') === 'true';
 
 		const rechazar = (estado: number, mensaje: string) =>
-			fail(estado, { nombre: '', mensaje, exito: null });
+			fail(estado, { nombre: '', destinadoA: '', mensaje, exito: null });
 
 		if (!UUID.test(id)) return rechazar(400, 'Curso inválido.');
 
@@ -115,6 +149,7 @@ export const actions: Actions = {
 
 		return {
 			nombre: '',
+			destinadoA: '',
 			mensaje: null,
 			exito: archivado
 				? `«${curso.nombre}» quedó archivado. Sus mesas se siguen consultando.`

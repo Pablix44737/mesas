@@ -238,6 +238,7 @@ export type Database = {
 					archivado: boolean;
 					codigo: string;
 					creado_en: string;
+					destinado_a: string;
 					id: string;
 					nombre: string;
 				};
@@ -245,6 +246,7 @@ export type Database = {
 					archivado?: boolean;
 					codigo: string;
 					creado_en?: string;
+					destinado_a: string;
 					id?: string;
 					nombre: string;
 				};
@@ -252,8 +254,38 @@ export type Database = {
 					archivado?: boolean;
 					codigo?: string;
 					creado_en?: string;
+					destinado_a?: string;
 					id?: string;
 					nombre?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'cursos_destinado_a_fkey';
+						columns: ['destinado_a'];
+						isOneToOne: false;
+						referencedRelation: 'destinatarios';
+						referencedColumns: ['codigo'];
+					}
+				];
+			};
+			destinatarios: {
+				Row: {
+					codigo: string;
+					descripcion: string;
+					nombre: string;
+					orden: number;
+				};
+				Insert: {
+					codigo: string;
+					descripcion: string;
+					nombre: string;
+					orden?: number;
+				};
+				Update: {
+					codigo?: string;
+					descripcion?: string;
+					nombre?: string;
+					orden?: number;
 				};
 				Relationships: [];
 			};
@@ -261,6 +293,7 @@ export type Database = {
 				Row: {
 					creada_en: string;
 					curso_id: string;
+					docente_dni: string | null;
 					escenario_id: string;
 					id: string;
 					numero: number;
@@ -268,6 +301,7 @@ export type Database = {
 				Insert: {
 					creada_en?: string;
 					curso_id: string;
+					docente_dni?: string | null;
 					escenario_id: string;
 					id?: string;
 					numero: number;
@@ -275,6 +309,7 @@ export type Database = {
 				Update: {
 					creada_en?: string;
 					curso_id?: string;
+					docente_dni?: string | null;
 					escenario_id?: string;
 					id?: string;
 					numero?: number;
@@ -371,6 +406,7 @@ export type Database = {
 			};
 			roles: {
 				Row: {
+					checklist: string | null;
 					codigo: string;
 					creado_en: string;
 					id: string;
@@ -379,6 +415,7 @@ export type Database = {
 					orden: number;
 				};
 				Insert: {
+					checklist?: string | null;
 					codigo: string;
 					creado_en?: string;
 					id?: string;
@@ -387,6 +424,7 @@ export type Database = {
 					orden?: number;
 				};
 				Update: {
+					checklist?: string | null;
 					codigo?: string;
 					creado_en?: string;
 					id?: string;
@@ -395,6 +433,39 @@ export type Database = {
 					orden?: number;
 				};
 				Relationships: [];
+			};
+			roles_por_destinatario: {
+				Row: {
+					destinatario: string;
+					lo_elige_el_participante: boolean;
+					rol_codigo: string;
+				};
+				Insert: {
+					destinatario: string;
+					lo_elige_el_participante?: boolean;
+					rol_codigo: string;
+				};
+				Update: {
+					destinatario?: string;
+					lo_elige_el_participante?: boolean;
+					rol_codigo?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'roles_por_destinatario_destinatario_fkey';
+						columns: ['destinatario'];
+						isOneToOne: false;
+						referencedRelation: 'destinatarios';
+						referencedColumns: ['codigo'];
+					},
+					{
+						foreignKeyName: 'roles_por_destinatario_rol_codigo_fkey';
+						columns: ['rol_codigo'];
+						isOneToOne: false;
+						referencedRelation: 'roles';
+						referencedColumns: ['codigo'];
+					}
+				];
 			};
 		};
 		Views: {
@@ -495,6 +566,15 @@ export type Database = {
 			borrar_corrida: { Args: { p_corrida_id: string }; Returns: Json };
 			borrar_participacion: { Args: { p_participacion_id: string }; Returns: Json };
 			borrar_mesa: { Args: { p_mesa_id: string }; Returns: Json };
+			asignar_docente_a_la_mesa: {
+				Args: { p_mesa_id: string; p_dni: string };
+				Returns: Json;
+			};
+			quitar_el_docente_de_la_mesa: { Args: { p_mesa_id: string }; Returns: Json };
+			cambiar_el_destinatario: {
+				Args: { p_curso_id: string; p_destinatario: string };
+				Returns: Json;
+			};
 			dar_por_terminado_el_checklist: {
 				Args: { p_plantilla_id: string };
 				Returns: {

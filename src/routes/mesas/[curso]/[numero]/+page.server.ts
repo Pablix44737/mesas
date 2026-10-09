@@ -1,6 +1,8 @@
 import { error, fail } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
 import { mesaDelCurso } from '$lib/server/mesas';
+import { dniValido, mostrarDni, normalizarDni } from '$lib/dni';
+import { checklistComunDe, rolesDelDestinatario } from '$lib/server/roles';
 import type { Actions, PageServerLoad } from './$types';
 
 type Resumen = { id: string; nombre: string; ponderado: boolean; items: number; maximo: number };
@@ -11,7 +13,7 @@ async function traerMesa(codigoDelCurso: string, numeroCrudo: string) {
 	const { data: mesa, error: fallo } = await supabase
 		.from('mesas')
 		.select(
-			`id, numero, creada_en,
+			`id, numero, creada_en, docente_dni,
 			 escenario:escenarios(
 				id, nombre, planificacion_archivo, planificacion_tamano,
 				checklist_tecnica:checklist_plantillas(id, nombre, ponderado)
@@ -29,14 +31,12 @@ async function traerMesa(codigoDelCurso: string, numeroCrudo: string) {
 export const load: PageServerLoad = async ({ params, url }) => {
 	const { curso, mesa } = await traerMesa(params.curso, params.numero);
 
-	// El del facilitador no cuelga del escenario: es común a todas las mesas.
-	const [{ data: operacion }, { data: corridas }] = await Promise.all([
-		supabase
-			.from('checklist_plantillas')
-			.select('id, nombre, ponderado')
-			.eq('rol_codigo', 'observador_operacion')
-			.eq('estado', 'disponible')
-			.maybeSingle(),
+	// El del observador que mira al facilitador no cuelga del escenario: es común
+	// a todas las mesas. Cuál de los dos comunes corresponde lo decide el
+	// destinatario del curso: el del facilitador con docentes, el del proceso con
+	// alumnos. Se resuelve por el rol que ese curso ofrece, no nombrándolo acá.
+	const [operacion, { data: corridas }] = await Promise.all([
+		checklistComunDe(curso.destinado_a),
 		supabase
 			.from('corridas')
 			.select('id, numero, habilitada, creada_en')
@@ -81,7 +81,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	// Quiénes entraron a la mesa y con qué rol. Al líder le sirve para saber, sin
 	// andar preguntando, quién ya está y si los observadores enviaron lo suyo.
 	const idsDeCorridas = (corridas ?? []).map((c) => c.id);
-	const [{ data: participaciones }, { data: roles }] = await Promise.all([
+	const [{ data: participaciones }, roles] = await Promise.all([
 		idsDeCorridas.length > 0
 			? supabase
 					.from('participaciones')
@@ -93,7 +93,9 @@ export const load: PageServerLoad = async ({ params, url }) => {
 					)
 					.in('corrida_id', idsDeCorridas)
 			: Promise.resolve({ data: null }),
-		supabase.from('roles').select('codigo, nombre, orden').order('orden')
+		// Los de este curso, no los del sistema: en uno de alumnos el observador del
+		// facilitador no existe y anunciarlo «sin ocupar» sería pedir lo imposible.
+		rolesDelDestinatario(curso.destinado_a)
 	]);
 
 	const todasLasParticipaciones = participaciones ?? [];
@@ -116,11 +118,43 @@ export const load: PageServerLoad = async ({ params, url }) => {
 
 	const ocupados = new Set(enLaCorridaEnCurso.map((p) => p.rolCodigo));
 
+	/**
+	 * En un curso de alumnos el docente hace dos cosas: conduce la mesa y facilita.
+	 * Ningún alumno puede ser facilitador, así que ese rol no sale del QR sino de
+	 * acá: se declara una vez por mesa y el sistema le abre su lugar en cada
+	 * corrida. La evaluación la completa en la pantalla del facilitador, que ya
+	 * existe; desde acá sale el enlace, no una copia del checklist.
+	 */
+	const conduceElDocente = curso.destinado_a === 'alumnos';
+
+	const { data: docenteEnElPadron } =
+		conduceElDocente && mesa.docente_dni
+			? await supabase
+					.from('participantes')
+					.select('nombre, apellido')
+					.eq('dni', mesa.docente_dni)
+					.maybeSingle()
+			: { data: null };
+
+	const suParticipacion = mesa.docente_dni
+		? (enLaCorridaEnCurso.find((p) => p.dni === mesa.docente_dni) ?? null)
+		: null;
+
 	return {
 		curso,
+		docente: conduceElDocente
+			? {
+					dni: mesa.docente_dni,
+					nombre: docenteEnElPadron
+						? `${docenteEnElPadron.nombre} ${docenteEnElPadron.apellido}`
+						: null,
+					participacionId: suParticipacion?.id ?? null,
+					evaluo: suParticipacion?.envio ?? false
+				}
+			: null,
 		participantes: enLaCorridaEnCurso,
 		// Informativo, no una falta: una mesa puede correr sin asistente, por ejemplo.
-		rolesLibres: (roles ?? []).filter((r) => !ocupados.has(r.codigo)).map((r) => r.nombre),
+		rolesLibres: roles.filter((r) => !ocupados.has(r.codigo)).map((r) => r.nombre),
 		// Personas distintas que pasaron por la mesa, contando todas sus corridas.
 		personasEnLaMesa: new Set(todasLasParticipaciones.map((p) => p.dni)).size,
 		// Para mostrar junto al QR la dirección que codifica, por si alguien
@@ -135,7 +169,11 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		mesa: { id: mesa.id, numero: mesa.numero, creada_en: mesa.creada_en },
 		escenario: mesa.escenario,
 		checklistDeTecnica: resumir(tecnica),
-		checklistDeOperacion: resumir(operacion),
+		// El común que ocupa este curso, con el nombre del rol que lo completa: en
+		// uno de alumnos no es «del facilitador» sino «del observador del proceso».
+		checklistComun: operacion
+			? { ...resumir(operacion)!, rol: operacion.rolNombre }
+			: null,
 		corridas: corridas ?? [],
 		corridaEnCurso: (corridas ?? []).find((c) => c.habilitada) ?? null
 	};
@@ -163,6 +201,76 @@ export const actions: Actions = {
 		return {
 			mensaje: null,
 			exito: `Corrida ${corrida.numero} habilitada. Los participantes ya pueden identificarse.`
+		};
+	},
+
+	/**
+	 * Declarar quién conduce la mesa. El documento queda en la mesa, así que se
+	 * pide una vez y no una por corrida: `asignar_docente_a_la_mesa()` le abre su
+	 * lugar de facilitador en la corrida en curso, y `habilitar_siguiente_corrida()`
+	 * en todas las que vengan.
+	 */
+	declararDocente: async ({ request, params }) => {
+		const { mesa } = await traerMesa(params.curso, params.numero);
+
+		const formulario = await request.formData();
+		const dni = normalizarDni(String(formulario.get('dni') ?? ''));
+
+		const rechazar = (estado: number, mensaje: string) => fail(estado, { mensaje, exito: null });
+
+		if (!dniValido(dni)) return rechazar(400, 'Ingresá el documento, sin puntos.');
+
+		const { data, error: fallo } = await supabase.rpc('asignar_docente_a_la_mesa', {
+			p_mesa_id: mesa.id,
+			p_dni: dni
+		});
+
+		if (fallo) {
+			if (fallo.message.includes('facilitador lo elige')) {
+				return rechazar(
+					409,
+					'Este curso es de docentes: ahí el facilitador se declara desde el QR como cualquier otro rol.'
+				);
+			}
+			if (fallo.message.includes('ya esta en la corrida')) {
+				return rechazar(
+					409,
+					'Ese documento ya está en la corrida con otro rol. Pedile al administrador que elimine ese registro y volvé a intentarlo.'
+				);
+			}
+			return rechazar(500, 'No se pudo declarar al docente. Intentá de nuevo.');
+		}
+
+		const resumen = data as unknown as { nombre: string | null; corrida: number | null };
+		const quien = resumen.nombre ?? `El documento ${mostrarDni(dni)}`;
+
+		return {
+			mensaje: null,
+			exito: resumen.corrida
+				? `${quien} conduce esta mesa y ya tiene su lugar de facilitador en la corrida ${resumen.corrida}.`
+				: `${quien} conduce esta mesa. Al habilitar la primera corrida se le abre su lugar de facilitador.`
+		};
+	},
+
+	/**
+	 * Sacar al docente declarado. No se tocan las participaciones ya abiertas: lo
+	 * que evaluó quedó hecho. Sólo deja de abrírsele lugar en las corridas nuevas.
+	 */
+	quitarDocente: async ({ params }) => {
+		const { mesa } = await traerMesa(params.curso, params.numero);
+
+		const { error: fallo } = await supabase.rpc('quitar_el_docente_de_la_mesa', {
+			p_mesa_id: mesa.id
+		});
+
+		if (fallo) {
+			return fail(500, { mensaje: 'No se pudo sacar al docente. Intentá de nuevo.', exito: null });
+		}
+
+		return {
+			mensaje: null,
+			exito:
+				'La mesa quedó sin docente declarado. Lo que haya evaluado sigue registrado; sólo deja de abrírsele lugar en las corridas nuevas.'
 		};
 	}
 };

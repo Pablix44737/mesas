@@ -81,6 +81,30 @@
 					required
 				/>
 			</div>
+
+			<!-- Decide qué roles va a ver el participante al escanear el QR, así que
+			     se muestran acá mismo en vez de hacerlos descubrir después. -->
+			<fieldset class="roles">
+				<legend>A quién está destinado</legend>
+				{#each data.destinatarios as destinatario (destinatario.codigo)}
+					<label class="rol">
+						<input
+							type="radio"
+							name="destinadoA"
+							value={destinatario.codigo}
+							checked={form?.destinadoA === destinatario.codigo}
+							required
+						/>
+						<span class="texto">
+							<span class="rol-nombre">{destinatario.nombre}</span>
+							<span class="detalle">{destinatario.descripcion}</span>
+							<span class="detalle">Roles que se ofrecen: {destinatario.roles.join(', ')}.</span>
+						</span>
+						<Icono nombre="tilde-circulo" clase="marca-elegido" />
+					</label>
+				{/each}
+			</fieldset>
+
 			<div class="confirmacion">
 				<button class="boton" type="submit" disabled={creando}>
 					{creando ? 'Creando…' : 'Crear el curso'}
@@ -103,7 +127,7 @@
 		<a class="curso-cuerpo" href="/admin/cursos/{curso.codigo}">
 			<span class="curso-marca"><Icono nombre="escenario" tamano={22} /></span>
 			<span class="curso-nombre">{curso.nombre}</span>
-			<span class="detalle">Desde el {fecha(curso.creado_en)}</span>
+			<span class="detalle">{curso.destinatario} · desde el {fecha(curso.creado_en)}</span>
 
 			<span class="curso-cifras">
 				<span><strong>{curso.mesas}</strong> {curso.mesas === 1 ? 'mesa' : 'mesas'}</span>

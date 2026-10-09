@@ -26,7 +26,7 @@
 
 	const enviada = $derived(data.enviadaEn !== null);
 	const practica = $derived(practicaLaTecnica(data.participacion.rolCodigo));
-	const evalua = $derived(llevaChecklist(data.participacion.rolCodigo));
+	const evalua = $derived(llevaChecklist(data.participacion.checklistOrigen));
 	// El facilitador es el único que recibe las dos cosas: la planificación para
 	// guiar la corrida y la lista de cotejo de la técnica para evaluarla.
 	const facilita = $derived(data.participacion.rolCodigo === 'facilitador');
@@ -175,8 +175,9 @@
 				<div class="aviso alerta">
 					<Icono nombre="alerta" />
 					<span>
-						{#if data.participacion.rolCodigo === 'observador_operacion'}
-							Todavía no hay un checklist del observador del facilitador cargado en el sistema.
+						{#if data.participacion.checklistOrigen === 'comun'}
+							Todavía no hay un checklist de {data.participacion.rolNombre.toLowerCase()} cargado
+							en el sistema.
 						{:else}
 							El escenario de esta mesa todavía no tiene asociado un checklist de la técnica.
 						{/if}

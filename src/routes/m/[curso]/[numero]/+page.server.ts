@@ -2,6 +2,7 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
 import { checklistsSinEnviarDe } from '$lib/server/evaluaciones';
 import { mesaDelCurso } from '$lib/server/mesas';
+import { loEligeElParticipante, rolesQueSeEligen } from '$lib/server/roles';
 import { dniValido, normalizarDni } from '$lib/dni';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -31,12 +32,7 @@ async function traerMesaYCorrida(codigoDelCurso: string, numeroCrudo: string) {
 export const load: PageServerLoad = async ({ params }) => {
 	const { curso, mesa, corrida } = await traerMesaYCorrida(params.curso, params.numero);
 
-	const { data: roles } = await supabase
-		.from('roles')
-		.select('codigo, nombre, observador')
-		.order('orden');
-
-	return { curso, mesa, corrida, roles: roles ?? [] };
+	return { curso, mesa, corrida, roles: await rolesQueSeEligen(curso.destinado_a) };
 };
 
 export const actions: Actions = {
@@ -52,9 +48,14 @@ export const actions: Actions = {
 		if (!dniValido(dni)) return rechazar(400, 'Ingresá tu DNI, sin puntos.', 'dni');
 		if (!rolCodigo) return rechazar(400, 'Elegí el rol que vas a ocupar.', 'rolCodigo');
 
-		const { mesa, corrida } = await traerMesaYCorrida(params.curso, params.numero);
+		const { curso, mesa, corrida } = await traerMesaYCorrida(params.curso, params.numero);
 		if (!corrida) {
 			return rechazar(409, 'La mesa no tiene ninguna corrida habilitada.', '');
+		}
+
+		// Que sea uno de los roles que este curso ofrece, no sólo uno que exista.
+		if (!(await loEligeElParticipante(curso.destinado_a, rolCodigo))) {
+			return rechazar(400, 'Ese rol no se ocupa en este curso.', 'rolCodigo');
 		}
 
 		// Si ya se identificó en esta corrida, vuelve a lo suyo en vez de duplicar:

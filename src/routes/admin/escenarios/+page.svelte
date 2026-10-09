@@ -61,21 +61,25 @@
 
 	<div class="tarjeta" style="margin: 0">
 		<div class="tarjeta-cabecera">
-			<h2>Checklist del facilitador</h2>
+			<h2>Checklists que no cuelgan de un escenario</h2>
 		</div>
-		{#if data.checklistDeOperacion}
-			<div class="identidad">
-				<span class="nombre" style="font-size: 16px">{data.checklistDeOperacion.nombre}</span>
-				<span class="detalle">
-					Es común a todos los escenarios: se presenta en toda mesa donde alguien ocupe ese rol.
-				</span>
-			</div>
+		{#if data.checklistsComunes.length > 0}
+			{#each data.checklistsComunes as comun (comun.id)}
+				<div class="identidad" style="margin-bottom: 12px">
+					<span class="etiqueta">{comun.rol}</span>
+					<span class="nombre" style="font-size: 16px">{comun.nombre}</span>
+				</div>
+			{/each}
+			<p class="detalle" style="margin: 0">
+				Son comunes a todos los escenarios: se presentan en toda mesa donde alguien ocupe ese rol.
+				Cuál de los dos aparece lo decide el destinatario del curso.
+			</p>
 		{:else}
 			<div class="aviso alerta" style="margin: 0">
 				<Icono nombre="alerta" />
 				<span>
-					Todavía no hay un checklist del observador del facilitador. Sin él, ese rol no recibe
-					material en ninguna mesa.
+					Todavía no hay checklists de este tipo cargados. Sin ellos, el observador del
+					facilitador y el del proceso no reciben material en ninguna mesa.
 				</span>
 			</div>
 		{/if}

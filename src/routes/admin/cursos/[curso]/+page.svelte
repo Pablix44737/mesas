@@ -5,6 +5,12 @@
 	let { data, form } = $props();
 
 	let renombrandoEnCurso = $state(false);
+	let cambiandoDestinatario = $state(false);
+	let cambiandoEnCurso = $state(false);
+
+	const destinatario = $derived(
+		data.destinatarios.find((d) => d.codigo === data.curso.destinado_a)
+	);
 	/**
 	 * Panel de renombrado abierto a mano. Mientras valga `undefined` manda lo que
 	 * devolvió el servidor: así un rechazo lo reabre con lo tipeado aunque no haya
@@ -114,6 +120,87 @@
 		<span>{form.exito}</span>
 	</div>
 {/if}
+
+<!-- A quién está destinado decide qué roles ve el participante al escanear, así
+     que se dice acá arriba y no escondido en una pantalla de ajustes. -->
+<div class="tarjeta">
+	<div class="tarjeta-cabecera">
+		<h2>A quién está destinado</h2>
+		{#if !cambiandoDestinatario && data.rolesYaOcupados === 0}
+			<button
+				class="boton fantasma"
+				type="button"
+				onclick={() => (cambiandoDestinatario = true)}
+			>
+				<Icono nombre="editar" tamano={16} />
+				Cambiar
+			</button>
+		{/if}
+	</div>
+
+	{#if cambiandoDestinatario}
+		<form
+			method="POST"
+			action="?/destinatario"
+			use:enhance={() => {
+				cambiandoEnCurso = true;
+				return async ({ update, result }) => {
+					await update({ reset: false });
+					cambiandoEnCurso = false;
+					if (result.type === 'success') cambiandoDestinatario = false;
+				};
+			}}
+		>
+			<fieldset class="roles">
+				<legend class="visualmente-oculto">A quién está destinado el curso</legend>
+				{#each data.destinatarios as destinatario (destinatario.codigo)}
+					<label class="rol">
+						<input
+							type="radio"
+							name="destinadoA"
+							value={destinatario.codigo}
+							checked={data.curso.destinado_a === destinatario.codigo}
+							required
+						/>
+						<span class="texto">
+							<span class="rol-nombre">{destinatario.nombre}</span>
+							<span class="detalle">{destinatario.descripcion}</span>
+							<span class="detalle">Roles que se ofrecen: {destinatario.roles.join(', ')}.</span>
+						</span>
+						<Icono nombre="tilde-circulo" clase="marca-elegido" />
+					</label>
+				{/each}
+			</fieldset>
+			<div class="confirmacion" style="margin-top: 12px">
+				<button class="boton" type="submit" disabled={cambiandoEnCurso}>
+					{cambiandoEnCurso ? 'Guardando…' : 'Guardar'}
+				</button>
+				<button
+					class="boton secundario"
+					type="button"
+					onclick={() => (cambiandoDestinatario = false)}
+					disabled={cambiandoEnCurso}
+				>
+					Cancelar
+				</button>
+			</div>
+		</form>
+	{:else}
+		<p style="margin: 0">
+			<strong>{destinatario?.nombre ?? data.curso.destinado_a}.</strong>
+			{destinatario?.descripcion ?? ''}
+		</p>
+		<p class="detalle" style="margin: 8px 0 0">
+			Al escanear el QR, el participante elige entre: {data.rolesDelCurso.join(', ')}.
+		</p>
+		{#if data.rolesYaOcupados > 0}
+			<p class="detalle" style="margin: 8px 0 0">
+				Ya no se puede cambiar: en este curso se declararon {data.rolesYaOcupados} roles, y
+				cambiarlo los dejaría fuera de lo que el curso admite.
+			</p>
+		{/if}
+	{/if}
+</div>
 
 <div class="tarjeta">
 	<div class="tarjeta-cabecera">

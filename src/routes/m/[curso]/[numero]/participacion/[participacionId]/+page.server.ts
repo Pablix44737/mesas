@@ -1,6 +1,7 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
 import { checklistsSinEnviarDe } from '$lib/server/evaluaciones';
+import { loEligeElParticipante, rolesQueSeEligen } from '$lib/server/roles';
 import type { ResultadoDeEvaluacion } from '$lib/tipos';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -20,13 +21,13 @@ async function traerParticipacion(
 		.from('participaciones')
 		.select(
 			`id, dni, rol_codigo,
-			 rol:roles(codigo, nombre, observador),
+			 rol:roles(codigo, nombre, observador, checklist),
 			 participante:participantes(nombre, apellido),
 			 corrida:corridas(
 				id, numero, habilitada,
 				mesa:mesas(
 					id, numero,
-					curso:cursos(codigo, nombre),
+					curso:cursos(codigo, nombre, destinado_a),
 					escenario:escenarios(
 						id, nombre, planificacion_archivo, planificacion_tamano,
 						checklist_tecnica:checklist_plantillas(id, nombre, ponderado)
@@ -51,25 +52,26 @@ async function traerParticipacion(
 }
 
 /**
- * El checklist del facilitador es común; el de la técnica sale del escenario y lo
- * comparten su observador y el facilitador. Espeja a
- * `plantilla_de_la_participacion()` en la base, que es la que manda: si las dos se
- * separaran, la pantalla mostraría un checklist que la función no dejaría abrir.
+ * Qué lista de cotejo le toca a esta participación, preguntándole al rol en vez
+ * de nombrarlo. Espeja a `plantilla_de_la_participacion()` en la base, que es la
+ * que manda: si las dos se separaran, la pantalla mostraría un checklist que la
+ * función no dejaría abrir. Por eso las dos leen lo mismo, `roles.checklist`.
  */
 async function plantillaDe(participacion: {
 	rol_codigo: string;
+	rol: { checklist: string | null } | null;
 	corrida: { mesa: { escenario: { checklist_tecnica: unknown } | null } | null } | null;
 }) {
-	if (participacion.rol_codigo === 'observador_operacion') {
+	if (participacion.rol?.checklist === 'comun') {
 		const { data } = await supabase
 			.from('checklist_plantillas')
 			.select('id, nombre, ponderado')
-			.eq('rol_codigo', 'observador_operacion')
+			.eq('rol_codigo', participacion.rol_codigo)
 			.eq('estado', 'disponible')
 			.maybeSingle();
 		return data;
 	}
-	if (['observador_tecnica', 'facilitador'].includes(participacion.rol_codigo)) {
+	if (participacion.rol?.checklist === 'del_escenario') {
 		return (participacion.corrida?.mesa?.escenario?.checklist_tecnica ?? null) as {
 			id: string;
 			nombre: string;
@@ -133,7 +135,7 @@ export const load: PageServerLoad = async ({ params }) => {
 	// Lo que dejó a medias en otra corrida de esta mesa: desde acá siempre vuelve.
 	// Y, si hay una corrida más nueva, con qué roles puede entrar a ella —o, si ya
 	// se declaró, cuál es su lugar ahí, para llevarlo en vez de pedirle un rol.
-	const [pendientes, { data: yaDeclarado }, { data: roles }] = await Promise.all([
+	const [pendientes, { data: yaDeclarado }, roles] = await Promise.all([
 		checklistsSinEnviarDe(mesa.id, participacion.dni, participacion.corrida?.id),
 		siguiente
 			? supabase
@@ -144,8 +146,8 @@ export const load: PageServerLoad = async ({ params }) => {
 					.maybeSingle()
 			: Promise.resolve({ data: null }),
 		siguiente
-			? supabase.from('roles').select('codigo, nombre, observador').order('orden')
-			: Promise.resolve({ data: null })
+			? rolesQueSeEligen(mesa.curso?.destinado_a ?? '')
+			: Promise.resolve([])
 	]);
 
 	const maximo = Number(calculado?.maximo ?? 0);
@@ -165,6 +167,8 @@ export const load: PageServerLoad = async ({ params }) => {
 			dni: participacion.dni,
 			rolCodigo: participacion.rol_codigo,
 			rolNombre: participacion.rol?.nombre ?? participacion.rol_codigo,
+			// De dónde sale su lista de cotejo, o null si su rol no evalúa.
+			checklistOrigen: (participacion.rol?.checklist ?? null) as 'comun' | 'del_escenario' | null,
 			// null cuando el DNI no está en el padrón: el registro vale igual y
 			// queda pendiente de que el administrador lo complete.
 			nombre: participacion.participante
@@ -185,7 +189,7 @@ export const load: PageServerLoad = async ({ params }) => {
 					participacionId: yaDeclarado?.id ?? null
 				}
 			: null,
-		roles: roles ?? [],
+		roles,
 		pendientes,
 		enviadaEn: instancia?.enviada_en ?? null,
 		resultado,
@@ -292,8 +296,10 @@ export const actions: Actions = {
 
 		if (!rolCodigo) return rechazar(400, 'Elegí el rol que vas a ocupar en la corrida nueva.');
 
-		const [{ data: rol }, { data: vigente }] = await Promise.all([
-			supabase.from('roles').select('codigo').eq('codigo', rolCodigo).maybeSingle(),
+		// Que el rol sea uno de los que ocupa este curso, no sólo que exista: el
+		// facilitador de un curso de alumnos es el docente y no se elige desde acá.
+		const [elegible, { data: vigente }] = await Promise.all([
+			loEligeElParticipante(mesa.curso?.destinado_a ?? '', rolCodigo),
 			supabase
 				.from('corridas')
 				.select('id, numero')
@@ -302,7 +308,7 @@ export const actions: Actions = {
 				.maybeSingle()
 		]);
 
-		if (!rol) return rechazar(400, 'Ese rol no existe.');
+		if (!elegible) return rechazar(400, 'Ese rol no se ocupa en este curso.');
 		if (!vigente) return rechazar(409, 'La mesa no tiene ninguna corrida habilitada.');
 
 		// Pudo haber quedado abierta esta pantalla desde antes de que el líder

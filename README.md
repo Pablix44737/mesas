@@ -99,6 +99,12 @@ donde se elimina una. Archivar un curso no borra nada: lo saca del frente para q
 las ediciones viejas no compitan con la que está en marcha, y deja de ofrecerse al
 líder cuando crea una mesa.
 
+Al crearlo se elige **a quién está destinado**, y eso decide qué roles se ocupan en
+sus mesas. El formulario los enumera al lado de cada opción, para elegir viendo lo
+que el participante va a ver. Se puede corregir desde la pantalla del curso mientras
+nadie haya declarado un rol todavía; después no, porque quedarían participaciones con
+roles que su propio curso ya no admite.
+
 `/admin/cursos/<curso>/mesas/<numero>` — el administrador consulta cómo se desarrolló cada mesa: sus
 corridas, quiénes ocuparon cada rol en cada una y quién llegó a enviar su checklist.
 `.../corridas/<numero>` muestra las evaluaciones de esa corrida
@@ -111,8 +117,9 @@ escanear y elija bien.
 
 `/admin/escenarios` — el administrador da de alta escenarios, los renombra si el
 título quedó mal, les asocia el checklist del observador de la técnica y les adjunta
-la planificación (PDF o Word, hasta 20 MB). El checklist del observador del facilitador es común a todos los
-escenarios: se muestra, no se elige.
+la planificación (PDF o Word, hasta 20 MB). Los checklists del observador del
+facilitador y del observador del proceso son comunes a todos los escenarios: se
+muestran, no se eligen, y cuál de los dos aparece lo decide el destinatario del curso.
 
 `/mesas` — el líder de mesa da de alta una mesa con su número y uno de los
 escenarios disponibles. `/mesas/<curso>/<numero>` le muestra quiénes se identificaron en la
@@ -122,6 +129,12 @@ de su escenario —la planificación para el facilitador y los dos checklists, c
 uno con su cantidad de ítems y su máximo alcanzable— y es donde el líder habilita
 las corridas: la primera, y después cada siguiente, que cierra la anterior.
 
+En un curso de alumnos la misma pantalla suma **quién conduce la mesa**: ahí el que
+facilita es el docente, no un alumno, así que deja su documento una vez y el sistema
+le abre su lugar de facilitador en cada corrida que habilite. Desde ahí entra a la
+pantalla del facilitador de siempre —la planificación y la lista de cotejo de la
+técnica—, que no se duplica acá.
+
 `/mesas/<curso>/<numero>/cartel` — el QR en grande, con el curso, el número de mesa
 y el escenario arriba, para proyectar o imprimir. Trae su propio botón de impresión, así que sirve
 también desde el teléfono, donde no hay Ctrl+P. En papel se van los botones y el
@@ -129,7 +142,8 @@ marco: quedan el número, el código a 11 cm y la firma del sistema.
 
 `/m/<curso>/<numero>` — adonde lleva el código QR de la mesa (`/m/<curso>/<numero>/qr`). El
 participante ingresa su DNI, elige el rol que va a ocupar en la corrida habilitada
-y recibe lo que ese rol necesita: el observador del facilitador, el checklist común;
+—**los que ocupa su curso**, no los del sistema— y recibe lo que ese rol necesita: el
+observador del facilitador o el del proceso, su checklist común;
 el de la técnica, el del escenario de su mesa; el facilitador, **las dos cosas** —la
 planificación (o el aviso de que no está cargada) y el mismo checklist de la técnica,
 que completa y envía como cualquier observador—; el operador y el asistente quedan
@@ -256,6 +270,33 @@ búsqueda de «ya me identifiqué» está acotada a la corrida habilitada— y p
 declarar otro rol. Los registros de las corridas previas quedan intactos y cada
 evaluación cuelga de su corrida. Verificado en la Mesa 1: Ana pasó de observadora
 de la técnica (corrida 2) a operadora (corrida 3), y Elena hizo el camino inverso.
+
+**El mismo modelo se juega distinto según a quién esté destinado el curso.** Con
+docentes o instructores, uno de ellos facilita y otro lo evalúa. Con alumnos eso no
+tiene sentido: el que facilita es el docente que conduce la mesa, nadie lo evalúa, y
+en su lugar aparece el **observador del proceso**. Los dos roles conviven en el
+sistema, cada uno en su tipo de curso, y `roles_por_destinatario` dice cuáles se
+ocupan en cada uno. Es una tabla y no dos columnas en `roles` porque cuando aparezca
+un tercer público —residentes, personal ya recibido— darlo de alta tiene que ser
+insertar filas, no migrar dos tablas. La regla la hace cumplir un trigger sobre
+`participaciones`: la pantalla filtra la lista por comodidad, pero mandar otro
+`rol_codigo` a mano se rechaza igual.
+
+**El facilitador de un curso de alumnos no sale del QR, sale de la mesa.** Ningún
+alumno puede ocuparlo, así que `lo_elige_el_participante` lo marca como un rol que se
+ocupa pero no se elige: el docente deja su documento una vez en `mesas.docente_dni` y
+`habilitar_siguiente_corrida()` le abre su participación en cada corrida nueva. Se
+pide una vez por mesa y no una por corrida, que es la diferencia entre una
+herramienta y un trámite. Los docentes van al **mismo padrón** que el resto:
+`participantes` guarda personas, y «docente» es el rol que ocupan, no lo que son.
+
+**Dejamos de preguntar quién sos y preguntamos qué checklist te toca.** Hasta el
+segundo rol de checklist común, `rol = 'observador_operacion'` estaba escrito en dos
+funciones plpgsql, un índice y diez puntos de la aplicación. Copiar ese `if` trece
+veces era la forma segura de que el tercero rompiera algo, así que la pregunta pasó a
+`roles.checklist` —`comun`, `del_escenario` o nada— y la respuesta es una sola.
+Verificado antes de aplicar la migración: sobre las 161 participaciones existentes, la
+función nueva devuelve exactamente el mismo checklist que la vieja, **0 diferencias**.
 
 **Avanzar de corrida no vuelve a pedir el DNI, y tampoco lo pasea por la URL.** El
 atajo podría haber sido un enlace con el DNI en la query, pero eso lo deja en el

@@ -35,11 +35,38 @@ export const load: PageServerLoad = async ({ params }) => {
 	const [{ data: mesas }, { data: evaluaciones }] = await Promise.all([
 		supabase
 			.from('mesas')
-			.select('id, numero, escenario:escenarios(nombre), corridas(numero, habilitada)')
+			.select('id, numero, escenario:escenarios(nombre), corridas(id, numero, habilitada)')
 			.eq('curso_id', curso.id)
 			.order('numero'),
 		supabase.from('evaluaciones_enviadas').select('mesa_id')
 	]);
+
+	// El destinatario decide qué roles se ocupan, así que mientras nadie haya
+	// declarado uno todavía se puede corregir. Después no: quedarían
+	// participaciones con roles que el curso ya no admite.
+	const corridasDelCurso = (mesas ?? []).flatMap((mesa) => mesa.corridas.map((c) => c.id));
+
+	const [{ data: destinatarios }, { data: rolesPorDestinatario }, { count: ocupados }] =
+		await Promise.all([
+			supabase.from('destinatarios').select('*').order('orden'),
+			supabase
+				.from('roles_por_destinatario')
+				.select('destinatario, lo_elige_el_participante, rol:roles(nombre, orden)'),
+			corridasDelCurso.length > 0
+				? supabase
+						.from('participaciones')
+						.select('id', { count: 'exact', head: true })
+						.in('corrida_id', corridasDelCurso)
+				: Promise.resolve({ count: 0 })
+		]);
+
+	const rolesDe = (codigo: string) =>
+		(rolesPorDestinatario ?? [])
+			.filter((r) => r.destinatario === codigo && r.lo_elige_el_participante)
+			.map((r) => r.rol)
+			.filter((rol) => rol !== null)
+			.sort((a, b) => a.orden - b.orden)
+			.map((rol) => rol.nombre);
 
 	const porMesa = new Map<string, number>();
 	for (const evaluacion of evaluaciones ?? []) {
@@ -50,6 +77,9 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	return {
 		curso,
+		destinatarios: (destinatarios ?? []).map((d) => ({ ...d, roles: rolesDe(d.codigo) })),
+		rolesDelCurso: rolesDe(curso.destinado_a),
+		rolesYaOcupados: ocupados ?? 0,
 		mesas: (mesas ?? []).map((mesa) => ({
 			id: mesa.id,
 			numero: mesa.numero,
@@ -62,6 +92,47 @@ export const load: PageServerLoad = async ({ params }) => {
 };
 
 export const actions: Actions = {
+	/**
+	 * Corregir a quién está destinado el curso. `cambiar_el_destinatario()` lo
+	 * rechaza si ya se declaró algún rol: el destinatario decide cuáles se ocupan,
+	 * y cambiarlo después dejaría participaciones con roles que su propio curso ya
+	 * no admite. Es la misma regla con la que se deshace una corrida.
+	 */
+	destinatario: async ({ request, params }) => {
+		const curso = await traerCurso(params.curso);
+
+		const formulario = await request.formData();
+		const destinadoA = String(formulario.get('destinadoA') ?? '');
+
+		const rechazar = (estado: number, mensaje: string) => fail(estado, { mensaje, exito: null });
+
+		const { data, error: fallo } = await supabase.rpc('cambiar_el_destinatario', {
+			p_curso_id: curso.id,
+			p_destinatario: destinadoA
+		});
+
+		if (fallo) {
+			if (fallo.message.includes('ya no existe')) return rechazar(404, 'Ese curso ya no existe.');
+			if (fallo.message.includes('roles ocupados')) {
+				return rechazar(
+					409,
+					'En este curso ya se declararon roles, así que su destinatario no se puede cambiar: quedarían participaciones con roles que el curso ya no admite.'
+				);
+			}
+			if (fallo.message.includes('destinatario no existe')) {
+				return rechazar(400, 'Elegí uno de los destinatarios de la lista.');
+			}
+			return rechazar(500, 'No se pudo cambiar el destinatario. Intentá de nuevo.');
+		}
+
+		const resumen = data as unknown as { nombre: string };
+
+		return {
+			mensaje: null,
+			exito: `«${resumen.nombre}» quedó con su destinatario corregido.`
+		};
+	},
+
 	/** Corregir el nombre. El código no se toca: va a estar impreso en los QR. */
 	renombrar: async ({ request, params }) => {
 		const curso = await traerCurso(params.curso);

@@ -10,20 +10,26 @@ export const load: PageServerLoad = async () => {
 				'id, nombre, disponible, planificacion_archivo, checklist_tecnica:checklist_plantillas(id, nombre)'
 			)
 			.order('nombre'),
+		// Los checklists que no cuelgan de un escenario sino de su rol, uno por rol
+		// de checklist común. Son dos: el del facilitador y el del proceso, cada uno
+		// en su tipo de curso.
 		supabase
 			.from('checklist_plantillas')
-			.select('id, nombre')
-			.eq('rol_codigo', 'observador_operacion')
+			.select('id, nombre, rol:roles!inner(nombre, checklist)')
 			.eq('estado', 'disponible')
-			.maybeSingle()
+			.eq('roles.checklist', 'comun')
 	]);
 
 	if (falloEscenarios) error(500, falloEscenarios.message);
 
 	return {
 		escenarios: escenarios ?? [],
-		// Común a todos los escenarios: no se elige, se informa.
-		checklistDeOperacion: operacion
+		// Comunes a todos los escenarios: no se eligen, se informan.
+		checklistsComunes: (operacion ?? []).map((p) => ({
+			id: p.id,
+			nombre: p.nombre,
+			rol: p.rol?.nombre ?? ''
+		}))
 	};
 };
 

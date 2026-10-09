@@ -10,6 +10,8 @@
 	let habilitando = $state(false);
 	let confirmandoAvance = $state(false);
 	let mostrarQr = $state(true);
+	let declarandoDocente = $state(false);
+	let confirmandoQuitarDocente = $state(false);
 
 	const siguiente = $derived((data.corridas[0]?.numero ?? 0) + 1);
 
@@ -85,6 +87,131 @@
 				</div>
 			{/if}
 		</div>
+
+		<!-- En un curso de alumnos el facilitador es el docente que conduce la mesa:
+		     ningún alumno lo ve en la lista de roles del QR. Se declara acá, una vez
+		     por mesa, y evalúa en la pantalla del facilitador de siempre. -->
+		{#if data.docente}
+			<div class="tarjeta">
+				<div class="tarjeta-cabecera">
+					<h2>Quién conduce la mesa</h2>
+					{#if data.docente.evaluo}
+						<span class="chip exito">Evaluó</span>
+					{/if}
+				</div>
+
+				{#if !data.docente.dni || declarandoDocente}
+					<p class="ayuda">
+						En este curso el facilitador sos vos, no un alumno. Dejá tu documento una vez y el
+						sistema te abre tu lugar en cada corrida que habilites, para que puedas completar la
+						lista de cotejo de la técnica.
+					</p>
+					<form
+						method="POST"
+						action="?/declararDocente"
+						use:enhance={() => async ({ update, result }) => {
+							await update({ reset: false });
+							if (result.type === 'success') declarandoDocente = false;
+						}}
+					>
+						<div class="campo">
+							<label for="docente-dni">Tu documento</label>
+							<div class="campo-con-icono">
+								<Icono nombre="dni" />
+								<input
+									id="docente-dni"
+									name="dni"
+									type="tel"
+									inputmode="numeric"
+									autocomplete="off"
+									placeholder="20111222"
+									value={data.docente.dni ?? ''}
+									aria-invalid={Boolean(form?.mensaje)}
+									required
+								/>
+							</div>
+							<p class="ayuda">Sin puntos ni espacios.</p>
+						</div>
+						<div class="confirmacion">
+							<button class="boton" type="submit">Guardar</button>
+							{#if data.docente.dni}
+								<button
+									class="boton secundario"
+									type="button"
+									onclick={() => (declarandoDocente = false)}
+								>
+									Cancelar
+								</button>
+							{/if}
+						</div>
+					</form>
+				{:else}
+					<div class="fila" style="margin-bottom: 12px">
+						<span class="avatar-rol"><Icono nombre="facilitador" tamano={22} /></span>
+						<div class="identidad">
+							<span class="etiqueta">Conduce y facilita</span>
+							{#if data.docente.nombre}
+								<span class="nombre">{data.docente.nombre}</span>
+								<span class="detalle">DNI {mostrarDni(data.docente.dni)}</span>
+							{:else}
+								<span class="nombre">DNI {mostrarDni(data.docente.dni)}</span>
+								<span class="detalle">No está en el padrón: su evaluación va a ir sin nombre.</span>
+							{/if}
+						</div>
+					</div>
+
+					{#if data.docente.participacionId && data.corridaEnCurso}
+						<a
+							class="boton bloque"
+							href="/m/{data.curso.codigo}/{data.mesa.numero}/participacion/{data.docente
+								.participacionId}"
+						>
+							<Icono nombre="checklist" />
+							{data.docente.evaluo
+								? `Ver lo que enviaste en la corrida ${data.corridaEnCurso.numero}`
+								: `Completar la técnica de la corrida ${data.corridaEnCurso.numero}`}
+						</a>
+					{:else if !data.corridaEnCurso}
+						<p class="detalle" style="margin: 0">
+							Habilitá la primera corrida y se te abre ahí tu lugar de facilitador.
+						</p>
+					{/if}
+
+					<div class="acciones-fila" style="margin-top: 12px">
+						<button class="enlace" type="button" onclick={() => (declarandoDocente = true)}>
+							Cambiar el documento
+						</button>
+						{#if confirmandoQuitarDocente}
+							<form
+								method="POST"
+								action="?/quitarDocente"
+								use:enhance={() => async ({ update }) => {
+									await update({ reset: false });
+									confirmandoQuitarDocente = false;
+								}}
+							>
+								<button class="enlace peligro" type="submit">Sí, sacarlo</button>
+							</form>
+							<button
+								class="enlace"
+								type="button"
+								onclick={() => (confirmandoQuitarDocente = false)}
+							>
+								Cancelar
+							</button>
+						{:else}
+							<button
+								class="enlace"
+								type="button"
+								onclick={() => (confirmandoQuitarDocente = true)}
+							>
+								Sacarlo
+							</button>
+						{/if}
+					</div>
+				{/if}
+			</div>
+		{/if}
 
 		<div class="tarjeta">
 			<div class="tarjeta-cabecera">
@@ -292,16 +419,17 @@
 				</div>
 
 				<div>
-					<span class="etiqueta">Checklist del facilitador · para su observador</span>
-					{#if data.checklistDeOperacion}
-						<span>{data.checklistDeOperacion.nombre}</span>
+					{#if data.checklistComun}
+						<span class="etiqueta">Checklist · para el {data.checklistComun.rol.toLowerCase()}</span>
+						<span>{data.checklistComun.nombre}</span>
 						<span class="detalle">
-							{data.checklistDeOperacion.items} ítems · máximo {data.checklistDeOperacion.maximo}
-							{#if !data.checklistDeOperacion.ponderado}· sin ponderar{/if}
+							{data.checklistComun.items} ítems · máximo {data.checklistComun.maximo}
+							{#if !data.checklistComun.ponderado}· sin ponderar{/if}
 							· común a todos los escenarios
 						</span>
 					{:else}
-						<span class="pendiente">No hay checklist del observador del facilitador</span>
+						<span class="etiqueta">Checklist común del curso</span>
+						<span class="pendiente">Este curso todavía no tiene el suyo cargado</span>
 					{/if}
 				</div>
 			</div>
