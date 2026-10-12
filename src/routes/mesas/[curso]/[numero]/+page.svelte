@@ -46,6 +46,27 @@
 	<title>Mesa {data.mesa.numero} — SIMUNaM</title>
 </svelte:head>
 
+<!-- El botón que pliega y despliega una tarjeta desde su cabecera. Con borde e
+     icono y no como texto subrayado: es lo que se toca para ver más, y tiene que
+     leerse como botón. La flecha dice para dónde va: abajo abre, arriba cierra. -->
+{#snippet desplegar(
+	abierto: boolean,
+	alternar: () => void,
+	paraAbrir: string,
+	paraCerrar = 'Ocultar',
+	icono = 'abajo'
+)}
+	<button
+		class="boton secundario desplegar"
+		type="button"
+		aria-expanded={abierto}
+		onclick={alternar}
+	>
+		<Icono nombre={abierto ? 'arriba' : icono} tamano={16} />
+		{abierto ? paraCerrar : paraAbrir}
+	</button>
+{/snippet}
+
 {#snippet quien(persona: { nombre: string | null; dni: string })}
 	{#if persona.nombre}
 		{persona.nombre}
@@ -84,14 +105,7 @@
 		<div class="tarjeta">
 			<div class="tarjeta-cabecera">
 				<h2>Código QR de la mesa</h2>
-				<button
-					class="enlace"
-					type="button"
-					aria-expanded={mostrarQr}
-					onclick={() => (mostrarQr = !mostrarQr)}
-				>
-					{mostrarQr ? 'Ocultar' : 'Mostrar'}
-				</button>
+				{@render desplegar(mostrarQr, () => (mostrarQr = !mostrarQr), 'Mostrar')}
 			</div>
 
 			{#if mostrarQr}
@@ -130,17 +144,16 @@
 				<div class="tarjeta-cabecera">
 					<h2>Quién conduce la mesa</h2>
 					{#if data.docente.dni && !declarandoDocente}
-						<button
-							class="enlace"
-							type="button"
-							aria-expanded={cambiandoDocente}
-							onclick={() => {
+						{@render desplegar(
+							cambiandoDocente,
+							() => {
 								cambiandoDocente = !cambiandoDocente;
 								confirmandoQuitarDocente = false;
-							}}
-						>
-							{cambiandoDocente ? 'Ocultar' : 'Cambiar'}
-						</button>
+							},
+							'Cambiar',
+							'Ocultar',
+							'editar'
+						)}
 					{/if}
 				</div>
 
@@ -290,14 +303,7 @@
 				<h2>Corridas</h2>
 				<!-- Con una sola corrida la lista repetiría la línea de abajo. -->
 				{#if data.corridas.length > 1}
-					<button
-						class="enlace"
-						type="button"
-						aria-expanded={mostrarCorridas}
-						onclick={() => (mostrarCorridas = !mostrarCorridas)}
-					>
-						{mostrarCorridas ? 'Ocultar' : 'Ver todas'}
-					</button>
+					{@render desplegar(mostrarCorridas, () => (mostrarCorridas = !mostrarCorridas), 'Ver todas')}
 				{/if}
 			</div>
 
@@ -468,14 +474,11 @@
 			<div class="tarjeta-cabecera">
 				<h2>Recorrido de la mesa</h2>
 				{#if data.recorrido.length > 0}
-					<button
-						class="enlace"
-						type="button"
-						aria-expanded={detalleDelRecorrido}
-						onclick={() => (detalleDelRecorrido = !detalleDelRecorrido)}
-					>
-						{detalleDelRecorrido ? 'Ocultar detalle' : 'Ver detalle'}
-					</button>
+					{@render desplegar(
+						detalleDelRecorrido,
+						() => (detalleDelRecorrido = !detalleDelRecorrido),
+						'Ver detalle'
+					)}
 				{/if}
 			</div>
 
@@ -561,14 +564,7 @@
 		<div class="tarjeta">
 			<div class="tarjeta-cabecera">
 				<h2>Material que hereda del escenario</h2>
-				<button
-					class="enlace"
-					type="button"
-					aria-expanded={mostrarMaterial}
-					onclick={() => (mostrarMaterial = !mostrarMaterial)}
-				>
-					{mostrarMaterial ? 'Ocultar' : 'Mostrar'}
-				</button>
+				{@render desplegar(mostrarMaterial, () => (mostrarMaterial = !mostrarMaterial), 'Mostrar')}
 			</div>
 
 			{#if mostrarMaterial}

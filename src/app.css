@@ -384,6 +384,19 @@ a {
 	color: #fff;
 }
 
+/* El que pliega y despliega una tarjeta desde su cabecera. Más chico que un
+   botón de acción, porque no es una: muestra u oculta. El margen negativo lo
+   deja entrar en la cabecera sin hacerla más alta que las que no lo llevan. */
+.boton.desplegar {
+	flex: 0 0 auto;
+	gap: 6px;
+	min-height: 36px;
+	margin-block: -6px;
+	padding: 6px var(--e-3);
+	font-size: 14px;
+	white-space: nowrap;
+}
+
 .boton.fantasma {
 	background: none;
 	color: var(--azul);
