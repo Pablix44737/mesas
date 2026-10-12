@@ -131,8 +131,8 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	 * cuatro o cinco, no importa cuántas corridas lleve la mesa, y la pregunta «qué
 	 * le falta» se contesta sin leer nada, porque es el hueco.
 	 *
-	 * No cuesta ninguna consulta: las participaciones de todas las corridas ya
-	 * estaban cargadas para contar cuánta gente pasó por la mesa.
+	 * No cuesta ninguna consulta: sale de las participaciones de todas las
+	 * corridas, que ya se cargan de una vez para la corrida en curso.
 	 */
 	const numeroDeCorrida = new Map((corridas ?? []).map((c) => [c.id, c.numero]));
 
@@ -227,8 +227,6 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		rolesDeLaMesa: roles.map((r) => ({ codigo: r.codigo, nombre: r.nombre })),
 		recorrido,
 		nadieLosOcupo,
-		// Personas distintas que pasaron por la mesa, contando todas sus corridas.
-		personasEnLaMesa: new Set(todasLasParticipaciones.map((p) => p.dni)).size,
 		// Para mostrar junto al QR la dirección que codifica, por si alguien
 		// prefiere tipearla en vez de escanear.
 		origen: url.origin,

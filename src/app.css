@@ -439,8 +439,15 @@ a {
 }
 
 /* Que el último hijo no agregue aire de más al padding de abajo. */
-.tarjeta > :last-child:not(.tarjeta-pie):not(.tabla-envoltorio) {
+.tarjeta > :last-child:not(.tarjeta-pie):not(.tabla-envoltorio):not(.tarjeta-cabecera) {
 	margin-bottom: 0;
+}
+
+/* Una tarjeta plegada es sólo su cabecera. Sin esto le quedaba abajo el padding
+   entero, una franja vacía que parecía contenido que no había cargado. */
+.tarjeta > .tarjeta-cabecera:last-child {
+	margin-bottom: calc(var(--e-5) * -1);
+	border-bottom: 0;
 }
 
 /* La cabecera, el pie y las tablas van de borde a borde: se salen del padding.
@@ -1184,6 +1191,15 @@ fieldset.roles.invalido legend {
 	   de rol largos y la alternativa serían columnas de media pantalla. */
 	white-space: normal;
 	min-width: 5.5rem;
+	vertical-align: bottom;
+	/* Sin mayúsculas ni interletrado: partidos en dos renglones, «OBS. DEL /
+	   FACILITADOR» ocupaba más ancho que el nombre en minúscula, y con el
+	   interlineado del cuerpo cada renglón quedaba flotando lejos del otro. */
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 15px;
+	letter-spacing: normal;
+	text-transform: none;
 }
 
 /* El nombre entero queda en el `title`, pero sin subrayado punteado: acá no es una
@@ -1216,8 +1232,12 @@ fieldset.roles.invalido legend {
 	border-bottom: 1px solid var(--borde);
 	font-size: 15px;
 	font-weight: 400;
+	line-height: 20px;
 	letter-spacing: normal;
 	text-transform: none;
+	/* `.tabla th` no deja partir: un nombre largo se salía de la columna fija y
+	   quedaba escrito encima de las celdas de los roles. */
+	white-space: normal;
 	color: inherit;
 }
 
@@ -1235,12 +1255,18 @@ fieldset.roles.invalido legend {
 	font-weight: 600;
 }
 
-.recorrido-falta {
+.recorrido-nota {
 	display: block;
 	margin-top: 2px;
 	font-size: 13px;
 	line-height: 18px;
 	color: var(--tinta-suave);
+}
+
+/* Las corridas de un rol van en fila: apiladas, una celda con tres corridas
+   estiraba la fila entera y las marcas de al lado quedaban flotando al medio. */
+.tabla.recorrido td {
+	white-space: nowrap;
 }
 
 /* Cada corrida en que ocupó ese rol. Dos marcas en una celda es alguien que lo
@@ -1273,14 +1299,13 @@ fieldset.roles.invalido legend {
 
 /* En el teléfono, con los anchos de arriba entraba una sola columna de rol por
    vez y había que barrer la tabla entera para contestar algo. Apretando la
-   columna fija y las de rol entran tres, que alcanzan para leer una fila de un
-   vistazo. Los encabezados se parten en varias líneas y está bien: son los
-   nombres de los roles, no texto que haya que seguir. */
+   columna fija y las de rol entran dos o tres. Los encabezados se parten en dos
+   líneas y está bien: son los nombres de los roles, no texto que haya que seguir. */
 @media (max-width: 719px) {
 	.tabla.recorrido th[scope='row'] {
-		min-width: 8.5rem;
+		min-width: 0;
 		padding-left: var(--e-4);
-		padding-right: var(--e-4);
+		padding-right: var(--e-3);
 	}
 
 	/* El tope va en el contenido y no en la celda: en una tabla de ancho automático
@@ -1288,12 +1313,12 @@ fieldset.roles.invalido legend {
 	   hasta el nombre más largo, comiéndose el lugar de los roles. Acotando lo de
 	   adentro, el nombre se parte en dos líneas, que en una columna fija no molesta. */
 	.recorrido-quien,
-	.recorrido-falta {
-		max-width: 8.5rem;
+	.recorrido-nota {
+		width: 7rem;
 	}
 
 	.tabla.recorrido th[scope='col'] {
-		min-width: 4.5rem;
+		min-width: 0;
 		padding-left: var(--e-3);
 		padding-right: var(--e-3);
 	}
@@ -1307,10 +1332,26 @@ fieldset.roles.invalido legend {
 		font-size: 14px;
 	}
 
-	.recorrido-falta {
+	.recorrido-nota {
 		font-size: 12px;
 		line-height: 16px;
 	}
+
+	.corrida-marca {
+		min-width: 24px;
+		height: 24px;
+		padding: 0 5px;
+		margin-right: 3px;
+		font-size: 12px;
+	}
+}
+
+/* El resumen del recorrido: una fila por persona, el nombre y debajo lo que le
+   falta. Apilados y no en línea como el resto de las `.lista`: con nombres y
+   roles de largos distintos, en línea cada fila quedaba cortada en otro lugar. */
+.lista.recorrido-resumen li {
+	display: grid;
+	gap: 2px;
 }
 
 /* Las dos acciones secundarias de quién conduce la mesa. Se envuelven en el

@@ -9,9 +9,20 @@
 
 	let habilitando = $state(false);
 	let confirmandoAvance = $state(false);
-	let mostrarQr = $state(true);
 	let declarandoDocente = $state(false);
 	let confirmandoQuitarDocente = $state(false);
+
+	/**
+	 * La pantalla junta muchas cosas y el líder la mira con la mesa andando. Queda a
+	 * la vista lo que usa en cada corrida —el QR, habilitar la siguiente, quién está
+	 * y qué le falta a cada uno— y lo que consulta de vez en cuando se despliega
+	 * desde la cabecera de su tarjeta, como ya hacía el QR.
+	 */
+	let mostrarQr = $state(true);
+	let mostrarCorridas = $state(false);
+	let cambiandoDocente = $state(false);
+	let detalleDelRecorrido = $state(false);
+	let mostrarMaterial = $state(false);
 
 	const siguiente = $derived((data.corridas[0]?.numero ?? 0) + 1);
 
@@ -34,6 +45,14 @@
 <svelte:head>
 	<title>Mesa {data.mesa.numero} — SIMUNaM</title>
 </svelte:head>
+
+{#snippet quien(persona: { nombre: string | null; dni: string })}
+	{#if persona.nombre}
+		{persona.nombre}
+	{:else}
+		<span class="pendiente">DNI {mostrarDni(persona.dni)}</span>
+	{/if}
+{/snippet}
 
 <div class="app">
 	<BarraSuperior
@@ -65,7 +84,12 @@
 		<div class="tarjeta">
 			<div class="tarjeta-cabecera">
 				<h2>Código QR de la mesa</h2>
-				<button class="enlace" type="button" onclick={() => (mostrarQr = !mostrarQr)}>
+				<button
+					class="enlace"
+					type="button"
+					aria-expanded={mostrarQr}
+					onclick={() => (mostrarQr = !mostrarQr)}
+				>
 					{mostrarQr ? 'Ocultar' : 'Mostrar'}
 				</button>
 			</div>
@@ -101,10 +125,22 @@
 		     por mesa, y evalúa en la pantalla del facilitador de siempre. -->
 		{#if data.docente}
 			<div class="tarjeta">
+				<!-- Sin el chip de «Evaluó»: ya lo dice el botón, que pasa de completar
+				     la técnica a ver lo enviado. -->
 				<div class="tarjeta-cabecera">
 					<h2>Quién conduce la mesa</h2>
-					{#if data.docente.evaluo}
-						<span class="chip exito">Evaluó</span>
+					{#if data.docente.dni && !declarandoDocente}
+						<button
+							class="enlace"
+							type="button"
+							aria-expanded={cambiandoDocente}
+							onclick={() => {
+								cambiandoDocente = !cambiandoDocente;
+								confirmandoQuitarDocente = false;
+							}}
+						>
+							{cambiandoDocente ? 'Ocultar' : 'Cambiar'}
+						</button>
 					{/if}
 				</div>
 
@@ -119,7 +155,10 @@
 						action="?/declararDocente"
 						use:enhance={() => async ({ update, result }) => {
 							await update({ reset: false });
-							if (result.type === 'success') declarandoDocente = false;
+							if (result.type === 'success') {
+								declarandoDocente = false;
+								cambiandoDocente = false;
+							}
 						}}
 					>
 						<div class="campo">
@@ -186,10 +225,11 @@
 					{/if}
 
 					<!-- Dos acciones que no son el camino principal —ése es completar la
-					     técnica—, pero que tienen que decir qué hacen sin que haya que
-					     probarlas. Mismo patrón que quitar la planificación de un escenario:
-					     un botón, y la confirmación recién al tocarlo. -->
-					{#if confirmandoQuitarDocente}
+					     técnica—: se despliegan desde «Cambiar», pero una vez a la vista
+					     tienen que decir qué hacen sin que haya que probarlas. Mismo patrón
+					     que quitar la planificación de un escenario: un botón, y la
+					     confirmación recién al tocarlo. -->
+					{#if cambiandoDocente && confirmandoQuitarDocente}
 						<div class="aviso alerta" style="margin: 16px 0 0">
 							<Icono nombre="alerta" />
 							<div>
@@ -203,6 +243,7 @@
 										use:enhance={() => async ({ update }) => {
 											await update({ reset: false });
 											confirmandoQuitarDocente = false;
+											cambiandoDocente = false;
 										}}
 									>
 										<button class="boton peligro" type="submit">
@@ -220,7 +261,7 @@
 								</div>
 							</div>
 						</div>
-					{:else}
+					{:else if cambiandoDocente}
 						<div class="acciones-docente">
 							<button
 								class="boton secundario"
@@ -247,13 +288,23 @@
 		<div class="tarjeta">
 			<div class="tarjeta-cabecera">
 				<h2>Corridas</h2>
+				<!-- Con una sola corrida la lista repetiría la línea de abajo. -->
+				{#if data.corridas.length > 1}
+					<button
+						class="enlace"
+						type="button"
+						aria-expanded={mostrarCorridas}
+						onclick={() => (mostrarCorridas = !mostrarCorridas)}
+					>
+						{mostrarCorridas ? 'Ocultar' : 'Ver todas'}
+					</button>
+				{/if}
 			</div>
 
 			{#if data.corridaEnCurso}
 				<p>
-					La <strong>corrida {data.corridaEnCurso.numero}</strong> está habilitada desde las
-					{hora(data.corridaEnCurso.creada_en)}. Los participantes pueden identificarse y declarar
-					su rol, y lo que se evalúe queda referido a esta corrida.
+					La <strong>corrida {data.corridaEnCurso.numero}</strong> está en curso desde las
+					{hora(data.corridaEnCurso.creada_en)}.
 				</p>
 			{:else}
 				<p>
@@ -344,7 +395,7 @@
 				</form>
 			{/if}
 
-			{#if data.corridas.length > 0}
+			{#if mostrarCorridas && data.corridas.length > 1}
 				<ul class="lista" style="margin-top: 16px">
 					{#each data.corridas as corrida (corrida.id)}
 						<li class:en-curso={corrida.habilitada}>
@@ -405,40 +456,58 @@
 					</p>
 				{/if}
 			{/if}
-
-			{#if data.personasEnLaMesa > data.participantes.length}
-				<p class="detalle" style="margin: 12px 0 0">
-					Por esta mesa pasaron {data.personasEnLaMesa} personas contando todas sus corridas.
-				</p>
-			{/if}
 		</div>
 
 		<!-- Lo que el modelo MESAS no resuelve solo: con más o menos de cinco personas
 		     la rotación en sentido de las agujas del reloj no cierra, alguien repite
 		     rol y alguien nunca llega a otro. Esto no decide por el líder, le muestra
-		     de qué decidir. -->
+		     de qué decidir.
+		     De entrada, sólo qué le falta a cada uno: es lo que se usa para armar la
+		     corrida que viene. En qué corrida ocupó cada rol es el detalle. -->
 		<div class="tarjeta">
 			<div class="tarjeta-cabecera">
 				<h2>Recorrido de la mesa</h2>
 				{#if data.recorrido.length > 0}
-					<span class="detalle">
-						{data.recorrido.length}
-						{data.recorrido.length === 1 ? 'persona' : 'personas'}
-					</span>
+					<button
+						class="enlace"
+						type="button"
+						aria-expanded={detalleDelRecorrido}
+						onclick={() => (detalleDelRecorrido = !detalleDelRecorrido)}
+					>
+						{detalleDelRecorrido ? 'Ocultar detalle' : 'Ver detalle'}
+					</button>
 				{/if}
 			</div>
 
 			{#if data.recorrido.length === 0}
 				<p class="detalle" style="margin: 0">
 					Todavía no pasó nadie por esta mesa. Cuando se identifiquen vas a ver acá qué rol
-					ocupó cada uno en cada corrida.
+					le falta a cada uno.
 				</p>
+			{:else if !detalleDelRecorrido}
+				<ul class="lista recorrido-resumen">
+					{#each data.recorrido as persona (persona.dni)}
+						<li>
+							<span class="quien">{@render quien(persona)}</span>
+							<span class="detalle">
+								{#if persona.conduceLaMesa}
+									Conduce la mesa, no rota
+								{:else if persona.faltan.length > 0}
+									Le falta: {persona.faltan.join(', ')}
+								{:else}
+									Ya ocupó todos los roles
+								{/if}
+							</span>
+						</li>
+					{/each}
+				</ul>
 			{:else}
 				<p class="ayuda">
-					En qué corridas ocupó cada rol. El hueco es lo que le falta, y es por donde conviene
-					seguir la rotación.
+					Cada número es una corrida en la que ocupó ese rol. El hueco es lo que le falta.
 				</p>
 
+				<!-- Acá la primera columna lleva sólo el nombre: lo que le falta ya lo dice
+				     el hueco, y repetirlo en texto la ensanchaba hasta tapar los roles. -->
 				<div class="tabla-envoltorio">
 					<table class="tabla recorrido">
 						<thead>
@@ -453,21 +522,9 @@
 							{#each data.recorrido as persona (persona.dni)}
 								<tr>
 									<th scope="row">
-										<span class="recorrido-quien">
-											{#if persona.nombre}
-												{persona.nombre}
-											{:else}
-												<span class="pendiente">DNI {mostrarDni(persona.dni)}</span>
-											{/if}
-										</span>
+										<span class="recorrido-quien">{@render quien(persona)}</span>
 										{#if persona.conduceLaMesa}
-											<span class="recorrido-falta">Conduce la mesa, no rota</span>
-										{:else if persona.faltan.length > 0}
-											<span class="recorrido-falta">
-												Le falta: {persona.faltan.join(', ')}
-											</span>
-										{:else}
-											<span class="recorrido-falta">Ya ocupó todos los roles</span>
+											<span class="recorrido-nota">Conduce, no rota</span>
 										{/if}
 									</th>
 									{#each persona.porRol as celda (celda.codigo)}
@@ -504,54 +561,64 @@
 		<div class="tarjeta">
 			<div class="tarjeta-cabecera">
 				<h2>Material que hereda del escenario</h2>
+				<button
+					class="enlace"
+					type="button"
+					aria-expanded={mostrarMaterial}
+					onclick={() => (mostrarMaterial = !mostrarMaterial)}
+				>
+					{mostrarMaterial ? 'Ocultar' : 'Mostrar'}
+				</button>
 			</div>
 
-			<div class="material">
-				<div>
-					<span class="etiqueta">Planificación · para el facilitador</span>
-					{#if data.escenario?.planificacion_archivo}
-						<span>
-							<a href="/mesas/{data.curso.codigo}/{data.mesa.numero}/planificacion" target="_blank" rel="noopener">
-								{data.escenario.planificacion_archivo}
-							</a>
-						</span>
-						<span class="detalle">
-							{mostrarTamano(data.escenario.planificacion_tamano ?? 0)}
-						</span>
-					{:else}
-						<span class="pendiente">Sin planificación cargada</span>
-						<span class="detalle">El facilitador va a ver que no está disponible.</span>
-					{/if}
+			{#if mostrarMaterial}
+				<div class="material">
+					<div>
+						<span class="etiqueta">Planificación · para el facilitador</span>
+						{#if data.escenario?.planificacion_archivo}
+							<span>
+								<a href="/mesas/{data.curso.codigo}/{data.mesa.numero}/planificacion" target="_blank" rel="noopener">
+									{data.escenario.planificacion_archivo}
+								</a>
+							</span>
+							<span class="detalle">
+								{mostrarTamano(data.escenario.planificacion_tamano ?? 0)}
+							</span>
+						{:else}
+							<span class="pendiente">Sin planificación cargada</span>
+							<span class="detalle">El facilitador va a ver que no está disponible.</span>
+						{/if}
+					</div>
+	
+					<div>
+						<span class="etiqueta">Checklist de la técnica · para su observador y el facilitador</span>
+						{#if data.checklistDeTecnica}
+							<span>{data.checklistDeTecnica.nombre}</span>
+							<span class="detalle">
+								{data.checklistDeTecnica.items} ítems · máximo {data.checklistDeTecnica.maximo}
+								{#if !data.checklistDeTecnica.ponderado}· sin ponderar{/if}
+							</span>
+						{:else}
+							<span class="pendiente">El escenario no tiene checklist de la técnica</span>
+						{/if}
+					</div>
+	
+					<div>
+						{#if data.checklistComun}
+							<span class="etiqueta">Checklist · para el {data.checklistComun.rol.toLowerCase()}</span>
+							<span>{data.checklistComun.nombre}</span>
+							<span class="detalle">
+								{data.checklistComun.items} ítems · máximo {data.checklistComun.maximo}
+								{#if !data.checklistComun.ponderado}· sin ponderar{/if}
+								· común a todos los escenarios
+							</span>
+						{:else}
+							<span class="etiqueta">Checklist común del curso</span>
+							<span class="pendiente">Este curso todavía no tiene el suyo cargado</span>
+						{/if}
+					</div>
 				</div>
-
-				<div>
-					<span class="etiqueta">Checklist de la técnica · para su observador y el facilitador</span>
-					{#if data.checklistDeTecnica}
-						<span>{data.checklistDeTecnica.nombre}</span>
-						<span class="detalle">
-							{data.checklistDeTecnica.items} ítems · máximo {data.checklistDeTecnica.maximo}
-							{#if !data.checklistDeTecnica.ponderado}· sin ponderar{/if}
-						</span>
-					{:else}
-						<span class="pendiente">El escenario no tiene checklist de la técnica</span>
-					{/if}
-				</div>
-
-				<div>
-					{#if data.checklistComun}
-						<span class="etiqueta">Checklist · para el {data.checklistComun.rol.toLowerCase()}</span>
-						<span>{data.checklistComun.nombre}</span>
-						<span class="detalle">
-							{data.checklistComun.items} ítems · máximo {data.checklistComun.maximo}
-							{#if !data.checklistComun.ponderado}· sin ponderar{/if}
-							· común a todos los escenarios
-						</span>
-					{:else}
-						<span class="etiqueta">Checklist común del curso</span>
-						<span class="pendiente">Este curso todavía no tiene el suyo cargado</span>
-					{/if}
-				</div>
-			</div>
+			{/if}
 		</div>
 
 	</div>
