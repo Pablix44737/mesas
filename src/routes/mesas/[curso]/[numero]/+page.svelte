@@ -432,7 +432,7 @@
 					Todavía no se identificó nadie en esta corrida. Mostrales el código QR de arriba.
 				</p>
 			{:else}
-				<ul class="lista">
+				<ul class="lista participantes">
 					{#each data.participantes as participante (participante.id)}
 						<li>
 							<span class="rotulo">{participante.rolNombre}</span>

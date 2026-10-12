@@ -1346,6 +1346,35 @@ fieldset.roles.invalido legend {
 	}
 }
 
+/* Los participantes de la corrida en curso. En línea, como el resto de las
+   `.lista`, el chip de «Evaluó» caía a la derecha o debajo a la izquierda según
+   cuánto midieran el rol y el nombre, y los nombres arrancaban cada uno en otra
+   columna porque «Observador del facilitador» no entra en la del rótulo. Así el
+   rol va arriba, a todo el ancho, y el chip siempre a la derecha del nombre. */
+.lista.participantes li {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 2px var(--e-4);
+}
+
+.lista.participantes .rotulo {
+	grid-column: 1 / -1;
+	min-width: 0;
+}
+
+/* Fijado a la primera columna: sin chip, el nombre se acomodaba solo en la
+   segunda y quedaba corrido a la derecha. */
+.lista.participantes .quien {
+	grid-column: 1;
+	min-width: 0;
+}
+
+.lista.participantes .chip {
+	grid-column: 2;
+	grid-row: 2;
+}
+
 /* El resumen del recorrido: una fila por persona, el nombre y debajo lo que le
    falta. Apilados y no en línea como el resto de las `.lista`: con nombres y
    roles de largos distintos, en línea cada fila quedaba cortada en otro lugar. */
