@@ -1801,6 +1801,83 @@ fieldset.roles.invalido legend {
 	color: var(--azul);
 }
 
+/* --- carpeta de un curso, con sus mesas adentro --- */
+
+/* La cabecera se ve como una tarjeta-enlace más, para que se lea como algo que
+   se toca; la flecha hacia abajo, en vez de hacia el costado, dice que abre ahí
+   mismo en lugar de llevar a otra pantalla. */
+.carpeta > summary {
+	display: flex;
+	align-items: center;
+	gap: var(--e-4);
+	padding: var(--e-4) var(--e-5);
+	margin-bottom: var(--e-2);
+	background: var(--superficie);
+	border: 1px solid var(--borde);
+	border-radius: var(--r-lg);
+	box-shadow: var(--sombra-sm);
+	list-style: none;
+	cursor: pointer;
+	transition:
+		border-color 120ms ease,
+		background-color 120ms ease;
+}
+
+.carpeta > summary::-webkit-details-marker {
+	display: none;
+}
+
+.carpeta > summary:hover {
+	background: var(--azul-tenue);
+	border-color: var(--azul);
+}
+
+.carpeta > summary .texto {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.carpeta > summary .titulo {
+	font-family: var(--fuente-titulo);
+	font-size: 16px;
+	font-weight: 600;
+	line-height: 22px;
+}
+
+.carpeta > summary .flecha {
+	color: var(--tinta-tenue);
+	transition: transform 120ms ease;
+}
+
+.carpeta[open] > summary .flecha {
+	transform: rotate(180deg);
+}
+
+/* Las mesas cuelgan de su curso: sangradas y con una línea que las une a la
+   carpeta, así no se confunden con las del curso siguiente. */
+.carpeta-mesas {
+	margin: 0 0 var(--e-4) var(--e-5);
+	padding-left: var(--e-4);
+	border-left: 2px solid var(--borde);
+}
+
+/* En el teléfono la sangría entera dejaba el nombre del escenario en cuatro
+   renglones: alcanza con la línea para ver de qué curso son. */
+@media (max-width: 719px) {
+	.carpeta-mesas {
+		margin-left: var(--e-2);
+		padding-left: var(--e-2);
+	}
+
+	.carpeta-mesas .tarjeta-enlace {
+		gap: var(--e-3);
+		padding: var(--e-4);
+	}
+}
+
 /* --- código QR de la mesa, dentro de su pantalla --- */
 
 .qr-panel {

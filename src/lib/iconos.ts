@@ -25,6 +25,7 @@ export const iconos: Record<string, string[]> = {
 
 	inicio: ['M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', 'M9 22V12h6v10'],
 	mesa: ['M3 10h18', 'M5 10V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4', 'M6 10v10', 'M18 10v10'],
+	carpeta: ['M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'],
 	corrida: ['M5 3l14 9-14 9V3z'],
 	escenario: [
 		'M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2',

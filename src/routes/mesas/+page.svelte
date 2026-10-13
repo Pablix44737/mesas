@@ -120,23 +120,47 @@
 
 		<h2 class="etiqueta" style="margin: 24px 0 8px">Mesas creadas</h2>
 
-		{#each data.mesas as mesa (mesa.id)}
-			<a class="tarjeta-enlace" href="/mesas/{mesa.curso?.codigo}/{mesa.numero}">
-				<span class="numero-mesa">{mesa.numero}</span>
-				<span class="texto">
-					<span class="titulo">{mesa.escenario?.nombre}</span>
-					<span class="detalle">
-						{#if mesa.corridaEnCurso}
-							Corrida {mesa.corridaEnCurso} en curso
-						{:else if mesa.corridas > 0}
-							{mesa.corridas} corridas · ninguna en curso
-						{:else}
-							<span class="pendiente">Sin corridas habilitadas</span>
-						{/if}
+		<!-- Una carpeta por curso: las mesas aparecen recién al abrirla. Con un solo
+		     curso en marcha no hay nada que elegir, así que arranca abierta. -->
+		{#each data.carpetas as carpeta (carpeta.id)}
+			{@const enCurso = carpeta.mesas.filter((mesa) => mesa.corridaEnCurso).length}
+			<details class="carpeta" open={data.carpetas.length === 1}>
+				<summary>
+					<span class="avatar-rol"><Icono nombre="carpeta" /></span>
+					<span class="texto">
+						<span class="titulo">{carpeta.nombre}</span>
+						<span class="detalle">
+							{carpeta.mesas.length}
+							{carpeta.mesas.length === 1 ? 'mesa' : 'mesas'}
+							{#if enCurso > 0}· {enCurso} en curso{/if}
+						</span>
 					</span>
-				</span>
-				<Icono nombre="adelante" clase="flecha" />
-			</a>
+					<Icono nombre="abajo" clase="flecha" />
+				</summary>
+
+				<div class="carpeta-mesas">
+					{#each carpeta.mesas as mesa (mesa.id)}
+						<a class="tarjeta-enlace" href="/mesas/{mesa.curso?.codigo}/{mesa.numero}">
+							<span class="numero-mesa">{mesa.numero}</span>
+							<span class="texto">
+								<span class="titulo">{mesa.escenario?.nombre}</span>
+								<span class="detalle">
+									{#if mesa.corridaEnCurso}
+										Corrida {mesa.corridaEnCurso} en curso
+									{:else if mesa.corridas > 0}
+										{mesa.corridas} corridas · ninguna en curso
+									{:else}
+										<span class="pendiente">Sin corridas habilitadas</span>
+									{/if}
+								</span>
+							</span>
+							<Icono nombre="adelante" clase="flecha" />
+						</a>
+					{:else}
+						<div class="vacio">Este curso todavía no tiene mesas.</div>
+					{/each}
+				</div>
+			</details>
 		{:else}
 			<div class="vacio">Todavía no hay mesas creadas.</div>
 		{/each}

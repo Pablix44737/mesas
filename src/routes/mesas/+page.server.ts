@@ -25,15 +25,26 @@ export const load: PageServerLoad = async () => {
 
 	if (falloMesas) error(500, falloMesas.message);
 
+	const resumidas = (mesas ?? []).map((mesa) => ({
+		id: mesa.id,
+		numero: mesa.numero,
+		escenario: mesa.escenario,
+		curso: mesa.curso,
+		corridaEnCurso: mesa.corridas.find((c) => c.habilitada)?.numero ?? null,
+		corridas: mesa.corridas.length
+	}));
+
+	// Cada curso numera sus mesas desde 1, así que en una sola lista había varias
+	// «mesa 1» sin forma de distinguirlas. Se agrupan por curso, y sólo los que
+	// están en marcha: los archivados son ediciones terminadas.
+	const carpetas = (cursos ?? []).map((curso) => ({
+		id: curso.id,
+		nombre: curso.nombre,
+		mesas: resumidas.filter((mesa) => mesa.curso?.id === curso.id)
+	}));
+
 	return {
-		mesas: (mesas ?? []).map((mesa) => ({
-			id: mesa.id,
-			numero: mesa.numero,
-			escenario: mesa.escenario,
-			curso: mesa.curso,
-			corridaEnCurso: mesa.corridas.find((c) => c.habilitada)?.numero ?? null,
-			corridas: mesa.corridas.length
-		})),
+		carpetas,
 		escenarios: escenarios ?? [],
 		cursos: cursos ?? []
 	};
