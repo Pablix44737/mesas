@@ -29,6 +29,15 @@
 
 	const porEliminar = $derived(bajaAMano === undefined ? (form?.eliminando ?? null) : bajaAMano);
 
+	/** La baja del curso entero. Mismo centinela: un rechazo la reabre. */
+	let bajaDelCursoAMano = $state<boolean | undefined>(undefined);
+	const eliminandoCurso = $derived(bajaDelCursoAMano ?? Boolean(form?.eliminandoCurso));
+	let confirmacionCurso = $state('');
+	let borrandoCurso = $state(false);
+
+	const corridasDelCurso = $derived(data.mesas.reduce((total, mesa) => total + mesa.corridas, 0));
+	const normalizar = (texto: string) => texto.toLocaleLowerCase('es').replace(/\s+/g, ' ').trim();
+
 	function abrir(id: string) {
 		bajaAMano = id;
 		confirmacion = '';
@@ -335,5 +344,79 @@
 				</tbody>
 			</table>
 		</div>
+	{/if}
+</div>
+
+<!-- Para los cursos de prueba: una edición real que terminó se archiva. Va al final
+     y separada, porque no es parte de administrar el curso sino de deshacerlo. -->
+<div class="dar-de-baja">
+	{#if eliminandoCurso}
+		<div class="aviso error">
+			<Icono nombre="alerta" />
+			<div>
+				<strong>Eliminar el curso «{data.curso.nombre}» no se puede deshacer.</strong>
+				{#if data.mesas.length > 0}
+					Se van con él
+					{data.mesas.length === 1 ? 'su mesa' : `sus ${data.mesas.length} mesas`},
+					{corridasDelCurso === 1 ? '1 corrida' : `${corridasDelCurso} corridas`} y
+					{data.evaluacionesDelCurso === 1
+						? '1 evaluación enviada'
+						: `${data.evaluacionesDelCurso} evaluaciones enviadas`}.
+				{/if}
+
+				<form
+					method="POST"
+					action="?/eliminarCurso"
+					style="margin-top: 12px"
+					use:enhance={() => {
+						borrandoCurso = true;
+						return async ({ update }) => {
+							await update({ reset: false });
+							borrandoCurso = false;
+						};
+					}}
+				>
+					<div class="campo" style="max-width: 28rem">
+						<label for="confirmacion-curso">Escribí «{data.curso.nombre}» para confirmar</label>
+						<input
+							id="confirmacion-curso"
+							name="confirmacion"
+							type="text"
+							autocomplete="off"
+							bind:value={confirmacionCurso}
+							required
+						/>
+					</div>
+
+					<div class="confirmacion" style="max-width: 28rem">
+						<button
+							class="boton peligro"
+							type="submit"
+							disabled={borrandoCurso ||
+								normalizar(confirmacionCurso) !== normalizar(data.curso.nombre)}
+						>
+							<Icono nombre="quitar" />
+							{borrandoCurso ? 'Eliminando…' : 'Sí, eliminar el curso'}
+						</button>
+						<button
+							class="boton secundario"
+							type="button"
+							onclick={() => {
+								bajaDelCursoAMano = false;
+								confirmacionCurso = '';
+							}}
+							disabled={borrandoCurso}
+						>
+							Cancelar
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	{:else}
+		<button class="boton peligro" type="button" onclick={() => (bajaDelCursoAMano = true)}>
+			<Icono nombre="quitar" tamano={16} />
+			Eliminar el curso
+		</button>
 	{/if}
 </div>

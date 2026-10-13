@@ -566,6 +566,7 @@ export type Database = {
 			borrar_corrida: { Args: { p_corrida_id: string }; Returns: Json };
 			borrar_participacion: { Args: { p_participacion_id: string }; Returns: Json };
 			borrar_mesa: { Args: { p_mesa_id: string }; Returns: Json };
+			borrar_curso: { Args: { p_curso_id: string }; Returns: Json };
 			asignar_docente_a_la_mesa: {
 				Args: { p_mesa_id: string; p_dni: string };
 				Returns: Json;

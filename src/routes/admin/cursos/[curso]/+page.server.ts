@@ -1,4 +1,4 @@
-import { error, fail } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -67,6 +67,8 @@ export const load: PageServerLoad = async ({ params }) => {
 		curso,
 		destinatarios: destinatarios ?? [],
 		rolesYaOcupados: ocupados ?? 0,
+		// Para decir antes de eliminar el curso cuánto trabajo se va con él.
+		evaluacionesDelCurso: (mesas ?? []).reduce((total, mesa) => total + (porMesa.get(mesa.id) ?? 0), 0),
 		mesas: (mesas ?? []).map((mesa) => ({
 			id: mesa.id,
 			numero: mesa.numero,
@@ -222,5 +224,43 @@ export const actions: Actions = {
 				`${cuantas(resumen.participaciones, 'rol ocupado', 'roles ocupados')} y ` +
 				`${evaluaciones()}. El padrón y el material del escenario quedaron intactos.`
 		};
+	},
+
+	/**
+	 * Eliminar el curso entero: sus mesas, y con ellas todo lo que colgó de cada
+	 * una. Es pensado para los cursos de prueba; una edición real que terminó se
+	 * archiva. Igual que con una mesa, se confirma escribiendo a mano, y el nombre
+	 * contra el que se compara sale de la base y no del formulario.
+	 *
+	 * `borrar_curso()` cuenta y borra en una sola transacción.
+	 */
+	eliminarCurso: async ({ request, params }) => {
+		const curso = await traerCurso(params.curso);
+
+		const formulario = await request.formData();
+		const confirmacion = String(formulario.get('confirmacion') ?? '').trim();
+
+		const rechazar = (estado: number, mensaje: string) =>
+			fail(estado, { mensaje, exito: null, eliminandoCurso: true });
+
+		// Sin distinguir mayúsculas ni espacios de más: lo que se pide es intención,
+		// no exactitud tipográfica.
+		const normalizar = (texto: string) => texto.toLocaleLowerCase('es').replace(/\s+/g, ' ').trim();
+		if (normalizar(confirmacion) !== normalizar(curso.nombre)) {
+			return rechazar(400, `Para eliminarlo hay que escribir el nombre del curso: «${curso.nombre}».`);
+		}
+
+		const { error: fallo } = await supabase.rpc('borrar_curso', { p_curso_id: curso.id });
+
+		if (fallo) {
+			return rechazar(
+				fallo.code === 'P0002' ? 404 : 500,
+				fallo.code === 'P0002'
+					? 'Ese curso ya no existe: alguien lo eliminó antes.'
+					: 'No se pudo eliminar el curso. Intentá de nuevo.'
+			);
+		}
+
+		redirect(303, '/admin/cursos');
 	}
 };
