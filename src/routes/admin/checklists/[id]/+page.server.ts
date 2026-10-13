@@ -195,7 +195,7 @@ export const actions: Actions = {
 			if (fallo.message.includes('se uso')) {
 				return rechazar(
 					409,
-					'Alguien ya completó este checklist en una mesa, así que no se puede eliminar: se perdería ese trabajo.'
+					'Este checklist ya se usó en una mesa, así que no se puede eliminar.'
 				);
 			}
 			return rechazar(500, 'No se pudo eliminar el checklist. Intentá de nuevo.');

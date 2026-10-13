@@ -34,10 +34,7 @@
 		<div class="pagina-cabecera">
 			<div class="titulo">
 				<h1>Lo registrado sobre tu corrida</h1>
-				<p class="bajada">
-					Si practicaste la técnica en esta mesa, identificate para ver los checklists que
-					enviaron quienes te evaluaron.
-				</p>
+				<p class="bajada">Identificate con tu DNI para ver cómo te evaluaron.</p>
 			</div>
 		</div>
 
@@ -105,9 +102,7 @@
 				{#if corrida.enCurso}
 					<div class="aviso alerta">
 						<Icono nombre="reloj" />
-						<span>
-							Esta corrida todavía está en curso: puede que falten checklists por enviar.
-						</span>
+						<span>Puede que todavía falten checklists por enviar.</span>
 					</div>
 				{/if}
 

@@ -15,11 +15,7 @@
 	<div class="envoltorio">
 		<div class="aviso alerta">
 			<Icono nombre="alerta" />
-			<span>
-				Hay una <strong>mesa {data.numero}</strong> en más de un curso, así que este código no
-				alcanza para saber a cuál entrar. Es un cartel de los viejos: pedile al líder de mesa el
-				actualizado.
-			</span>
+			<span>Hay una <strong>mesa {data.numero}</strong> en más de un curso.</span>
 		</div>
 
 		<h2 class="etiqueta" style="margin-bottom: 8px">Elegí el curso</h2>

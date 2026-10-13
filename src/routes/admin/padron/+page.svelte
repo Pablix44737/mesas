@@ -108,8 +108,7 @@
 			<span class="chip alerta">{data.pendientes.length}</span>
 		</div>
 		<p class="ayuda">
-			Estos DNI ocuparon un rol pero no están en el padrón. Al incorporarlos, sus registros quedan
-			resueltos solos.
+			Ocuparon un rol en alguna mesa pero no están en el padrón.
 		</p>
 		<ul class="lista">
 			{#each data.pendientes as pendiente (pendiente.dni)}
@@ -377,28 +376,19 @@
 												</div>
 											</div>
 
-											{#if cambiaElDni}
+											{#if cambiaElDni && (persona.registros > 0 || esperando)}
 												<div class="aviso alerta" style="margin: 0 0 16px">
 													<Icono nombre="alerta" />
 													<div>
-														<strong>El DNI es con lo que las mesas identifican a la persona.</strong>
 														{#if persona.registros > 0}
-															Al cambiarlo,
-															{persona.registros === 1
-																? 'el registro que tiene'
-																: `sus ${persona.registros} registros`}
-															en las mesas
-															{persona.registros === 1 ? 'queda' : 'quedan'} sin identificar, con
-															el DNI viejo — no se
-															{persona.registros === 1 ? 'borra' : 'borran'}.
-														{:else}
-															Todavía no ocupó ningún rol, así que no hay registros que se muevan.
+															Lo que registró con el DNI actual va a quedar sin identificar.
 														{/if}
 														{#if esperando}
-															En cambio, {esperando.registros.length === 1
-																? 'queda resuelto 1 registro que está esperando'
-																: `quedan resueltos ${esperando.registros.length} registros que están esperando`}
-															el DNI nuevo.
+															Se le van a asignar
+															{esperando.registros.length === 1
+																? 'el registro hecho'
+																: `los ${esperando.registros.length} registros hechos`}
+															con el DNI nuevo.
 														{/if}
 													</div>
 												</div>
@@ -435,14 +425,11 @@
 														{persona.registros === 1 ? 'un rol' : `${persona.registros} roles`}
 														en las mesas.
 													</strong>
-													Al quitar a esa persona del padrón, sus registros y evaluaciones
-													<strong>no se borran</strong>: quedan con el DNI, sin identificar.
-													Si vuelve al padrón, se resuelven solos.
+													Sus evaluaciones no se borran, pero quedan sin identificar.
 												{:else}
 													<strong>
-														{persona.apellido}, {persona.nombre} todavía no ocupó ningún rol.
+														¿Quitar a {persona.apellido}, {persona.nombre} del padrón?
 													</strong>
-													Quitar ese registro no afecta a ninguna mesa.
 												{/if}
 												<form
 													method="POST"

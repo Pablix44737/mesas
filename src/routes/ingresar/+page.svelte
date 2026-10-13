@@ -17,7 +17,7 @@
 		<header class="bienvenida-encabezado">
 			<span class="bienvenida-logo"><Marca alto={38} /></span>
 			<h1>Administración</h1>
-			<p>Esta parte del sistema prepara el evento, así que pide la clave del equipo.</p>
+			<p>Ingresá la clave del equipo.</p>
 		</header>
 
 		{#if form?.mensaje}

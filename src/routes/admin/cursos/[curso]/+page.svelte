@@ -165,7 +165,6 @@
 						<span class="texto">
 							<span class="rol-nombre">{destinatario.nombre}</span>
 							<span class="detalle">{destinatario.descripcion}</span>
-							<span class="detalle">Roles que se ofrecen: {destinatario.roles.join(', ')}.</span>
 						</span>
 						<Icono nombre="tilde-circulo" clase="marca-elegido" />
 					</label>
@@ -187,18 +186,8 @@
 		</form>
 	{:else}
 		<p style="margin: 0">
-			<strong>{destinatario?.nombre ?? data.curso.destinado_a}.</strong>
-			{destinatario?.descripcion ?? ''}
+			<strong>{destinatario?.nombre ?? data.curso.destinado_a}</strong>
 		</p>
-		<p class="detalle" style="margin: 8px 0 0">
-			Al escanear el QR, el participante elige entre: {data.rolesDelCurso.join(', ')}.
-		</p>
-		{#if data.rolesYaOcupados > 0}
-			<p class="detalle" style="margin: 8px 0 0">
-				Ya no se puede cambiar: en este curso se declararon {data.rolesYaOcupados} roles, y
-				cambiarlo los dejaría fuera de lo que el curso admite.
-			</p>
-		{/if}
 	{/if}
 </div>
 
@@ -284,8 +273,7 @@
 														: `las ${mesa.evaluaciones} evaluaciones que se enviaron`}
 												{/if}.
 											</strong>
-											No se puede deshacer. El padrón y el material del escenario no se tocan:
-											lo que se pierde es lo que pasó en esta mesa.
+											No se puede deshacer.
 
 											<form
 												method="POST"

@@ -27,17 +27,13 @@ export const load: PageServerLoad = async () => {
 		{ data: mesas },
 		{ data: corridas },
 		{ data: enviadas },
-		{ data: destinatarios },
-		{ data: rolesPorDestinatario }
+		{ data: destinatarios }
 	] = await Promise.all([
 		supabase.from('cursos').select('*').order('archivado').order('creado_en', { ascending: false }),
 		supabase.from('mesas').select('id, curso_id'),
 		supabase.from('corridas').select('mesa_id'),
 		supabase.from('evaluaciones_enviadas').select('mesa_id'),
-		supabase.from('destinatarios').select('*').order('orden'),
-		supabase
-			.from('roles_por_destinatario')
-			.select('destinatario, lo_elige_el_participante, rol:roles(nombre, orden)')
+		supabase.from('destinatarios').select('*').order('orden')
 	]);
 
 	if (fallo) error(500, fallo.message);
@@ -60,20 +56,10 @@ export const load: PageServerLoad = async () => {
 		mesasPorCurso.set(mesa.curso_id, (mesasPorCurso.get(mesa.curso_id) ?? 0) + 1);
 	}
 
-	// Qué roles ocupa cada destinatario, para que el administrador elija sabiendo
-	// qué va a ver el participante en vez de adivinarlo por el nombre.
 	const nombreDelDestinatario = new Map((destinatarios ?? []).map((d) => [d.codigo, d.nombre]));
 
 	return {
-		destinatarios: (destinatarios ?? []).map((destinatario) => ({
-			...destinatario,
-			roles: (rolesPorDestinatario ?? [])
-				.filter((r) => r.destinatario === destinatario.codigo && r.lo_elige_el_participante)
-				.map((r) => r.rol)
-				.filter((rol) => rol !== null)
-				.sort((a, b) => a.orden - b.orden)
-				.map((rol) => rol.nombre)
-		})),
+		destinatarios: destinatarios ?? [],
 		cursos: (cursos ?? []).map((curso) => ({
 			...curso,
 			destinatario: nombreDelDestinatario.get(curso.destinado_a) ?? curso.destinado_a,

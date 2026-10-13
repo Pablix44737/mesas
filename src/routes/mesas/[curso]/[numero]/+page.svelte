@@ -158,11 +158,7 @@
 				</div>
 
 				{#if !data.docente.dni || declarandoDocente}
-					<p class="ayuda">
-						En este curso el facilitador sos vos, no un alumno. Dejá tu documento una vez y el
-						sistema te abre tu lugar en cada corrida que habilites, para que puedas completar la
-						lista de cotejo de la técnica.
-					</p>
+					<p class="ayuda">En este curso el facilitador sos vos.</p>
 					<form
 						method="POST"
 						action="?/declararDocente"
@@ -215,7 +211,7 @@
 								<span class="detalle">DNI {mostrarDni(data.docente.dni)}</span>
 							{:else}
 								<span class="nombre">DNI {mostrarDni(data.docente.dni)}</span>
-								<span class="detalle">No está en el padrón: su evaluación va a ir sin nombre.</span>
+								<span class="detalle">No está en el padrón</span>
 							{/if}
 						</div>
 					</div>
@@ -233,7 +229,7 @@
 						</a>
 					{:else if !data.corridaEnCurso}
 						<p class="detalle" style="margin: 0">
-							Habilitá la primera corrida y se te abre ahí tu lugar de facilitador.
+							Habilitá la primera corrida para empezar a evaluar.
 						</p>
 					{/if}
 
@@ -247,8 +243,7 @@
 							<Icono nombre="alerta" />
 							<div>
 								<strong>La mesa va a quedar sin nadie que la conduzca.</strong>
-								Lo que {data.docente.nombre ?? 'esa persona'} ya evaluó queda registrado; lo que
-								deja de pasar es que se le abra lugar de facilitador en las corridas nuevas.
+								Lo que ya evaluó queda registrado.
 								<div class="confirmacion" style="margin-top: 12px">
 									<form
 										method="POST"
@@ -314,15 +309,13 @@
 				</p>
 			{:else}
 				<p>
-					Esta mesa todavía no tiene ninguna corrida habilitada. Hasta que habilites la primera,
-					los participantes no pueden identificarse.
+					Habilitá la primera corrida para que los participantes puedan escanear el QR.
 				</p>
 			{/if}
 
 			{#if confirmandoAvance}
 				<p>
-					Habilitar la corrida {siguiente} cierra la corrida {data.corridaEnCurso?.numero}. A
-					partir de ahí, lo que se registre queda referido a la nueva.
+					Habilitar la corrida {siguiente} cierra la corrida {data.corridaEnCurso?.numero}.
 				</p>
 
 				{#if data.sinEnviar.length > 0}
@@ -334,8 +327,7 @@
 									? 'Hay alguien que todavía no envió su checklist'
 									: `Hay ${data.sinEnviar.length} personas que todavía no enviaron su checklist`}.
 							</strong>
-							Van a poder terminarlo igual —el sistema se los ofrece cuando vuelvan a escanear
-							el QR—, pero si podés, esperalos.
+							Van a poder terminarlo igual, pero si podés, esperalos.
 							<ul class="lista" style="margin-top: 8px">
 								{#each data.sinEnviar as pendiente, i (i)}
 									<li class="pendiente-padron">
@@ -430,9 +422,7 @@
 			</div>
 
 			{#if !data.corridaEnCurso}
-				<p class="detalle" style="margin: 0">
-					Habilitá una corrida para que los participantes puedan identificarse.
-				</p>
+				<p class="detalle" style="margin: 0">Todavía no hay ninguna corrida habilitada.</p>
 			{:else if data.participantes.length === 0}
 				<p class="detalle" style="margin: 0">
 					Todavía no se identificó nadie en esta corrida. Mostrales el código QR de arriba.
@@ -483,10 +473,7 @@
 			</div>
 
 			{#if data.recorrido.length === 0}
-				<p class="detalle" style="margin: 0">
-					Todavía no pasó nadie por esta mesa. Cuando se identifiquen vas a ver acá qué rol
-					le falta a cada uno.
-				</p>
+				<p class="detalle" style="margin: 0">Todavía no pasó nadie por esta mesa.</p>
 			{:else if !detalleDelRecorrido}
 				<ul class="lista recorrido-resumen">
 					{#each data.recorrido as persona (persona.dni)}
@@ -494,7 +481,7 @@
 							<span class="quien">{@render quien(persona)}</span>
 							<span class="detalle">
 								{#if persona.conduceLaMesa}
-									Conduce la mesa, no rota
+									Conduce la mesa
 								{:else if persona.faltan.length > 0}
 									Le falta: {persona.faltan.join(', ')}
 								{:else}
@@ -527,7 +514,7 @@
 									<th scope="row">
 										<span class="recorrido-quien">{@render quien(persona)}</span>
 										{#if persona.conduceLaMesa}
-											<span class="recorrido-nota">Conduce, no rota</span>
+											<span class="recorrido-nota">Conduce la mesa</span>
 										{/if}
 									</th>
 									{#each persona.porRol as celda (celda.codigo)}
@@ -563,7 +550,7 @@
 
 		<div class="tarjeta">
 			<div class="tarjeta-cabecera">
-				<h2>Material que hereda del escenario</h2>
+				<h2>Material del escenario</h2>
 				{@render desplegar(mostrarMaterial, () => (mostrarMaterial = !mostrarMaterial), 'Mostrar')}
 			</div>
 
@@ -582,18 +569,14 @@
 							</span>
 						{:else}
 							<span class="pendiente">Sin planificación cargada</span>
-							<span class="detalle">El facilitador va a ver que no está disponible.</span>
 						{/if}
 					</div>
-	
+
 					<div>
-						<span class="etiqueta">Checklist de la técnica · para su observador y el facilitador</span>
+						<span class="etiqueta">Checklist de la técnica</span>
 						{#if data.checklistDeTecnica}
 							<span>{data.checklistDeTecnica.nombre}</span>
-							<span class="detalle">
-								{data.checklistDeTecnica.items} ítems · máximo {data.checklistDeTecnica.maximo}
-								{#if !data.checklistDeTecnica.ponderado}· sin ponderar{/if}
-							</span>
+							<span class="detalle">{data.checklistDeTecnica.items} ítems</span>
 						{:else}
 							<span class="pendiente">El escenario no tiene checklist de la técnica</span>
 						{/if}
@@ -603,14 +586,10 @@
 						{#if data.checklistComun}
 							<span class="etiqueta">Checklist · para el {data.checklistComun.rol.toLowerCase()}</span>
 							<span>{data.checklistComun.nombre}</span>
-							<span class="detalle">
-								{data.checklistComun.items} ítems · máximo {data.checklistComun.maximo}
-								{#if !data.checklistComun.ponderado}· sin ponderar{/if}
-								· común a todos los escenarios
-							</span>
+							<span class="detalle">{data.checklistComun.items} ítems</span>
 						{:else}
-							<span class="etiqueta">Checklist común del curso</span>
-							<span class="pendiente">Este curso todavía no tiene el suyo cargado</span>
+							<span class="etiqueta">Checklist del observador</span>
+							<span class="pendiente">Sin checklist cargado</span>
 						{/if}
 					</div>
 				</div>

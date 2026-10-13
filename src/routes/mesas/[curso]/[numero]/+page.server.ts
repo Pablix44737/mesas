@@ -311,15 +311,10 @@ export const actions: Actions = {
 			return rechazar(500, 'No se pudo declarar al docente. Intentá de nuevo.');
 		}
 
-		const resumen = data as unknown as { nombre: string | null; corrida: number | null };
+		const resumen = data as unknown as { nombre: string | null };
 		const quien = resumen.nombre ?? `El documento ${mostrarDni(dni)}`;
 
-		return {
-			mensaje: null,
-			exito: resumen.corrida
-				? `${quien} conduce esta mesa y ya tiene su lugar de facilitador en la corrida ${resumen.corrida}.`
-				: `${quien} conduce esta mesa. Al habilitar la primera corrida se le abre su lugar de facilitador.`
-		};
+		return { mensaje: null, exito: `${quien} conduce esta mesa.` };
 	},
 
 	/**
@@ -340,7 +335,7 @@ export const actions: Actions = {
 		return {
 			mensaje: null,
 			exito:
-				'La mesa quedó sin docente declarado. Lo que haya evaluado sigue registrado; sólo deja de abrírsele lugar en las corridas nuevas.'
+				'La mesa quedó sin docente.'
 		};
 	}
 };

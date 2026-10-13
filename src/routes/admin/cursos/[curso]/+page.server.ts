@@ -46,27 +46,15 @@ export const load: PageServerLoad = async ({ params }) => {
 	// participaciones con roles que el curso ya no admite.
 	const corridasDelCurso = (mesas ?? []).flatMap((mesa) => mesa.corridas.map((c) => c.id));
 
-	const [{ data: destinatarios }, { data: rolesPorDestinatario }, { count: ocupados }] =
-		await Promise.all([
-			supabase.from('destinatarios').select('*').order('orden'),
-			supabase
-				.from('roles_por_destinatario')
-				.select('destinatario, lo_elige_el_participante, rol:roles(nombre, orden)'),
-			corridasDelCurso.length > 0
-				? supabase
-						.from('participaciones')
-						.select('id', { count: 'exact', head: true })
-						.in('corrida_id', corridasDelCurso)
-				: Promise.resolve({ count: 0 })
-		]);
-
-	const rolesDe = (codigo: string) =>
-		(rolesPorDestinatario ?? [])
-			.filter((r) => r.destinatario === codigo && r.lo_elige_el_participante)
-			.map((r) => r.rol)
-			.filter((rol) => rol !== null)
-			.sort((a, b) => a.orden - b.orden)
-			.map((rol) => rol.nombre);
+	const [{ data: destinatarios }, { count: ocupados }] = await Promise.all([
+		supabase.from('destinatarios').select('*').order('orden'),
+		corridasDelCurso.length > 0
+			? supabase
+					.from('participaciones')
+					.select('id', { count: 'exact', head: true })
+					.in('corrida_id', corridasDelCurso)
+			: Promise.resolve({ count: 0 })
+	]);
 
 	const porMesa = new Map<string, number>();
 	for (const evaluacion of evaluaciones ?? []) {
@@ -77,8 +65,7 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	return {
 		curso,
-		destinatarios: (destinatarios ?? []).map((d) => ({ ...d, roles: rolesDe(d.codigo) })),
-		rolesDelCurso: rolesDe(curso.destinado_a),
+		destinatarios: destinatarios ?? [],
 		rolesYaOcupados: ocupados ?? 0,
 		mesas: (mesas ?? []).map((mesa) => ({
 			id: mesa.id,
@@ -116,7 +103,7 @@ export const actions: Actions = {
 			if (fallo.message.includes('roles ocupados')) {
 				return rechazar(
 					409,
-					'En este curso ya se declararon roles, así que su destinatario no se puede cambiar: quedarían participaciones con roles que el curso ya no admite.'
+					'En este curso ya se ocuparon roles, así que su destinatario no se puede cambiar.'
 				);
 			}
 			if (fallo.message.includes('destinatario no existe')) {
@@ -222,7 +209,7 @@ export const actions: Actions = {
 			return {
 				mensaje: null,
 				eliminando: null,
-				exito: `La mesa ${resumen.numero} quedó eliminada. No llegó a tener corridas, así que no había nada registrado en ella.`
+				exito: `La mesa ${resumen.numero} quedó eliminada.`
 			};
 		}
 

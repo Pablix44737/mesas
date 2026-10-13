@@ -145,8 +145,7 @@
 			</div>
 			{#if !enConstruccion}
 				<p class="ayuda" style="margin: 8px 0 0">
-					Este checklist ya está en uso: el nombre nuevo se va a ver también en las evaluaciones
-					enviadas con él. Es el mismo instrumento, con el título corregido.
+					El nombre nuevo se va a ver también en las evaluaciones ya enviadas.
 				</p>
 			{/if}
 		</form>
@@ -255,16 +254,13 @@
 {#if data.items.length === 0}
 	<div class="aviso alerta">
 		<Icono nombre="alerta" />
-		<span>
-			Todavía no cargaste ningún criterio. Un checklist sin criterios no se puede dar por terminado.
-		</span>
+		<span>Todavía no cargaste ningún criterio.</span>
 	</div>
 {/if}
 
 {#if data.items.length > 1}
 	<p class="ayuda" style="margin-bottom: 12px">
-		Arrastrá un criterio del asa, o usá las flechas, para cambiar el orden en que los
-		observadores los van a ver. El orden se guarda solo.
+		Arrastrá un criterio, o usá las flechas, para cambiar el orden.
 	</p>
 {/if}
 
@@ -432,16 +428,14 @@
 			<div class="aviso alerta">
 				<Icono nombre="alerta" />
 				<span>
-					Al darlo por terminado va a reemplazar a <strong>{data.operacionVigente}</strong>, que
-					es el checklist de {data.plantilla.rol?.nombre.toLowerCase()} vigente en todas las
-					mesas. Las evaluaciones ya enviadas conservan el suyo.
+					Al darlo por terminado va a reemplazar a <strong>{data.operacionVigente}</strong>.
 				</span>
 			</div>
 		{/if}
 
 		{#if confirmandoTerminar}
 			<p>
-				Va a quedar disponible para asociarse a un escenario y presentarse en las mesas, con sus
+				Lo vas a dar por terminado con
 				<strong>{data.items.length}</strong> criterios y un máximo de
 				<strong>{data.maximo}</strong>.
 			</p>
@@ -484,13 +478,6 @@
 			</button>
 		{/if}
 	</div>
-{:else}
-	<div class="aviso exito" role="status">
-		<Icono nombre="tilde-circulo" />
-		<span>
-			Este checklist está disponible: se puede asociar a un escenario y se presenta en las mesas.
-		</span>
-	</div>
 {/if}
 
 {#if data.escenariosQueLoUsan === 0 && data.vecesQueSeUso === 0}
@@ -500,7 +487,7 @@
 				<Icono nombre="alerta" />
 				<div>
 					<strong>Eliminar el checklist «{data.plantilla.nombre}» no se puede deshacer.</strong>
-					Se van con él sus {data.items.length} criterios. Nadie lo completó todavía, así que no se pierde ninguna evaluación.
+					Se van con él sus {data.items.length} criterios.
 					<form
 						method="POST"
 						action="?/eliminar"
@@ -538,5 +525,5 @@
 		{/if}
 	</div>
 {:else}
-	<p class="ayuda dar-de-baja">Este checklist no se puede eliminar: {data.vecesQueSeUso > 0 ? 'alguien ya lo completó en una mesa y se perdería ese trabajo' : (data.escenariosQueLoUsan === 1 ? 'hay un escenario que lo usa' : `hay ${data.escenariosQueLoUsan} escenarios que lo usan`)}.</p>
+	<p class="ayuda dar-de-baja">Este checklist no se puede eliminar porque {data.vecesQueSeUso > 0 ? 'ya se usó en una mesa' : (data.escenariosQueLoUsan === 1 ? 'hay un escenario que lo usa' : `hay ${data.escenariosQueLoUsan} escenarios que lo usan`)}.</p>
 {/if}

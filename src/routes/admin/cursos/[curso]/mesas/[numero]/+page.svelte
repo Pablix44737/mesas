@@ -73,9 +73,9 @@
 		<Icono nombre="alerta" />
 		<span>
 			{sinResolver === 1
-				? 'Un rol de esta mesa fue ocupado por un DNI que el padrón no reconoce'
-				: `${sinResolver} roles de esta mesa fueron ocupados por DNI que el padrón no reconoce`}.
-			<a href="/admin/padron">Incorporá a esas personas</a> y los registros quedan resueltos.
+				? 'Un rol de esta mesa lo ocupó un DNI que no está en el padrón'
+				: `${sinResolver} roles de esta mesa los ocuparon DNI que no están en el padrón`}.
+			<a href="/admin/padron">Incorporá a esas personas</a>.
 		</span>
 	</div>
 {/if}
@@ -185,10 +185,8 @@
 													deja de estar registrado como {participacion.rolNombre} en la corrida
 													{corrida.numero}.
 												</strong>
-												Es lo que hay que hacer cuando alguien eligió mal el rol: mientras su
-												registro exista, el sistema lo lleva siempre al que ya tiene. Al darlo de
-												baja puede volver a escanear el QR y elegir el rol correcto. Lo único que
-												se pierde son las marcas que haya hecho con el rol equivocado.
+												Puede volver a escanear el QR y elegir otro rol. Se pierden las marcas que
+												haya hecho con este.
 
 												<form
 													method="POST"
@@ -280,11 +278,8 @@
 								deja la mesa sin corridas, como recién creada.
 							{/if}
 						</strong>
-						{#if corrida.participaciones.length === 0}
-							Todavía no se identificó nadie en ella, así que no se pierde nada.
-						{:else}
-							{seVanConElla(corrida.participaciones.length, corrida.sinEnviar)} Nadie envió nada,
-							así que no se pierde ninguna evaluación.
+						{#if corrida.participaciones.length > 0}
+							{seVanConElla(corrida.participaciones.length, corrida.sinEnviar)}
 						{/if}
 
 						<form
@@ -313,6 +308,6 @@
 	</div>
 {:else}
 	<div class="vacio">
-		Esta mesa todavía no tiene corridas. El líder de mesa tiene que habilitar la primera.
+		Esta mesa todavía no tiene corridas.
 	</div>
 {/each}

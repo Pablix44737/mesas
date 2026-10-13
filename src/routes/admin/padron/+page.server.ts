@@ -94,7 +94,7 @@ export const actions: Actions = {
 			mensaje: null,
 			exito:
 				registros > 0
-					? `${nombre} ${apellido} quedó en el padrón, y con eso ${registros === 1 ? 'se resolvió 1 registro que estaba esperando ese DNI' : `se resolvieron ${registros} registros que estaban esperando ese DNI`}.`
+					? `${nombre} ${apellido} quedó en el padrón, con ${registros === 1 ? 'el rol que ya había ocupado' : `los ${registros} roles que ya había ocupado`}.`
 					: `${nombre} ${apellido} quedó incorporado al padrón.`
 		};
 	},
@@ -237,7 +237,7 @@ export const actions: Actions = {
 			mensaje: null,
 			exito:
 				registros > 0
-					? `${persona.nombre} ${persona.apellido} salió del padrón. ${registros === 1 ? 'Su registro quedó sin identificar, con el DNI. Si esa persona vuelve al padrón, se resuelve solo.' : `Sus ${registros} registros quedaron sin identificar, con el DNI. Si esa persona vuelve al padrón, se resuelven solos.`}`
+					? `${persona.nombre} ${persona.apellido} salió del padrón. Sus evaluaciones quedaron sin identificar.`
 					: `${persona.nombre} ${persona.apellido} salió del padrón.`
 		};
 	}

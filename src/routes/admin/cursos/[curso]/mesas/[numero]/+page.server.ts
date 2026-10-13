@@ -189,7 +189,7 @@ export const actions: Actions = {
 			if (fallo.message.includes('ya envio su checklist')) {
 				return rechazar(
 					409,
-					'Esa persona ya envió su checklist, así que su registro no se puede eliminar. Su evaluación quedó hecha con ese rol.'
+					'Esa persona ya envió su checklist, así que su registro no se puede eliminar.'
 				);
 			}
 			return rechazar(500, 'No se pudo eliminar el registro. Intentá de nuevo.');

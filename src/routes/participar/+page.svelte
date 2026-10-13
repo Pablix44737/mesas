@@ -206,9 +206,5 @@
 				{/if}
 			</form>
 		</div>
-
-		<p class="pie">
-			Al entrar vas a identificarte con tu DNI y a declarar el rol que ocupás en la corrida.
-		</p>
 	</div>
 </div>

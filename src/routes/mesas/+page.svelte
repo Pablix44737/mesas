@@ -79,7 +79,6 @@
 
 					<div class="campo">
 						<label for="cursoId">Curso al que pertenece</label>
-						<p class="ayuda">Separa las mesas de esta edición de las de cualquier otra.</p>
 						<select id="cursoId" name="cursoId" aria-invalid={form?.campo === 'cursoId'} required>
 							{#if data.cursos.length > 1}
 								<option value="" disabled selected={!form?.cursoId}>Elegí un curso</option>
@@ -97,7 +96,6 @@
 
 					<div class="campo">
 						<label for="escenarioId">Escenario que se va a practicar</label>
-						<!-- <p class="ayuda">La mesa hereda su planificación y sus checklists.</p> -->
 						<select
 							id="escenarioId"
 							name="escenarioId"

@@ -25,7 +25,7 @@
 <div class="pagina-cabecera">
 	<div class="titulo">
 		<h1>Cursos</h1>
-		<p class="bajada">Cada edición con sus mesas, separada de las demás</p>
+		<p class="bajada">Las ediciones del evento</p>
 	</div>
 	{#if !abriendoAlta}
 		<button class="boton" type="button" onclick={() => (abriendoAlta = true)}>
@@ -82,8 +82,6 @@
 				/>
 			</div>
 
-			<!-- Decide qué roles va a ver el participante al escanear el QR, así que
-			     se muestran acá mismo en vez de hacerlos descubrir después. -->
 			<fieldset class="roles">
 				<legend>A quién está destinado</legend>
 				{#each data.destinatarios as destinatario (destinatario.codigo)}
@@ -98,7 +96,6 @@
 						<span class="texto">
 							<span class="rol-nombre">{destinatario.nombre}</span>
 							<span class="detalle">{destinatario.descripcion}</span>
-							<span class="detalle">Roles que se ofrecen: {destinatario.roles.join(', ')}.</span>
 						</span>
 						<Icono nombre="tilde-circulo" clase="marca-elegido" />
 					</label>

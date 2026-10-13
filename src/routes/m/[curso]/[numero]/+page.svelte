@@ -35,9 +35,8 @@
 			<div class="aviso alerta" role="alert">
 				<Icono nombre="alerta" />
 				<span>
-					<strong>Dejaste un checklist sin enviar.</strong> Mientras observabas, el líder habilitó
-					la corrida {data.corrida.numero}. Lo que marcaste sigue guardado y todavía podés
-					enviarlo.
+					<strong>Dejaste un checklist sin enviar.</strong> Lo que marcaste sigue guardado y
+					todavía podés enviarlo.
 				</span>
 			</div>
 

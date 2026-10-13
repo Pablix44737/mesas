@@ -100,8 +100,7 @@
 				<Icono nombre="alerta" />
 				<span>
 					<strong>No encontramos el DNI {mostrarDni(data.participacion.dni)} en el padrón.</strong>
-					Podés seguir trabajando igual: tu registro quedó hecho y el administrador lo completa
-					cuando te incorpore. Si te equivocaste al tipear, avisale al líder de mesa.
+					Podés seguir igual. Si te equivocaste al tipear, avisale al líder de mesa.
 				</span>
 			</div>
 		{/if}
@@ -109,7 +108,7 @@
 		{#if !data.corrida.habilitada && !enviada}
 			<div class="aviso alerta">
 				<Icono nombre="reloj" />
-				<span>Esta corrida ya fue cerrada por el líder. Lo que ves quedó registrado en ella.</span>
+				<span>Esta corrida ya fue cerrada por el líder.</span>
 			</div>
 		{/if}
 
@@ -161,10 +160,7 @@
 				{:else}
 					<div class="aviso alerta" style="margin: 0">
 						<Icono nombre="alerta" />
-						<span>
-							La planificación de este escenario no está disponible: el administrador todavía
-							no la adjuntó.
-						</span>
+						<span>La planificación de este escenario todavía no está disponible.</span>
 					</div>
 				{/if}
 			</div>
@@ -174,23 +170,14 @@
 			{#if !data.checklist}
 				<div class="aviso alerta">
 					<Icono nombre="alerta" />
-					<span>
-						{#if data.participacion.checklistOrigen === 'comun'}
-							Todavía no hay un checklist de {data.participacion.rolNombre.toLowerCase()} cargado
-							en el sistema.
-						{:else}
-							El escenario de esta mesa todavía no tiene asociado un checklist de la técnica.
-						{/if}
-						Avisale al líder de mesa.
-					</span>
+					<span>Todavía no hay un checklist cargado para tu rol. Avisale al líder de mesa.</span>
 				</div>
 			{:else}
 				{#if enviada}
 					<div class="aviso exito" role="status">
 						<Icono nombre="tilde-circulo" />
 						<span>
-							<strong>Checklist enviado.</strong> Quedó registrado el {fechaDeEnvio} junto con
-							tu rol, la corrida y la mesa, y ya no admite cambios.
+							<strong>Checklist enviado</strong> el {fechaDeEnvio}. Ya no admite cambios.
 						</span>
 					</div>
 				{/if}
@@ -263,8 +250,8 @@
 						<div class="tarjeta">
 							<p>
 								Vas a enviar el checklist con <strong>{cumplidos} de {items.length}</strong>
-								ítems marcados, {cifra(puntos)} de {cifra(maximo)} puntos. El envío cierra la
-								evaluación y no se puede modificar.
+								ítems marcados, {cifra(puntos)} de {cifra(maximo)} puntos. Después no se puede
+								modificar.
 							</p>
 							<div class="confirmacion">
 								<form
@@ -329,11 +316,7 @@
 		     encerrado acá con la sola flecha de la barra. -->
 		{#if data.conduceLaMesa}
 			<div class="avanzar">
-				<h2 class="t-sub">Seguís conduciendo la mesa</h2>
-				<p class="detalle" style="margin-bottom: 12px">
-					No tenés que volver a declararte: al habilitar la corrida siguiente, tu lugar de
-					facilitador se abre solo y el checklist nuevo te espera acá.
-				</p>
+				<h2 class="t-sub" style="margin-bottom: 12px">Seguís conduciendo la mesa</h2>
 				<a class="boton bloque" href="/mesas/{data.curso?.codigo}/{data.mesa.numero}">
 					<Icono nombre="atras" />
 					Volver a conducir la mesa
@@ -346,8 +329,7 @@
 				{#if !data.siguienteCorrida}
 					<h2 class="t-sub">La corrida {data.corrida.numero} es la que sigue abierta</h2>
 					<p class="detalle" style="margin-bottom: 12px">
-						Cuando el líder de mesa habilite la siguiente, vas a poder entrar desde acá sin
-						volver a escanear el QR.
+						Cuando el líder de mesa habilite la siguiente, vas a poder entrar desde acá.
 					</p>
 					<a
 						class="boton secundario bloque"
@@ -358,10 +340,9 @@
 						Buscar de nuevo
 					</a>
 				{:else if data.siguienteCorrida.participacionId}
-					<h2 class="t-sub">Ya estás en la corrida {data.siguienteCorrida.numero}</h2>
-					<p class="detalle" style="margin-bottom: 12px">
-						El líder la habilitó y vos ya declaraste tu rol ahí.
-					</p>
+					<h2 class="t-sub" style="margin-bottom: 12px">
+						Ya estás en la corrida {data.siguienteCorrida.numero}
+					</h2>
 					<a
 						class="boton bloque"
 						href="/m/{data.curso?.codigo}/{data.mesa.numero}/participacion/{data.siguienteCorrida
@@ -371,11 +352,9 @@
 						<Icono nombre="adelante" />
 					</a>
 				{:else}
-					<h2 class="t-sub">Avanzar a la corrida {data.siguienteCorrida.numero}</h2>
-					<p class="detalle" style="margin-bottom: 12px">
-						Te identificamos por el DNI que ya ingresaste: solo elegí el rol que vas a ocupar
-						ahora.
-					</p>
+					<h2 class="t-sub" style="margin-bottom: 12px">
+						Avanzar a la corrida {data.siguienteCorrida.numero}
+					</h2>
 					<form
 						method="POST"
 						action="?/avanzar"

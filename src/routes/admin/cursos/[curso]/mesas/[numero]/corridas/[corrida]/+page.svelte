@@ -91,9 +91,6 @@
 {:else}
 	<div class="aviso alerta">
 		<Icono nombre="alerta" />
-		<span>
-			Esta corrida todavía no tiene evaluaciones asociadas: sus observadores aún no enviaron sus
-			checklists.
-		</span>
+		<span>Todavía no se envió ninguna evaluación en esta corrida.</span>
 	</div>
 {/each}

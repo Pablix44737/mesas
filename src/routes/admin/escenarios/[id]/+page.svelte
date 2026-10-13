@@ -84,7 +84,7 @@
 	{:else}
 		<div class="titulo">
 			<h1>{data.escenario.nombre}</h1>
-			<p class="bajada">Material que recibirán las mesas que practiquen este escenario</p>
+			<p class="bajada">Checklist de la técnica y planificación</p>
 		</div>
 		<button class="boton fantasma" type="button" onclick={() => (abiertoAMano = true)}>
 			<Icono nombre="editar" tamano={16} />
@@ -111,17 +111,12 @@
 		<div class="tarjeta-cabecera">
 			<h2>Checklist de la técnica</h2>
 		</div>
-		<p class="ayuda">
-			Se les presenta al observador de la técnica y al facilitador en las mesas que practiquen
-			este escenario.
-		</p>
-
 		{#if data.plantillasDeTecnica.length === 0}
 			<div class="aviso alerta" style="margin: 0">
 				<Icono nombre="alerta" />
 				<span>
-					Todavía no hay checklists del observador de la técnica disponibles.
-					<a href="/admin/checklists">Creá uno</a> y dalo por terminado para poder asociarlo.
+					Todavía no hay checklists de la técnica terminados.
+					<a href="/admin/checklists">Creá uno</a> para poder asociarlo.
 				</span>
 			</div>
 		{:else}
@@ -165,8 +160,6 @@
 		<div class="tarjeta-cabecera">
 			<h2>Planificación</h2>
 		</div>
-		<p class="ayuda">Se le presenta al facilitador de las mesas que practiquen este escenario.</p>
-
 		{#if data.escenario.planificacion_archivo}
 			<div class="fila" style="margin-bottom: 12px">
 				<span class="avatar-rol verde"><Icono nombre="planificacion" /></span>
@@ -224,10 +217,7 @@
 		{:else}
 			<div class="aviso alerta">
 				<Icono nombre="alerta" />
-				<span>
-					Este escenario todavía no tiene planificación adjunta. El facilitador va a ver que no
-					está disponible.
-				</span>
+				<span>Este escenario todavía no tiene planificación adjunta.</span>
 			</div>
 		{/if}
 
@@ -274,7 +264,7 @@
 				<Icono nombre="alerta" />
 				<div>
 					<strong>Eliminar el escenario «{data.escenario.nombre}» no se puede deshacer.</strong>
-					Se va con él su planificación adjunta. El checklist asociado no se toca: es un instrumento aparte y lo pueden usar otros escenarios.
+					Se va con él su planificación adjunta.
 					<form
 						method="POST"
 						action="?/eliminar"
