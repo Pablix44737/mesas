@@ -148,7 +148,8 @@
 									{#if mesa.corridaEnCurso}
 										Corrida {mesa.corridaEnCurso} en curso
 									{:else if mesa.corridas > 0}
-										{mesa.corridas} corridas · ninguna en curso
+										Cerrada · {mesa.corridas}
+										{mesa.corridas === 1 ? 'corrida' : 'corridas'}
 									{:else}
 										<span class="pendiente">Sin corridas habilitadas</span>
 									{/if}

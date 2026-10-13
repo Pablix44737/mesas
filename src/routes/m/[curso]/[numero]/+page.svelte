@@ -27,8 +27,12 @@
 			<div class="aviso alerta">
 				<Icono nombre="alerta" />
 				<span>
-					Esta mesa todavía no tiene una corrida habilitada. Esperá a que el líder de mesa la
-					habilite.
+					{#if data.cerrada}
+						Esta mesa ya está cerrada.
+					{:else}
+						Esta mesa todavía no tiene una corrida habilitada. Esperá a que el líder de mesa la
+						habilite.
+					{/if}
 				</span>
 			</div>
 		{:else if form?.pendientes && form.pendientes.length > 0}

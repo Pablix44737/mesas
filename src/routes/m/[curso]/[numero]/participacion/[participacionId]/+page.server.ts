@@ -204,6 +204,8 @@ export const load: PageServerLoad = async ({ params }) => {
 					participacionId: yaDeclarado?.id ?? null
 				}
 			: null,
+		// Ninguna corrida abierta: el líder cerró la mesa y no hay a dónde avanzar.
+		mesaCerrada: !vigente,
 		roles,
 		pendientes,
 		enviadaEn: instancia?.enviada_en ?? null,

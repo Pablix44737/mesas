@@ -32,7 +32,22 @@ async function traerMesaYCorrida(codigoDelCurso: string, numeroCrudo: string) {
 export const load: PageServerLoad = async ({ params }) => {
 	const { curso, mesa, corrida } = await traerMesaYCorrida(params.curso, params.numero);
 
-	return { curso, mesa, corrida, roles: await rolesQueSeEligen(curso.destinado_a) };
+	// Sin corrida abierta puede ser que todavía no empezó o que el líder ya la
+	// cerró: al participante se le dice distinto en cada caso.
+	const { count: corridas } = corrida
+		? { count: null }
+		: await supabase
+				.from('corridas')
+				.select('id', { count: 'exact', head: true })
+				.eq('mesa_id', mesa.id);
+
+	return {
+		curso,
+		mesa,
+		corrida,
+		cerrada: !corrida && (corridas ?? 0) > 0,
+		roles: await rolesQueSeEligen(curso.destinado_a)
+	};
 };
 
 export const actions: Actions = {

@@ -9,6 +9,8 @@
 
 	let habilitando = $state(false);
 	let confirmandoAvance = $state(false);
+	let confirmandoCierre = $state(false);
+	let cerrando = $state(false);
 	let declarandoDocente = $state(false);
 	let confirmandoQuitarDocente = $state(false);
 
@@ -18,13 +20,18 @@
 	 * y qué le falta a cada uno— y lo que consulta de vez en cuando se despliega
 	 * desde la cabecera de su tarjeta, como ya hacía el QR.
 	 */
-	let mostrarQr = $state(true);
+	// El QR sólo hace falta mientras la gente entra: con la mesa cerrada arranca
+	// plegado. Mientras nadie lo toque, manda eso; después, lo que se eligió.
+	let qrAMano = $state<boolean | undefined>(undefined);
 	let mostrarCorridas = $state(false);
 	let cambiandoDocente = $state(false);
 	let detalleDelRecorrido = $state(false);
 	let mostrarMaterial = $state(false);
 
 	const siguiente = $derived((data.corridas[0]?.numero ?? 0) + 1);
+	// Tuvo corridas y ninguna está abierta: el líder la dio por terminada.
+	const cerrada = $derived(!data.corridaEnCurso && data.corridas.length > 0);
+	const mostrarQr = $derived(qrAMano ?? !cerrada);
 
 	/**
 	 * «Observador» es la palabra más larga de la tabla de recorrido y es la que fija
@@ -67,6 +74,34 @@
 	</button>
 {/snippet}
 
+<!-- Lo que se pierde de vista al cerrar la corrida en curso, sea para pasar a la
+     siguiente o para cerrar la mesa: los mismos checklists a medio hacer. -->
+{#snippet quienesNoEnviaron()}
+	{#if data.sinEnviar.length > 0}
+		<div class="aviso alerta">
+			<Icono nombre="alerta" />
+			<div>
+				<strong>
+					{data.sinEnviar.length === 1
+						? 'Hay alguien que todavía no envió su checklist'
+						: `Hay ${data.sinEnviar.length} personas que todavía no enviaron su checklist`}.
+				</strong>
+				Van a poder terminarlo igual, pero si podés, esperalos.
+				<ul class="lista" style="margin-top: 8px">
+					{#each data.sinEnviar as pendiente, i (i)}
+						<li class="pendiente-padron">
+							<span class="quien">{pendiente.quien}</span>
+							<span class="detalle">
+								{pendiente.rol} · {pendiente.marcados} de {pendiente.items} ítems
+							</span>
+						</li>
+					{/each}
+				</ul>
+			</div>
+		</div>
+	{/if}
+{/snippet}
+
 {#snippet quien(persona: { nombre: string | null; dni: string })}
 	{#if persona.nombre}
 		{persona.nombre}
@@ -84,6 +119,8 @@
 		{#snippet derecha()}
 			{#if data.corridaEnCurso}
 				<span class="chip exito">Corrida {data.corridaEnCurso.numero}</span>
+			{:else if cerrada}
+				<span class="chip neutro">Cerrada</span>
 			{/if}
 		{/snippet}
 	</BarraSuperior>
@@ -105,7 +142,7 @@
 		<div class="tarjeta">
 			<div class="tarjeta-cabecera">
 				<h2>Código QR de la mesa</h2>
-				{@render desplegar(mostrarQr, () => (mostrarQr = !mostrarQr), 'Mostrar')}
+				{@render desplegar(mostrarQr, () => (qrAMano = !mostrarQr), 'Mostrar')}
 			</div>
 
 			{#if mostrarQr}
@@ -227,7 +264,7 @@
 								? `Ver lo que enviaste en la corrida ${data.corridaEnCurso.numero}`
 								: `Completar la técnica de la corrida ${data.corridaEnCurso.numero}`}
 						</a>
-					{:else if !data.corridaEnCurso}
+					{:else if !data.corridaEnCurso && !cerrada}
 						<p class="detalle" style="margin: 0">
 							Habilitá la primera corrida para empezar a evaluar.
 						</p>
@@ -307,6 +344,11 @@
 					La <strong>corrida {data.corridaEnCurso.numero}</strong> está en curso desde las
 					{hora(data.corridaEnCurso.creada_en)}.
 				</p>
+			{:else if cerrada}
+				<p>
+					La mesa está cerrada, con
+					{data.corridas.length === 1 ? 'una corrida' : `${data.corridas.length} corridas`}.
+				</p>
 			{:else}
 				<p>
 					Habilitá la primera corrida para que los participantes puedan escanear el QR.
@@ -318,29 +360,7 @@
 					Habilitar la corrida {siguiente} cierra la corrida {data.corridaEnCurso?.numero}.
 				</p>
 
-				{#if data.sinEnviar.length > 0}
-					<div class="aviso alerta">
-						<Icono nombre="alerta" />
-						<div>
-							<strong>
-								{data.sinEnviar.length === 1
-									? 'Hay alguien que todavía no envió su checklist'
-									: `Hay ${data.sinEnviar.length} personas que todavía no enviaron su checklist`}.
-							</strong>
-							Van a poder terminarlo igual, pero si podés, esperalos.
-							<ul class="lista" style="margin-top: 8px">
-								{#each data.sinEnviar as pendiente, i (i)}
-									<li class="pendiente-padron">
-										<span class="quien">{pendiente.quien}</span>
-										<span class="detalle">
-											{pendiente.rol} · {pendiente.marcados} de {pendiente.items} ítems
-										</span>
-									</li>
-								{/each}
-							</ul>
-						</div>
-					</div>
-				{/if}
+				{@render quienesNoEnviaron()}
 
 				<div class="confirmacion">
 					<form
@@ -369,12 +389,61 @@
 						Seguir en la corrida {data.corridaEnCurso?.numero}
 					</button>
 				</div>
+			{:else if confirmandoCierre}
+				<p>
+					Cerrar la mesa cierra la corrida {data.corridaEnCurso?.numero} y no abre otra.
+				</p>
+
+				{@render quienesNoEnviaron()}
+
+				<div class="confirmacion">
+					<form
+						method="POST"
+						action="?/cerrar"
+						use:enhance={() => {
+							cerrando = true;
+							return async ({ update }) => {
+								await update({ reset: false });
+								cerrando = false;
+								confirmandoCierre = false;
+							};
+						}}
+					>
+						<button class="boton bloque" type="submit" disabled={cerrando}>
+							<Icono nombre="tilde" />
+							{cerrando ? 'Cerrando…' : 'Sí, cerrar la mesa'}
+						</button>
+					</form>
+					<button
+						class="boton secundario bloque"
+						type="button"
+						onclick={() => (confirmandoCierre = false)}
+						disabled={cerrando}
+					>
+						Seguir en la corrida {data.corridaEnCurso?.numero}
+					</button>
+				</div>
 			{:else if data.corridaEnCurso}
-				<button class="boton bloque" type="button" onclick={() => (confirmandoAvance = true)}>
-					<Icono nombre="corrida" />
-					Habilitar la corrida {siguiente}
-				</button>
+				<!-- Las dos maneras de terminar la corrida en curso: pasar a la siguiente,
+				     o terminar la mesa. La segunda es la de una sola vez, así que va abajo
+				     y sin color. -->
+				<div class="confirmacion">
+					<button class="boton bloque" type="button" onclick={() => (confirmandoAvance = true)}>
+						<Icono nombre="corrida" />
+						Habilitar la corrida {siguiente}
+					</button>
+					<button
+						class="boton secundario bloque"
+						type="button"
+						onclick={() => (confirmandoCierre = true)}
+					>
+						<Icono nombre="tilde" />
+						Cerrar la mesa
+					</button>
+				</div>
 			{:else}
+				<!-- Cerrada, la mesa se puede volver a abrir: por si se cerró antes de
+				     tiempo. Sin color, porque ya no es lo que se espera que pase. -->
 				<form
 					method="POST"
 					action="?/habilitarSiguiente"
@@ -386,9 +455,21 @@
 						};
 					}}
 				>
-					<button class="boton enviar bloque" type="submit" disabled={habilitando}>
+					<button
+						class="boton bloque"
+						class:enviar={!cerrada}
+						class:secundario={cerrada}
+						type="submit"
+						disabled={habilitando}
+					>
 						<Icono nombre="corrida" />
-						{habilitando ? 'Habilitando…' : 'Habilitar la primera corrida'}
+						{#if habilitando}
+							Habilitando…
+						{:else if cerrada}
+							Reabrirla con la corrida {siguiente}
+						{:else}
+							Habilitar la primera corrida
+						{/if}
 					</button>
 				</form>
 			{/if}
@@ -411,6 +492,8 @@
 			{/if}
 		</div>
 
+		<!-- Cerrada la mesa no hay corrida de la que mostrar quién está. -->
+		{#if !cerrada}
 		<div class="tarjeta">
 			<div class="tarjeta-cabecera">
 				<h2>Participantes</h2>
@@ -453,6 +536,7 @@
 				{/if}
 			{/if}
 		</div>
+		{/if}
 
 		<!-- Lo que el modelo MESAS no resuelve solo: con más o menos de cinco personas
 		     la rotación en sentido de las agujas del reloj no cierra, alguien repite

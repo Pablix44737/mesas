@@ -275,6 +275,33 @@ export const actions: Actions = {
 	},
 
 	/**
+	 * Cerrar la mesa: la corrida en curso se cierra y no se abre otra. Es lo que
+	 * hace `habilitar_siguiente_corrida()` sin la segunda mitad, así que no pide
+	 * una función propia. Lo que quedó sin enviar se puede terminar igual, como
+	 * cuando se avanza de corrida; y si se cerró de más, habilitar la siguiente
+	 * la vuelve a abrir.
+	 */
+	cerrar: async ({ params }) => {
+		const { mesa } = await traerMesa(params.curso, params.numero);
+
+		const { data: cerradas, error: fallo } = await supabase
+			.from('corridas')
+			.update({ habilitada: false })
+			.eq('mesa_id', mesa.id)
+			.eq('habilitada', true)
+			.select('numero');
+
+		if (fallo) {
+			return fail(500, { mensaje: 'No se pudo cerrar la mesa. Intentá de nuevo.', exito: null });
+		}
+		if (!cerradas || cerradas.length === 0) {
+			return fail(409, { mensaje: 'La mesa ya estaba cerrada.', exito: null });
+		}
+
+		return { mensaje: null, exito: 'La mesa quedó cerrada.' };
+	},
+
+	/**
 	 * Declarar quién conduce la mesa. El documento queda en la mesa, así que se
 	 * pide una vez y no una por corrida: `asignar_docente_a_la_mesa()` le abre su
 	 * lugar de facilitador en la corrida en curso, y `habilitar_siguiente_corrida()`

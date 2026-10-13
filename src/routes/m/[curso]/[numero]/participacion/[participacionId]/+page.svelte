@@ -326,7 +326,9 @@
 			<!-- Enviado el checklist, lo que sigue es la corrida siguiente. Sin esto había
 			     que volver a escanear el QR y tipear el DNI de nuevo para rotar de rol. -->
 			<div class="avanzar">
-				{#if !data.siguienteCorrida}
+				{#if data.mesaCerrada}
+					<h2 class="t-sub">La mesa está cerrada</h2>
+				{:else if !data.siguienteCorrida}
 					<h2 class="t-sub">La corrida {data.corrida.numero} es la que sigue abierta</h2>
 					<p class="detalle" style="margin-bottom: 12px">
 						Cuando el líder de mesa habilite la siguiente, vas a poder entrar desde acá.
