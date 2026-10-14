@@ -133,6 +133,12 @@ Y el **recorrido de la mesa**: una fila por persona, una columna por rol, y en c
 celda las corridas en que lo ocupó. Es lo que el líder necesita para decidir la
 rotación siguiente, y lo que hasta ahora no tenía: sólo veía la corrida en curso.
 
+`/mesas/<curso>/<numero>/corridas/<numero>` — **lo que se evaluó en una corrida**,
+para tenerlo a mano en el debriefing: cada checklist enviado, ítem por ítem, con su
+resultado, y solapas para pasar a las corridas anteriores. Se llega tocando el chip
+de «Evaluó» de una persona —que salta a la suya— o el icono de cualquier corrida de
+la lista, que es por donde se entra cuando la mesa ya está cerrada.
+
 En un curso de alumnos la misma pantalla suma **quién conduce la mesa**: ahí el que
 facilita es el docente, no un alumno, así que deja su documento una vez y el sistema
 le abre su lugar de facilitador en cada corrida que habilite. Desde ahí entra a la
@@ -275,6 +281,18 @@ búsqueda de «ya me identifiqué» está acotada a la corrida habilitada— y p
 declarar otro rol. Los registros de las corridas previas quedan intactos y cada
 evaluación cuelga de su corrida. Verificado en la Mesa 1: Ana pasó de observadora
 de la técnica (corrida 2) a operadora (corrida 3), y Elena hizo el camino inverso.
+
+**Lo evaluado en una corrida va en pantalla aparte y no desplegado en la lista de
+participantes.** Desplegarlo ahí era lo primero que se venía a la cabeza, pero un
+checklist de la técnica puede tener 18 criterios: abrir dos o tres convertía la
+pantalla del líder en una pared, y es la pantalla desde la que conduce la mesa. En
+pantalla aparte, además, se llega a las corridas ya cerradas, que en esa lista no
+figuran, y es justamente lo que se mira en un debriefing. En la del líder no se
+agregó nada: el chip de «Evaluó» ya existía y ahora además lleva a lo que evaluó.
+
+La vista en sí no se escribió de nuevo: `evaluacionesDeLaCorrida()` ya la servía al
+administrador. Lo que faltaba era una puerta desde la zona del líder, que no entra
+al panel porque está detrás de la clave.
 
 **Las columnas del recorrido son los roles, no las corridas.** Es el punto flojo del
 modelo MESAS: con cinco personas la rotación en sentido de las agujas del reloj cierra

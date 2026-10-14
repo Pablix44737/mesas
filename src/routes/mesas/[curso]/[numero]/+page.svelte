@@ -486,6 +486,16 @@
 									cerrada · comenzó a las {hora(corrida.creada_en)}
 								{/if}
 							</span>
+							<!-- La puerta a las corridas ya cerradas, y la única que queda cuando
+							     la mesa se cerró y la lista de participantes ya no se muestra. -->
+							<a
+								class="icono-boton ver-evaluado"
+								href="/mesas/{data.curso.codigo}/{data.mesa.numero}/corridas/{corrida.numero}"
+								aria-label="Ver lo evaluado en la corrida {corrida.numero}"
+								title="Ver lo evaluado"
+							>
+								<Icono nombre="resultado" tamano={18} />
+							</a>
 						</li>
 					{/each}
 				</ul>
@@ -523,7 +533,16 @@
 								{/if}
 							</span>
 							{#if participante.envio}
-								<span class="chip exito">Evaluó</span>
+								<!-- El chip ya decía que evaluó; ahora además lleva a lo que evaluó,
+								     que es lo que el líder necesita tener a mano en el debriefing. -->
+								<a
+									class="chip exito chip-enlace"
+									href="/mesas/{data.curso.codigo}/{data.mesa.numero}/corridas/{data
+										.corridaEnCurso.numero}#p-{participante.id}"
+								>
+									Evaluó
+									<Icono nombre="adelante" tamano={12} />
+								</a>
 							{/if}
 						</li>
 					{/each}
@@ -532,6 +551,15 @@
 				{#if data.rolesLibres.length > 0}
 					<p class="detalle" style="margin: 12px 0 0">
 						Sin ocupar en esta corrida: {data.rolesLibres.join(', ')}.
+					</p>
+				{/if}
+
+				{#if data.participantes.some((p) => p.envio)}
+					<p class="detalle" style="margin: 12px 0 0">
+						<a href="/mesas/{data.curso.codigo}/{data.mesa.numero}/corridas/{data.corridaEnCurso
+							.numero}">
+							Ver los checklists que enviaron
+						</a>
 					</p>
 				{/if}
 			{/if}

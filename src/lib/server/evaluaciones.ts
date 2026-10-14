@@ -44,6 +44,8 @@ export async function checklistsSinEnviarDe(
 
 export type EvaluacionCompletada = {
 	instanciaId: string;
+	/** Para poder enlazar desde la lista de participantes a la evaluación de uno. */
+	participacionId: string;
 	observador: string | null;
 	dni: string;
 	rol: string;
@@ -99,6 +101,7 @@ export async function evaluacionesDeLaCorrida(corridaId: string): Promise<Evalua
 		const resultado = Number(evaluacion.resultado ?? 0);
 		return {
 			instanciaId: evaluacion.instancia_id ?? '',
+			participacionId: evaluacion.participacion_id ?? '',
 			observador: evaluacion.observador_nombre,
 			dni: evaluacion.observador_dni ?? '',
 			rol: evaluacion.rol_nombre ?? '',

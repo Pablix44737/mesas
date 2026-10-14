@@ -597,6 +597,32 @@ a {
 	display: none;
 }
 
+/* Un chip que además lleva a algún lado: el de «Evaluó» en la lista de
+   participantes abre lo que esa persona evaluó. Mismo aspecto, porque sigue
+   diciendo lo mismo; lo que cambia es que ahora se puede tocar. */
+.chip-enlace {
+	position: relative;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+/* El chip mide 24px de alto, que es poco para un dedo. Esto le agranda el área
+   tocable sin agrandarlo a él ni mover nada de lugar. */
+.chip-enlace::after {
+	content: '';
+	position: absolute;
+	inset: -8px -6px;
+}
+
+.chip-enlace:hover {
+	filter: brightness(0.96);
+}
+
+.chip-enlace:focus-visible {
+	outline: 3px solid var(--azul);
+	outline-offset: 2px;
+}
+
 .chip.exito,
 .chip.disponible {
 	background: var(--verde-claro);
@@ -1194,6 +1220,56 @@ fieldset.roles.invalido legend {
    gesto mueva el criterio en vez de desplazar la página. */
 /* La baja de un escenario o un checklist: va al final de su pantalla, separada
    del resto, porque no es parte de prepararlo sino de deshacerlo. */
+/* --- lo evaluado en una corrida --- */
+
+/* Las corridas de la mesa, para pasar de una a otra sin volver atrás. Se van al
+   costado cuando no entran: una mesa puede llevar seis o siete. */
+.corridas-solapas {
+	display: flex;
+	gap: var(--e-2);
+	overflow-x: auto;
+	margin-bottom: var(--e-4);
+	padding-bottom: 2px;
+}
+
+.solapa {
+	flex: 0 0 auto;
+	padding: 8px 14px;
+	border: 1px solid var(--borde);
+	border-radius: var(--r-full);
+	background: var(--superficie);
+	color: var(--tinta-suave);
+	font-size: 14px;
+	font-weight: 600;
+	line-height: 20px;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.solapa:hover {
+	border-color: var(--borde-fuerte);
+	color: var(--tinta);
+}
+
+.solapa.elegida {
+	background: var(--azul);
+	border-color: var(--azul);
+	color: #fff;
+}
+
+/* El acceso a lo evaluado desde la fila de cada corrida. Va al final, separado de
+   la hora, para que la fila siga leyéndose como un dato y no como un botón. */
+.lista .ver-evaluado {
+	margin-left: auto;
+	flex: 0 0 auto;
+}
+
+/* Al llegar desde el chip de «Evaluó» se salta a la tarjeta de esa persona, y sin
+   esto quedaría debajo de la barra superior, que es fija. */
+.envoltorio .tarjeta[id^='p-'] {
+	scroll-margin-top: calc(var(--barra-alto) + var(--e-4));
+}
+
 /* --- recorrido de la mesa: personas por roles --- */
 
 /* Las columnas son los roles y no las corridas. Así son siempre las mismas cuatro
