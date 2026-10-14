@@ -1,7 +1,14 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { enhance } from '$app/forms';
 	import Icono from '$lib/Icono.svelte';
 	import { mostrarDni } from '$lib/dni';
+	import {
+		EXTENSIONES_DEL_LISTADO,
+		leerListado,
+		type FilaConError,
+		type PersonaLeida
+	} from '$lib/importar-padron';
 
 	let { data, form } = $props();
 
@@ -67,15 +74,228 @@
 
 	const buscando = $derived(busqueda.trim() !== '');
 
+	/** La tarjeta de incorporar trabaja de a una persona o con un listado entero. */
+	let conListado = $state(false);
+	let leyendo = $state(false);
+	let importando = $state(false);
+	let fallaDelListado = $state<string | null>(null);
+	let listado = $state<{
+		archivo: string;
+		personas: PersonaLeida[];
+		errores: FilaConError[];
+	} | null>(null);
+	let todasLasNuevas = $state(false);
+	let todosLosErrores = $state(false);
+
+	const enElPadron = $derived(new Set(data.padron.map((persona) => persona.dni)));
+	const nuevas = $derived(listado?.personas.filter((p) => !enElPadron.has(p.dni)) ?? []);
+	const yaCargadas = $derived((listado?.personas.length ?? 0) - nuevas.length);
+
+	async function elegirListado(evento: Event & { currentTarget: HTMLInputElement }) {
+		const campo = evento.currentTarget;
+		const archivo = campo.files?.[0];
+		if (!archivo) return;
+
+		leyendo = true;
+		fallaDelListado = null;
+		listado = null;
+		try {
+			const lectura = await leerListado(archivo);
+			if ('falla' in lectura) {
+				fallaDelListado = lectura.falla;
+			} else {
+				listado = { archivo: archivo.name, ...lectura };
+				todasLasNuevas = false;
+				todosLosErrores = false;
+			}
+		} catch {
+			fallaDelListado = 'No se pudo leer el archivo. Probá guardarlo de nuevo como .xlsx o .csv.';
+		} finally {
+			leyendo = false;
+			// Así se puede volver a elegir el mismo archivo después de corregirlo.
+			campo.value = '';
+		}
+	}
+
+	function descartarListado() {
+		listado = null;
+		fallaDelListado = null;
+	}
+
+	/** Lo mínimo para que alguien arme su planilla sin adivinar las columnas. */
+	const planillaDeEjemplo =
+		'data:text/csv;charset=utf-8,' +
+		encodeURIComponent('\uFEFFDNI;Apellido;Nombre\r\n30111222;Pérez;Juan\r\n');
+
 	/** Precarga el formulario con un DNI pendiente para no tipearlo de nuevo. */
 	function completarCon(dni: string) {
-		const campo = document.getElementById('dni') as HTMLInputElement | null;
-		if (!campo) return;
-		campo.value = dni;
-		campo.dispatchEvent(new Event('input', { bubbles: true }));
-		document.getElementById('nombre')?.focus();
+		// Con el listado abierto el formulario no está en la página: se espera a que vuelva.
+		conListado = false;
+		tick().then(() => {
+			const campo = document.getElementById('dni') as HTMLInputElement | null;
+			if (!campo) return;
+			campo.value = dni;
+			campo.dispatchEvent(new Event('input', { bubbles: true }));
+			document.getElementById('nombre')?.focus();
+		});
 	}
 </script>
+
+{#snippet importacion()}
+	{#if !listado}
+		<div class="campo">
+			<label for="listado">Elegí la planilla</label>
+			<p class="ayuda">Excel o CSV, con columnas DNI, Apellido y Nombre.</p>
+			<input
+				id="listado"
+				type="file"
+				accept={EXTENSIONES_DEL_LISTADO.join(',')}
+				disabled={leyendo}
+				onchange={elegirListado}
+			/>
+		</div>
+		{#if leyendo}
+			<p class="ayuda">Leyendo el archivo…</p>
+		{/if}
+		{#if fallaDelListado}
+			<div class="aviso error" role="alert">
+				<Icono nombre="error" />
+				<span>{fallaDelListado}</span>
+			</div>
+		{/if}
+		<a class="boton fantasma" href={planillaDeEjemplo} download="padron.csv">
+			<Icono nombre="descargar" tamano={16} />
+			Descargar una planilla de ejemplo
+		</a>
+	{:else}
+		<p class="archivo-elegido">
+			<Icono nombre="padron" tamano={18} />
+			<span>{listado.archivo}</span>
+		</p>
+		<div class="resumen-listado">
+			<span class="chip exito">{nuevas.length} para incorporar</span>
+			{#if yaCargadas > 0}
+				<span class="chip neutro">{yaCargadas} ya en el padrón</span>
+			{/if}
+			{#if listado.errores.length > 0}
+				<span class="chip alerta">{listado.errores.length} con errores</span>
+			{/if}
+		</div>
+
+		{#if listado.errores.length > 0}
+			{@const errores = todosLosErrores ? listado.errores : listado.errores.slice(0, 5)}
+			<div class="aviso alerta">
+				<Icono nombre="alerta" />
+				<div>
+					<strong>
+						{listado.errores.length === 1
+							? 'Esta fila no se va a incorporar:'
+							: 'Estas filas no se van a incorporar:'}
+					</strong>
+					<ul class="filas-con-error">
+						{#each errores as error (error.fila)}
+							<li>Fila {error.fila}: {error.motivo}</li>
+						{/each}
+					</ul>
+					{#if listado.errores.length > 5}
+						<button
+							class="boton fantasma"
+							type="button"
+							aria-expanded={todosLosErrores}
+							onclick={() => (todosLosErrores = !todosLosErrores)}
+						>
+							<Icono nombre={todosLosErrores ? 'arriba' : 'abajo'} tamano={16} />
+							{todosLosErrores ? 'Ver menos' : `Ver las ${listado.errores.length}`}
+						</button>
+					{/if}
+				</div>
+			</div>
+		{/if}
+
+		{#if nuevas.length > 0}
+			{@const visibles = todasLasNuevas ? nuevas : nuevas.slice(0, 8)}
+			<div class="tabla-envoltorio vista-previa">
+				<table class="tabla">
+					<thead>
+						<tr>
+							<th>DNI</th>
+							<th>Apellido y nombre</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each visibles as persona (persona.dni)}
+							<tr>
+								<td>{mostrarDni(persona.dni)}</td>
+								<td class="principal">{persona.apellido}, {persona.nombre}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+			{#if nuevas.length > 8}
+				<button
+					class="boton fantasma"
+					type="button"
+					aria-expanded={todasLasNuevas}
+					onclick={() => (todasLasNuevas = !todasLasNuevas)}
+				>
+					<Icono nombre={todasLasNuevas ? 'arriba' : 'abajo'} tamano={16} />
+					{todasLasNuevas ? 'Ver menos' : `Ver las ${nuevas.length}`}
+				</button>
+			{/if}
+		{:else}
+			<div class="aviso info">
+				<Icono nombre="info" />
+				<span>
+					{listado.personas.length > 0
+						? 'Todas las personas del archivo ya están en el padrón.'
+						: 'No hay personas para incorporar.'}
+				</span>
+			</div>
+		{/if}
+
+		<form
+			class="confirmacion acciones-del-listado"
+			method="POST"
+			action="?/importar"
+			use:enhance={() => {
+				importando = true;
+				return async ({ result, update }) => {
+					await update();
+					importando = false;
+					if (result.type === 'success') {
+						descartarListado();
+						conListado = false;
+					}
+				};
+			}}
+		>
+			<input
+				type="hidden"
+				name="personas"
+				value={JSON.stringify(nuevas.map(({ dni, apellido, nombre }) => ({ dni, apellido, nombre })))}
+			/>
+			{#if nuevas.length > 0}
+				<button class="boton" type="submit" disabled={importando}>
+					<Icono nombre="tilde" tamano={16} />
+					{importando
+						? 'Incorporando…'
+						: nuevas.length === 1
+							? 'Incorporar 1 persona'
+							: `Incorporar ${nuevas.length} personas`}
+				</button>
+			{/if}
+			<button
+				class="boton secundario"
+				type="button"
+				onclick={descartarListado}
+				disabled={importando}
+			>
+				Elegir otro archivo
+			</button>
+		</form>
+	{/if}
+{/snippet}
 
 <svelte:head>
 	<title>Padrón — SIMUNaM</title>
@@ -132,66 +352,81 @@
 
 <div class="tarjeta">
 	<div class="tarjeta-cabecera">
-		<h2>Incorporar a una persona</h2>
+		<h2>{conListado ? 'Importar un listado' : 'Incorporar a una persona'}</h2>
+		<button
+			class="boton secundario desplegar"
+			type="button"
+			onclick={() => {
+				conListado = !conListado;
+				descartarListado();
+			}}
+		>
+			<Icono nombre={conListado ? 'editar' : 'subir'} tamano={16} />
+			{conListado ? 'De a una' : 'Desde un archivo'}
+		</button>
 	</div>
-	<form
-		method="POST"
-		action="?/incorporar"
-		use:enhance={() => {
-			incorporando = true;
-			return async ({ update }) => {
-				await update();
-				incorporando = false;
-			};
-		}}
-	>
-		<div class="rejilla tres" style="margin-bottom: 0">
-			<div class="campo">
-				<label for="dni">DNI</label>
-				<div class="campo-con-icono">
-					<Icono nombre="dni" />
+	{#if conListado}
+		{@render importacion()}
+	{:else}
+		<form
+			method="POST"
+			action="?/incorporar"
+			use:enhance={() => {
+				incorporando = true;
+				return async ({ update }) => {
+					await update();
+					incorporando = false;
+				};
+			}}
+		>
+			<div class="rejilla tres" style="margin-bottom: 0">
+				<div class="campo">
+					<label for="dni">DNI</label>
+					<div class="campo-con-icono">
+						<Icono nombre="dni" />
+						<input
+							id="dni"
+							name="dni"
+							type="tel"
+							inputmode="numeric"
+							autocomplete="off"
+							placeholder="30111222"
+							value={altaConLoTipeado?.dni ?? ''}
+							aria-invalid={altaConLoTipeado?.campo === 'dni'}
+							required
+						/>
+					</div>
+				</div>
+				<div class="campo">
+					<label for="nombre">Nombre</label>
 					<input
-						id="dni"
-						name="dni"
-						type="tel"
-						inputmode="numeric"
+						id="nombre"
+						name="nombre"
+						type="text"
 						autocomplete="off"
-						placeholder="30111222"
-						value={altaConLoTipeado?.dni ?? ''}
-						aria-invalid={altaConLoTipeado?.campo === 'dni'}
+						value={altaConLoTipeado?.nombre ?? ''}
+						aria-invalid={altaConLoTipeado?.campo === 'nombre'}
+						required
+					/>
+				</div>
+				<div class="campo">
+					<label for="apellido">Apellido</label>
+					<input
+						id="apellido"
+						name="apellido"
+						type="text"
+						autocomplete="off"
+						value={altaConLoTipeado?.apellido ?? ''}
+						aria-invalid={altaConLoTipeado?.campo === 'apellido'}
 						required
 					/>
 				</div>
 			</div>
-			<div class="campo">
-				<label for="nombre">Nombre</label>
-				<input
-					id="nombre"
-					name="nombre"
-					type="text"
-					autocomplete="off"
-					value={altaConLoTipeado?.nombre ?? ''}
-					aria-invalid={altaConLoTipeado?.campo === 'nombre'}
-					required
-				/>
-			</div>
-			<div class="campo">
-				<label for="apellido">Apellido</label>
-				<input
-					id="apellido"
-					name="apellido"
-					type="text"
-					autocomplete="off"
-					value={altaConLoTipeado?.apellido ?? ''}
-					aria-invalid={altaConLoTipeado?.campo === 'apellido'}
-					required
-				/>
-			</div>
-		</div>
-		<button class="boton" type="submit" disabled={incorporando}>
-			{incorporando ? 'Incorporando…' : 'Incorporar al padrón'}
-		</button>
-	</form>
+			<button class="boton" type="submit" disabled={incorporando}>
+				{incorporando ? 'Incorporando…' : 'Incorporar al padrón'}
+			</button>
+		</form>
+	{/if}
 </div>
 
 <div class="tarjeta">

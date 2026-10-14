@@ -1534,6 +1534,48 @@ fieldset.roles.invalido legend {
 	padding-left: var(--e-5);
 }
 
+/* Importar un listado al padrón: el archivo elegido, lo que trae y qué entra. */
+.archivo-elegido {
+	display: flex;
+	align-items: center;
+	gap: var(--e-2);
+	margin: 0 0 var(--e-3);
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+.archivo-elegido .icono {
+	flex: 0 0 auto;
+	color: var(--azul);
+}
+
+.resumen-listado {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--e-2);
+	margin-bottom: var(--e-4);
+}
+
+.filas-con-error {
+	margin: var(--e-2) 0 0;
+	padding-left: var(--e-5);
+	font-size: 14px;
+	line-height: 20px;
+}
+
+.aviso .filas-con-error + .boton.fantasma {
+	margin: var(--e-2) 0 0 calc(-1 * var(--e-3));
+	color: inherit;
+}
+
+.tabla-envoltorio.vista-previa {
+	margin-bottom: var(--e-2);
+}
+
+.acciones-del-listado {
+	margin-top: var(--e-4);
+}
+
 /* --- tabla (administración en escritorio) --- */
 
 .tabla-envoltorio {

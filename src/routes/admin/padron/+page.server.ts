@@ -1,6 +1,7 @@
 import { error, fail } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
 import { dniValido, mostrarDni, normalizarDni } from '$lib/dni';
+import { MAXIMO_DE_FILAS } from '$lib/importar-padron';
 import type { Actions, PageServerLoad } from './$types';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -97,6 +98,83 @@ export const actions: Actions = {
 					? `${nombre} ${apellido} quedó en el padrón, con ${registros === 1 ? 'el rol que ya había ocupado' : `los ${registros} roles que ya había ocupado`}.`
 					: `${nombre} ${apellido} quedó incorporado al padrón.`
 		};
+	},
+
+	/**
+	 * Un listado entero de una vez. El navegador ya leyó la planilla y mostró qué
+	 * entraba; acá se vuelve a validar todo, porque lo que llega es lo que manda el
+	 * navegador. Quien ya esté en el padrón se saltea, aunque se haya sumado entre
+	 * la vista previa y la confirmación.
+	 */
+	importar: async ({ request }) => {
+		const formulario = await request.formData();
+		const rechazar = (estado: number, mensaje: string) =>
+			fail(estado, { ...vacio, mensaje, exito: null });
+
+		let filas: unknown;
+		try {
+			filas = JSON.parse(String(formulario.get('personas') ?? ''));
+		} catch {
+			filas = null;
+		}
+		if (!Array.isArray(filas) || filas.length === 0) {
+			return rechazar(400, 'No hay personas para incorporar.');
+		}
+		if (filas.length > MAXIMO_DE_FILAS) {
+			return rechazar(400, `El listado tiene más de ${MAXIMO_DE_FILAS} personas.`);
+		}
+
+		const personas = new Map<string, { dni: string; nombre: string; apellido: string }>();
+		for (const fila of filas as Array<Record<string, unknown> | null>) {
+			const dni = normalizarDni(String(fila?.dni ?? ''));
+			const nombre = String(fila?.nombre ?? '').trim();
+			const apellido = String(fila?.apellido ?? '').trim();
+			if (!dniValido(dni) || nombre.length < 2 || apellido.length < 2) {
+				return rechazar(400, 'El listado tiene datos inválidos. Volvé a elegir el archivo.');
+			}
+			if (!personas.has(dni)) personas.set(dni, { dni, nombre, apellido });
+		}
+
+		const { data: nuevas, error: fallo } = await supabase
+			.from('participantes')
+			.upsert([...personas.values()], { onConflict: 'dni', ignoreDuplicates: true })
+			.select('dni');
+
+		if (fallo) return rechazar(500, 'No se pudo incorporar el listado. Intentá de nuevo.');
+
+		const incorporadas = nuevas?.map((persona) => persona.dni) ?? [];
+		const salteadas = personas.size - incorporadas.length;
+
+		// El trigger del padrón ya resolvió los roles que esperaban estos DNI. Se
+		// cuentan de a tandas: la lista entera no entra en una sola consulta.
+		let resueltos = 0;
+		for (let i = 0; i < incorporadas.length; i += 200) {
+			const { count } = await supabase
+				.from('participaciones')
+				.select('id', { count: 'exact', head: true })
+				.in('dni', incorporadas.slice(i, i + 200));
+			resueltos += count ?? 0;
+		}
+
+		const partes = [
+			incorporadas.length === 1
+				? 'Se incorporó 1 persona al padrón.'
+				: `Se incorporaron ${incorporadas.length} personas al padrón.`
+		];
+		if (salteadas > 0) {
+			partes.push(
+				salteadas === 1 ? '1 ya estaba cargada.' : `${salteadas} ya estaban cargadas.`
+			);
+		}
+		if (resueltos > 0) {
+			partes.push(
+				resueltos === 1
+					? 'Quedó identificado 1 rol que ya habían ocupado en las mesas.'
+					: `Quedaron identificados ${resueltos} roles que ya habían ocupado en las mesas.`
+			);
+		}
+
+		return { ...vacio, mensaje: null, exito: partes.join(' ') };
 	},
 
 	/**
