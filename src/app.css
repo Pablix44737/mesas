@@ -2555,3 +2555,11 @@ fieldset.roles.invalido legend {
 	font-size: 14px;
 	color: var(--tinta-suave);
 }
+
+/* El margen negativo con que `.barra-accion` se pega al borde inferior también
+   arrastra hacia arriba lo que venga después del formulario: el pie quedaba
+   medio tapado por la barra, y ahí viven enlaces. Devolverle ese espacio lo
+   libera sin despegar la barra mientras se desplaza. */
+form:has(> .barra-accion) + .pie {
+	margin-top: calc(var(--e-10) + var(--e-5));
+}

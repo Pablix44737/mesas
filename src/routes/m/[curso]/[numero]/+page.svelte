@@ -14,7 +14,14 @@
 </svelte:head>
 
 <div class="app">
-	<BarraSuperior titulo="Mesa {data.mesa.numero}" sub={data.mesa.escenario?.nombre ?? ''}>
+	<!-- Acá se llega escaneando, así que no hay pantalla anterior en el historial:
+	     la flecha lleva a `/participar`, que es desde donde se busca otra mesa. Sin
+	     esto, quien escaneaba el QR equivocado tenía que salir de la aplicación. -->
+	<BarraSuperior
+		volverA="/participar"
+		titulo="Mesa {data.mesa.numero}"
+		sub={data.mesa.escenario?.nombre ?? ''}
+	>
 		{#snippet derecha()}
 			{#if data.corrida}
 				<span class="chip azul sin-punto">Ciclo {data.corrida.numero}</span>
@@ -151,5 +158,13 @@
 				<a href="/m/{data.curso.codigo}/{data.mesa.numero}/consulta">Consultá lo registrado sobre tu ciclo</a>.
 			</p>
 		{/if}
+
+		<!-- La flecha de arriba ya vuelve, pero el caso de equivocarse de mesa merece
+		     decirse con palabras: es el que te deja mirando una pantalla que no es la
+		     tuya sin saber qué hacer. Va fuera del `if` porque también pasa cuando la
+		     mesa está cerrada o todavía no tiene ciclo. -->
+		<p class="pie">
+			¿No es ésta tu mesa? <a href="/participar">Buscá la tuya</a>.
+		</p>
 	</div>
 </div>

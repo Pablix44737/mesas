@@ -10,7 +10,9 @@
 </svelte:head>
 
 <div class="app">
-	<BarraSuperior volverA="/" titulo="Mesa {data.numero}" sub="¿De qué curso?" />
+	<!-- A `/participar` y no al inicio: acá se llega escaneando un cartel viejo, y lo
+	     que hace falta si ninguno de los cursos es el tuyo es buscar la mesa de nuevo. -->
+	<BarraSuperior volverA="/participar" titulo="Mesa {data.numero}" sub="¿De qué curso?" />
 
 	<div class="envoltorio">
 		<div class="aviso alerta">

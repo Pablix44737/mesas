@@ -166,6 +166,11 @@ checklist, la misma pantalla ofrece **avanzar a la corrida siguiente** eligiendo
 más que el rol nuevo: el DNI sale de la participación que ya existe, así que rotar no
 obliga a volver a escanear el QR ni a tipearlo de nuevo.
 
+La flecha de esta pantalla vuelve a `/participar` y no al inicio: acá se llega
+escaneando, así que no hay pantalla anterior en el historial, y lo que hace falta
+cuando el QR era el equivocado es buscar otra mesa. Lo mismo el selector de curso de
+los carteles viejos (`/m/<numero>`).
+
 `/m/<curso>/<numero>/consulta` — quien practicó la técnica se identifica con su DNI una vez
 terminada la corrida y accede a los checklists que enviaron sus observadores, ítem
 por ítem y con su resultado. Solo para quien ocupó el rol de operador o de asistente.
