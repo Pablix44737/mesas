@@ -1075,57 +1075,103 @@ fieldset.roles.invalido legend {
 	margin: 0;
 }
 
+/* Cada ítem pide una decisión: «Hizo» o «No hizo». Sin marcar no es lo mismo
+   que «No hizo», por eso las dos son botones y ninguna viene elegida. */
 .item {
-	display: flex;
-	align-items: flex-start;
-	gap: var(--e-3);
-	width: 100%;
-	min-height: 60px;
-	padding: var(--e-4);
-	text-align: left;
-	font: inherit;
-	font-size: 16px;
-	line-height: 22px;
+	padding: var(--e-3) var(--e-4) var(--e-4);
 	background: var(--superficie);
 	border: 1px solid var(--borde);
+	border-left: 3px solid var(--borde-fuerte);
 	border-radius: var(--r-lg);
-	color: inherit;
-	cursor: pointer;
+	/* Al llevar al primer ítem sin marcar, que no quede tapado por el progreso. */
+	scroll-margin-top: calc(var(--barra-alto) + 96px);
 	transition:
 		background-color 160ms ease,
 		border-color 160ms ease;
 }
 
-.item[aria-pressed='true'] {
+.item.hizo {
 	background: var(--verde-claro);
 	border-color: var(--verde);
+	border-left-color: var(--verde-oscuro);
 }
 
-.item:disabled {
-	cursor: default;
+.item.no-hizo {
+	background: var(--error-claro);
+	border-color: var(--error-borde);
+	border-left-color: var(--error);
 }
 
-.item .marca {
+.item.falta {
+	background: var(--alerta-claro);
+	border-color: var(--alerta-borde);
+	border-left-color: var(--alerta);
+}
+
+.item-enunciado {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--e-3);
+	margin-bottom: var(--e-3);
+	font-size: 16px;
+	line-height: 22px;
+}
+
+.item-enunciado .texto {
+	flex: 1 1 auto;
+}
+
+.decision {
 	display: grid;
-	place-items: center;
-	width: 26px;
-	height: 26px;
-	flex: 0 0 auto;
-	margin-top: 1px;
-	border: 2px solid var(--borde-fuerte);
-	border-radius: var(--r-sm);
-	background: var(--superficie);
-	color: transparent;
+	grid-template-columns: 1fr 1fr;
+	gap: var(--e-2);
 }
 
-.item[aria-pressed='true'] .marca {
+.decision form {
+	margin: 0;
+}
+
+.decision button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--e-2);
+	width: 100%;
+	min-height: 44px;
+	padding: 8px var(--e-3);
+	font: inherit;
+	font-size: 15px;
+	font-weight: 600;
+	background: var(--superficie);
+	border: 1px solid var(--borde-fuerte);
+	border-radius: var(--r-md);
+	color: var(--tinta-suave);
+	cursor: pointer;
+	transition:
+		background-color 160ms ease,
+		border-color 160ms ease,
+		color 160ms ease;
+}
+
+.decision .opcion-hizo[aria-pressed='true'] {
 	background: var(--verde-oscuro);
 	border-color: var(--verde-oscuro);
 	color: #fff;
 }
 
-.item .texto {
-	flex: 1 1 auto;
+.decision .opcion-no-hizo[aria-pressed='true'] {
+	background: var(--error);
+	border-color: var(--error);
+	color: #fff;
+}
+
+.decision button:disabled {
+	cursor: default;
+}
+
+/* Enviado, queda a la vista solo lo que se eligió. */
+.decision button:disabled:not([aria-pressed='true']) {
+	opacity: 0.45;
 }
 
 .peso {

@@ -89,7 +89,7 @@ export type Database = {
 					marcada_en: string;
 				};
 				Insert: {
-					cumplido?: boolean;
+					cumplido: boolean;
 					id?: string;
 					instancia_id: string;
 					item_id: string;

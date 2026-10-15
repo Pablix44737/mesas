@@ -10,6 +10,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Todas las acciones devuelven la misma forma, así la página lee `mensaje` sin más. */
 const rechazar = (estado: number, mensaje: string) => fail(estado, { mensaje });
 
+const faltanPorMarcar = (faltan: number) =>
+	faltan === 1
+		? 'Falta marcar 1 ítem: indicá si lo hizo o no lo hizo.'
+		: `Faltan marcar ${faltan} ítems: indicá en cada uno si lo hizo o no lo hizo.`;
+
 async function traerParticipacion(
 	participacionId: string,
 	codigoDelCurso: string,
@@ -139,6 +144,7 @@ export const load: PageServerLoad = async ({ params }) => {
 			])
 		: [{ data: null }, { data: null }];
 
+	// Sin respuesta, el ítem está sin marcar: ni «Hizo» ni «No hizo».
 	const marcados = new Map((respuestas ?? []).map((r) => [r.item_id, r.cumplido]));
 
 	// Lo que dejó a medias en otra corrida de esta mesa: desde acá siempre vuelve.
@@ -218,7 +224,7 @@ export const load: PageServerLoad = async ({ params }) => {
 						orden: i.orden,
 						texto: i.texto,
 						peso: Number(i.peso),
-						cumplido: marcados.get(i.id) ?? false
+						hizo: marcados.get(i.id) ?? null
 					})),
 					maximo: (items ?? []).reduce((total, i) => total + Number(i.peso), 0)
 				}
@@ -239,7 +245,10 @@ async function abrirInstancia(participacionId: string) {
 }
 
 export const actions: Actions = {
-	/** El observador marca un ítem cuando ocurre en el escenario lo que describe. */
+	/**
+	 * El observador marca en cada ítem si se hizo o no. Volver a tocar la marca
+	 * elegida la quita: el ítem queda sin marcar, que no es lo mismo que «No hizo».
+	 */
 	marcar: async ({ request, params }) => {
 		const { participacion } = await traerParticipacion(params.participacionId, params.curso, params.numero);
 
@@ -251,19 +260,27 @@ export const actions: Actions = {
 
 		const formulario = await request.formData();
 		const itemId = String(formulario.get('itemId') ?? '');
-		const cumplido = formulario.get('cumplido') === 'true';
+		const marca = String(formulario.get('marca') ?? '');
 
 		if (!UUID.test(itemId)) return rechazar(400, 'Ítem inválido.');
+		if (!['hizo', 'no_hizo', 'sin_marcar'].includes(marca)) return rechazar(400, 'Marca inválida.');
 
-		const { error: fallo } = await supabase.from('checklist_respuestas').upsert(
-			{
-				instancia_id: instancia.id,
-				item_id: itemId,
-				cumplido,
-				marcada_en: new Date().toISOString()
-			},
-			{ onConflict: 'instancia_id,item_id' }
-		);
+		const { error: fallo } =
+			marca === 'sin_marcar'
+				? await supabase
+						.from('checklist_respuestas')
+						.delete()
+						.eq('instancia_id', instancia.id)
+						.eq('item_id', itemId)
+				: await supabase.from('checklist_respuestas').upsert(
+						{
+							instancia_id: instancia.id,
+							item_id: itemId,
+							cumplido: marca === 'hizo',
+							marcada_en: new Date().toISOString()
+						},
+						{ onConflict: 'instancia_id,item_id' }
+					);
 
 		if (fallo) return rechazar(400, 'No se pudo registrar la marca. Probá de nuevo.');
 
@@ -278,13 +295,32 @@ export const actions: Actions = {
 		if (!instancia) return rechazar(409, 'Tu rol no lleva checklist en esta mesa.');
 		if (instancia.enviada_en) return rechazar(409, 'Este checklist ya había sido enviado.');
 
+		// Un ítem sin marcar no dice si no se hizo o si faltó marcarlo: no se envía
+		// con ninguno. La base lo vuelve a comprobar en el mismo momento del envío.
+		const [{ count: items }, { count: marcados }] = await Promise.all([
+			supabase
+				.from('checklist_items')
+				.select('id', { count: 'exact', head: true })
+				.eq('plantilla_id', instancia.plantilla_id),
+			supabase
+				.from('checklist_respuestas')
+				.select('id', { count: 'exact', head: true })
+				.eq('instancia_id', instancia.id)
+		]);
+		const faltan = (items ?? 0) - (marcados ?? 0);
+		if (faltan > 0) return rechazar(409, faltanPorMarcar(faltan));
+
 		const { error: fallo } = await supabase
 			.from('checklist_instancias')
 			.update({ enviada_en: new Date().toISOString() })
 			.eq('id', instancia.id)
 			.is('enviada_en', null);
 
-		if (fallo) return rechazar(400, 'No se pudo enviar el checklist. Probá de nuevo.');
+		if (fallo) {
+			const enLaBase = fallo.message.match(/Faltan (d+) items/);
+			if (enLaBase) return rechazar(409, faltanPorMarcar(Number(enLaBase[1])));
+			return rechazar(400, 'No se pudo enviar el checklist. Probá de nuevo.');
+		}
 
 		return { mensaje: null };
 	},

@@ -18,9 +18,11 @@
 	 * desmarcaban solos. Ahora la marca viaja al servidor sin recargar nada, y si
 	 * el servidor la rechaza se vuelve atrás ese ítem.
 	 */
-	let marcas = $state<Record<string, boolean>>({});
+	let marcas = $state<Record<string, boolean | null>>({});
 	let falloDeMarca = $state<string | null>(null);
 	let confirmandoEnvio = $state(false);
+	/** Se intentó enviar con ítems sin marcar: se los resalta hasta completarlos. */
+	let mostrarFaltantes = $state(false);
 	let enviando = $state(false);
 	let avanzando = $state(false);
 
@@ -31,21 +33,65 @@
 	// guiar la corrida y la lista de cotejo de la técnica para evaluarla.
 	const facilita = $derived(data.participacion.rolCodigo === 'facilitador');
 
+	/** `true` es «Hizo», `false` es «No hizo» y `null`, sin marcar. */
 	const items = $derived(
 		(data.checklist?.items ?? []).map((item) => ({
 			...item,
-			cumplido: marcas[item.id] ?? item.cumplido
+			hizo: item.id in marcas ? marcas[item.id] : item.hizo
 		}))
 	);
 
-	const cumplidos = $derived(items.filter((item) => item.cumplido).length);
+	const hechos = $derived(items.filter((item) => item.hizo === true).length);
+	const noHechos = $derived(items.filter((item) => item.hizo === false).length);
+	const faltan = $derived(items.length - hechos - noHechos);
 	const puntos = $derived(
-		items.reduce((total, item) => total + (item.cumplido ? item.peso : 0), 0)
+		items.reduce((total, item) => total + (item.hizo === true ? item.peso : 0), 0)
 	);
 	const maximo = $derived(data.checklist?.maximo ?? 0);
 	const porcentaje = $derived(maximo > 0 ? Math.round((puntos / maximo) * 100) : 0);
 
 	const cifra = (n: number) => Math.round(n * 100) / 100;
+
+	/**
+	 * Marca un ítem sin recargar la página. Tocar la marca que ya tiene la quita.
+	 * Si el servidor la rechaza, el ítem vuelve a como estaba.
+	 */
+	function marcar(item: { id: string; hizo: boolean | null }, elegida: boolean) {
+		const antes = item.hizo;
+		marcas[item.id] = antes === elegida ? null : elegida;
+		// Sin `update()`: recargar en cada toque hacía que respuestas fuera de orden
+		// pisaran marcas ya hechas.
+		return async ({ result }: { result: { type: string; data?: Record<string, unknown> } }) => {
+			if (result.type === 'failure') {
+				marcas[item.id] = antes;
+				falloDeMarca =
+					(result.data?.mensaje as string) ?? 'No se pudo registrar la marca. Probá de nuevo.';
+			} else if (result.type === 'error') {
+				marcas[item.id] = antes;
+				falloDeMarca = 'Se perdió la conexión. La marca no quedó registrada.';
+			} else {
+				falloDeMarca = null;
+			}
+		};
+	}
+
+	/** Lo que se manda al tocar un botón: la marca elegida, o quitarla si ya la tenía. */
+	const marcaAEnviar = (actual: boolean | null, elegida: boolean) =>
+		actual === elegida ? 'sin_marcar' : elegida ? 'hizo' : 'no_hizo';
+
+	function pedirEnvio() {
+		if (faltan > 0) {
+			mostrarFaltantes = true;
+			const primero = items.find((item) => item.hizo === null);
+			if (primero) {
+				document
+					.getElementById(`item-${primero.id}`)
+					?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			}
+			return;
+		}
+		confirmandoEnvio = true;
+	}
 
 	const fechaDeEnvio = $derived(
 		data.enviadaEn
@@ -190,7 +236,7 @@
 							<strong>{cifra(puntos)}</strong> de {cifra(maximo)}
 						</span>
 						<span class="detalle">
-							{cumplidos} de {items.length} ítems · {porcentaje}%
+							{hechos} hizo · {noHechos} no hizo{faltan > 0 ? ` · ${faltan} sin marcar` : ''}
 						</span>
 					</div>
 					<div class="barra" role="presentation">
@@ -199,49 +245,46 @@
 				</div>
 
 				{#if !enviada}
-					<p class="detalle" style="margin-bottom: 12px">Tocá cada ítem al observarlo.</p>
+					<p class="detalle" style="margin-bottom: 12px">Marcá en cada ítem si lo hizo o no lo hizo.</p>
 				{/if}
 
 				<div class="items">
 					{#each items as item (item.id)}
-						<form
-							method="POST"
-							action="?/marcar"
-							use:enhance={() => {
-								const antes = item.cumplido;
-								marcas[item.id] = !antes;
-								// Sin `update()`: recargar en cada toque hacía que respuestas fuera
-								// de orden pisaran marcas ya hechas.
-								return async ({ result }) => {
-									if (result.type === 'failure') {
-										marcas[item.id] = antes;
-										falloDeMarca =
-											(result.data?.mensaje as string) ??
-											'No se pudo registrar la marca. Probá de nuevo.';
-									} else if (result.type === 'error') {
-										marcas[item.id] = antes;
-										falloDeMarca = 'Se perdió la conexión. La marca no quedó registrada.';
-									} else {
-										falloDeMarca = null;
-									}
-								};
-							}}
+						<div
+							class="item"
+							id="item-{item.id}"
+							class:hizo={item.hizo === true}
+							class:no-hizo={item.hizo === false}
+							class:falta={mostrarFaltantes && item.hizo === null}
 						>
-							<input type="hidden" name="itemId" value={item.id} />
-							<input type="hidden" name="cumplido" value={item.cumplido ? 'false' : 'true'} />
-							<button
-								type="submit"
-								class="item"
-								aria-pressed={item.cumplido}
-								disabled={enviada}
-							>
-								<span class="marca"><Icono nombre="tilde" tamano={16} grosor={3} /></span>
+							<div class="item-enunciado">
 								<span class="texto">{item.texto}</span>
 								{#if data.checklist.ponderado}
 									<span class="peso" title="Peso del ítem">{item.peso}</span>
 								{/if}
-							</button>
-						</form>
+							</div>
+							<div class="decision" role="group" aria-label={item.texto}>
+								{#each [true, false] as elegida (elegida)}
+									<form
+										method="POST"
+										action="?/marcar"
+										use:enhance={() => marcar(item, elegida)}
+									>
+										<input type="hidden" name="itemId" value={item.id} />
+										<input type="hidden" name="marca" value={marcaAEnviar(item.hizo, elegida)} />
+										<button
+											type="submit"
+											class={elegida ? 'opcion-hizo' : 'opcion-no-hizo'}
+											aria-pressed={item.hizo === elegida}
+											disabled={enviada}
+										>
+											<Icono nombre={elegida ? 'tilde' : 'cerrar'} tamano={16} grosor={3} />
+											{elegida ? 'Hizo' : 'No hizo'}
+										</button>
+									</form>
+								{/each}
+							</div>
+						</div>
 					{/each}
 				</div>
 
@@ -249,9 +292,9 @@
 					{#if confirmandoEnvio}
 						<div class="tarjeta">
 							<p>
-								Vas a enviar el checklist con <strong>{cumplidos} de {items.length}</strong>
-								ítems marcados, {cifra(puntos)} de {cifra(maximo)} puntos. Después no se puede
-								modificar.
+								Vas a enviar el checklist con <strong>{hechos} hizo</strong> y
+								<strong>{noHechos} no hizo</strong>, {cifra(puntos)} de {cifra(maximo)} puntos.
+								Después no se puede modificar.
 							</p>
 							<div class="confirmacion">
 								<form
@@ -285,12 +328,18 @@
 							</div>
 						</div>
 					{:else}
+						{#if mostrarFaltantes && faltan > 0}
+							<div class="aviso alerta" role="alert">
+								<Icono nombre="alerta" />
+								<span>
+									{faltan === 1
+										? 'Falta marcar 1 ítem: indicá si lo hizo o no lo hizo.'
+										: `Faltan marcar ${faltan} ítems: indicá en cada uno si lo hizo o no lo hizo.`}
+								</span>
+							</div>
+						{/if}
 						<div class="barra-accion">
-							<button
-								class="boton enviar bloque"
-								type="button"
-								onclick={() => (confirmandoEnvio = true)}
-							>
+							<button class="boton enviar bloque" type="button" onclick={pedirEnvio}>
 								<Icono nombre="enviar" />
 								Enviar checklist
 							</button>
