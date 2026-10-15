@@ -328,13 +328,21 @@
 			<span class="chip alerta">{data.pendientes.length}</span>
 		</div>
 		<p class="ayuda">
-			Ocuparon un rol en alguna mesa pero no están en el padrón.
+			Ocuparon un rol en alguna mesa pero no están en el padrón. O les falta el alta, o el
+			documento se tipeó mal: tocá dónde ocupó el rol para verlo en su mesa y darlo de baja.
 		</p>
 		<ul class="lista">
 			{#each data.pendientes as pendiente (pendiente.dni)}
 				<li class="pendiente-padron">
 					<span class="quien">DNI {mostrarDni(pendiente.dni)}</span>
-					<span class="detalle">{pendiente.registros.join(' · ')}</span>
+					<span class="registros">
+						{#each pendiente.registros as registro (registro.ruta)}
+							<a class="registro" href={registro.ruta}>
+								<span class="donde">{registro.texto}</span>
+								<span class="detalle">{registro.curso}</span>
+							</a>
+						{/each}
+					</span>
 					<button
 						class="boton fantasma"
 						type="button"

@@ -1266,6 +1266,52 @@ fieldset.roles.invalido legend {
    gesto mueva el criterio en vez de desplazar la página. */
 /* La baja de un escenario o un checklist: va al final de su pantalla, separada
    del resto, porque no es parte de prepararlo sino de deshacerlo. */
+/* --- dónde ocupó el rol un DNI sin resolver --- */
+
+/* Los registros del aviso dejan de ser una frase y pasan a ser destinos: uno por
+   cada rol que ese documento ocupó, cada uno con el curso debajo, porque desde
+   que los números de mesa reinician por curso «Mesa 1» sola no identifica nada. */
+.registros {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--e-2);
+	min-width: 0;
+}
+
+.registro {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	padding: 6px 10px;
+	border: 1px solid var(--borde);
+	border-radius: var(--r-md);
+	background: var(--superficie);
+	text-decoration: none;
+	color: inherit;
+}
+
+.registro:hover {
+	border-color: var(--azul);
+}
+
+.registro .donde {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--azul);
+}
+
+/* Al llegar desde el padrón, la fila de esa participación queda señalada: en un
+   ciclo con cinco roles, encontrar cuál era el del documento mal tipeado a ojo
+   es justamente el trabajo que este enlace viene a ahorrar. */
+.tabla tbody tr:target {
+	background: var(--alerta-claro);
+	box-shadow: inset 3px 0 0 var(--alerta);
+}
+
+.tabla tbody tr[id^='p-'] {
+	scroll-margin-top: var(--e-10);
+}
+
 /* --- lo evaluado en una corrida --- */
 
 /* Las corridas de la mesa, para pasar de una a otra sin volver atrás. Se van al

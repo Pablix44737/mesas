@@ -37,15 +37,26 @@ export const load: PageServerLoad = async () => {
 		}
 	}
 
-	// Un mismo DNI desconocido puede haber ocupado roles en varias corridas:
-	// se incorpora una sola vez y se resuelven todos sus registros.
-	const porDni = new Map<string, { dni: string; registros: string[] }>();
+	/**
+	 * Un mismo DNI desconocido puede haber ocupado roles en varias corridas: se
+	 * incorpora una sola vez y se resuelven todos sus registros.
+	 *
+	 * Cada registro lleva adónde ir. Decir «Mesa 1 · ciclo 5 · Observador» sin más
+	 * dejaba al administrador con el dato y sin la acción: para atenderlo —porque
+	 * fue un error de tipeo y hay que dar de baja ese registro— tenía que buscar la
+	 * mesa a mano. Y desde que los números de mesa vuelven a empezar en cada curso,
+	 * «Mesa 1» sin el curso ni siquiera alcanzaba para encontrarla.
+	 */
+	type Registro = { texto: string; curso: string; ruta: string };
+	const porDni = new Map<string, { dni: string; registros: Registro[] }>();
 	for (const p of pendientes ?? []) {
 		const dni = p.dni ?? '';
 		const entrada = porDni.get(dni) ?? { dni, registros: [] };
-		entrada.registros.push(
-			`Mesa ${p.mesa_numero} · ciclo ${p.corrida_numero} · ${p.rol_nombre}`
-		);
+		entrada.registros.push({
+			texto: `Mesa ${p.mesa_numero} · ciclo ${p.corrida_numero} · ${p.rol_nombre}`,
+			curso: p.curso_nombre ?? '',
+			ruta: `/admin/cursos/${p.curso_codigo}/mesas/${p.mesa_numero}#p-${p.participacion_id}`
+		});
 		porDni.set(dni, entrada);
 	}
 

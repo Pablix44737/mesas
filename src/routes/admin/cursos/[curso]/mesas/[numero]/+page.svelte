@@ -114,7 +114,9 @@
 					</thead>
 					<tbody>
 						{#each corrida.participaciones as participacion (participacion.id)}
-							<tr>
+							<!-- El id es el ancla con que el padrón enlaza un DNI sin resolver
+							     hasta la fila exacta donde ocupó ese rol. -->
+							<tr id="p-{participacion.id}">
 								<td>
 									<span class="fila">
 										<Icono nombre={iconoDeRol[participacion.rolCodigo] ?? 'operador'} tamano={18} />

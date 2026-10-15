@@ -88,10 +88,12 @@ presentarse en las mesas.
 
 `/admin/padron` — el administrador ve quiénes están cargados, los busca por apellido,
 nombre o DNI, incorpora a los que falten, corrige los que estén mal y quita a los que
-sobren. Los DNI que ocuparon un rol sin estar en el padrón aparecen arriba, con el rol
-y la corrida donde se usaron; incorporarlos resuelve sus registros solo. Cada persona
-muestra cuántos roles ocupó, que es lo que hay que saber antes de quitarla o de
-cambiarle el DNI.
+sobren. Los DNI que ocuparon un rol sin estar en el padrón aparecen arriba, con el
+curso, la mesa, el ciclo y el rol donde se usaron; incorporarlos resuelve sus registros
+solo. Cada registro **es un enlace** a esa mesa, que abre la fila exacta de esa
+participación y la deja señalada: de ahí sale la otra salida, dar de baja el registro
+cuando el documento se tipeó mal. Cada persona muestra cuántos roles ocupó, que es lo
+que hay que saber antes de quitarla o de cambiarle el DNI.
 
 `/admin/cursos` — la grilla de ediciones. Cada tarjeta es un curso con sus mesas,
 corridas y evaluaciones; al entrar, `/admin/cursos/<id>` lista sus mesas y es desde
@@ -286,6 +288,16 @@ búsqueda de «ya me identifiqué» está acotada a la corrida habilitada— y p
 declarar otro rol. Los registros de las corridas previas quedan intactos y cada
 evaluación cuelga de su corrida. Verificado en la Mesa 1: Ana pasó de observadora
 de la técnica (corrida 2) a operadora (corrida 3), y Elena hizo el camino inverso.
+
+**Un aviso que no lleva a ningún lado es medio aviso.** «DNI sin resolver» decía dónde
+había ocupado el rol cada documento desconocido y ahí se terminaba: para atenderlo
+—incorporar a la persona, o dar de baja el registro si el documento se tipeó mal— había
+que buscar la mesa a mano. Peor: `participaciones_sin_resolver` es anterior a los
+cursos, así que decía «Mesa 1» a secas, y desde que los números reinician en cada curso
+eso ya no identifica nada. La vista sumó el curso, y con eso el dato se volvió un
+destino. La baja no se duplicó en el padrón: vive donde ya estaba, en la mesa, donde se
+ve el ciclo entero y quién más estuvo. Sigue valiendo la regla de siempre —un registro
+con checklist enviado no se da de baja—, y ahí se ve por qué: la fila dice «Enviada».
 
 **Lo evaluado en una corrida va en pantalla aparte y no desplegado en la lista de
 participantes.** Desplegarlo ahí era lo primero que se venía a la cabeza, pero un
