@@ -17,7 +17,7 @@
 </script>
 
 <svelte:head>
-	<title>Mesa {data.mesa.numero} · Corrida {data.corrida.numero} — SIMUNaM</title>
+	<title>Mesa {data.mesa.numero} · Ciclo {data.corrida.numero} — SIMUNaM</title>
 </svelte:head>
 
 <a class="miga" href="/admin/cursos/{data.curso.codigo}/mesas/{data.mesa.numero}">
@@ -27,7 +27,7 @@
 
 <div class="pagina-cabecera">
 	<div class="titulo">
-		<h1>Corrida {data.corrida.numero}</h1>
+		<h1>Ciclo {data.corrida.numero}</h1>
 		<p class="bajada">Mesa {data.mesa.numero} · {data.mesa.escenario}</p>
 	</div>
 	{#if data.corrida.habilitada}
@@ -91,6 +91,6 @@
 {:else}
 	<div class="aviso alerta">
 		<Icono nombre="alerta" />
-		<span>Todavía no se envió ninguna evaluación en esta corrida.</span>
+		<span>Todavía no se envió ninguna evaluación en este ciclo.</span>
 	</div>
 {/each}

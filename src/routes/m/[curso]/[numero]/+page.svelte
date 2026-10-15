@@ -17,7 +17,7 @@
 	<BarraSuperior titulo="Mesa {data.mesa.numero}" sub={data.mesa.escenario?.nombre ?? ''}>
 		{#snippet derecha()}
 			{#if data.corrida}
-				<span class="chip azul sin-punto">Corrida {data.corrida.numero}</span>
+				<span class="chip azul sin-punto">Ciclo {data.corrida.numero}</span>
 			{/if}
 		{/snippet}
 	</BarraSuperior>
@@ -30,7 +30,7 @@
 					{#if data.cerrada}
 						Esta mesa ya está cerrada.
 					{:else}
-						Esta mesa todavía no tiene una corrida habilitada. Esperá a que el líder de mesa la
+						Esta mesa todavía no tiene un ciclo habilitado. Esperá a que el líder de mesa lo
 						habilite.
 					{/if}
 				</span>
@@ -48,7 +48,7 @@
 				<div class="tarjeta">
 					<div class="identidad">
 						<span class="etiqueta">
-							Corrida {pendiente.corridaNumero} · {pendiente.rol}
+							Ciclo {pendiente.corridaNumero} · {pendiente.rol}
 						</span>
 						<span class="nombre">{pendiente.checklist}</span>
 						<span class="detalle">
@@ -70,12 +70,12 @@
 				<input type="hidden" name="rolCodigo" value={form.rolCodigo} />
 				<input type="hidden" name="continuar" value="true" />
 				<button class="boton secundario bloque" type="submit">
-					Ahora no: entrar como {form.rolNombre} en la corrida {data.corrida.numero}
+					Ahora no: entrar como {form.rolNombre} en el ciclo {data.corrida.numero}
 				</button>
 			</form>
 
 			<p class="pie">
-				Si entrás a la corrida nueva vas a poder volver a este checklist desde tu pantalla.
+				Si entrás al ciclo nuevo vas a poder volver a este checklist desde tu pantalla.
 			</p>
 		{:else}
 			{#if form?.mensaje}
@@ -116,7 +116,7 @@
 				</div>
 
 				<fieldset class="roles" class:invalido={form?.campo === 'rolCodigo'}>
-					<legend>El rol que vas a ocupar en esta corrida</legend>
+					<legend>El rol que vas a ocupar en este ciclo</legend>
 					{#each data.roles as rol (rol.codigo)}
 						<label class="rol">
 							<input
@@ -140,7 +140,7 @@
 
 				<div class="barra-accion">
 					<button class="boton bloque" type="submit" disabled={enviando}>
-						{enviando ? 'Registrando…' : 'Entrar a la corrida'}
+						{enviando ? 'Registrando…' : 'Entrar al ciclo'}
 						{#if !enviando}<Icono nombre="adelante" />{/if}
 					</button>
 				</div>
@@ -148,7 +148,7 @@
 
 			<p class="pie">
 				¿Ya practicaste la técnica en esta mesa?
-				<a href="/m/{data.curso.codigo}/{data.mesa.numero}/consulta">Consultá lo registrado sobre tu corrida</a>.
+				<a href="/m/{data.curso.codigo}/{data.mesa.numero}/consulta">Consultá lo registrado sobre tu ciclo</a>.
 			</p>
 		{/if}
 	</div>

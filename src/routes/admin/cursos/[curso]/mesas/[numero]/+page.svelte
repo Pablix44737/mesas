@@ -28,7 +28,7 @@
 				: sinEnviar === 1
 					? ' y un checklist abierto sin enviar'
 					: ` y ${sinEnviar} checklists abiertos sin enviar`;
-		return `Se van con ella ${ocupados}${abiertos}.`;
+		return `Se van con él ${ocupados}${abiertos}.`;
 	};
 
 	const hora = (fecha: string) =>
@@ -84,12 +84,12 @@
 	<div class="tarjeta">
 		<div class="tarjeta-cabecera">
 			<div class="identidad">
-				<span class="nombre" style="font-size: 16px">Corrida {corrida.numero}</span>
+				<span class="nombre" style="font-size: 16px">Ciclo {corrida.numero}</span>
 				<span class="detalle">
 					{#if corrida.habilitada}
 						en curso desde las {hora(corrida.creada_en)}
 					{:else}
-						cerrada · comenzó a las {hora(corrida.creada_en)}
+						cerrado · comenzó a las {hora(corrida.creada_en)}
 					{/if}
 				</span>
 			</div>
@@ -99,7 +99,7 @@
 		</div>
 
 		{#if corrida.participaciones.length === 0}
-			<div class="vacio">Nadie se identificó todavía en esta corrida.</div>
+			<div class="vacio">Nadie se identificó todavía en este ciclo.</div>
 		{:else}
 			<div class="tabla-envoltorio">
 				<table class="tabla">
@@ -182,7 +182,7 @@
 											<div>
 												<strong>
 													{participacion.nombre ?? `El DNI ${mostrarDni(participacion.dni)}`}
-													deja de estar registrado como {participacion.rolNombre} en la corrida
+													deja de estar registrado como {participacion.rolNombre} en el ciclo
 													{corrida.numero}.
 												</strong>
 												Puede volver a escanear el QR y elegir otro rol. Se pierden las marcas que
@@ -259,7 +259,7 @@
 								eliminando = corrida.id;
 							}}
 						>
-							Eliminar esta corrida
+							Eliminar este ciclo
 						</button>
 					{/if}
 				{/if}
@@ -271,11 +271,11 @@
 					<Icono nombre="alerta" />
 					<div>
 						<strong>
-							Eliminar la corrida {corrida.numero}
+							Eliminar el ciclo {corrida.numero}
 							{#if anterior}
-								devuelve la mesa a la corrida {anterior.numero}, que vuelve a quedar habilitada.
+								devuelve la mesa al ciclo {anterior.numero}, que vuelve a quedar habilitado.
 							{:else}
-								deja la mesa sin corridas, como recién creada.
+								deja la mesa sin ciclos, como recién creada.
 							{/if}
 						</strong>
 						{#if corrida.participaciones.length > 0}
@@ -298,7 +298,7 @@
 							<input type="hidden" name="corridaId" value={corrida.id} />
 							<button class="boton peligro" type="submit" disabled={enCurso}>
 								<Icono nombre="quitar" />
-								{enCurso ? 'Eliminando…' : `Sí, eliminar la corrida ${corrida.numero}`}
+								{enCurso ? 'Eliminando…' : `Sí, eliminar el ciclo ${corrida.numero}`}
 							</button>
 						</form>
 					</div>
@@ -308,6 +308,6 @@
 	</div>
 {:else}
 	<div class="vacio">
-		Esta mesa todavía no tiene corridas.
+		Esta mesa todavía no tiene ciclos.
 	</div>
 {/each}

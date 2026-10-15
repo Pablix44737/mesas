@@ -118,7 +118,7 @@
 	>
 		{#snippet derecha()}
 			{#if data.corridaEnCurso}
-				<span class="chip exito">Corrida {data.corridaEnCurso.numero}</span>
+				<span class="chip exito">Ciclo {data.corridaEnCurso.numero}</span>
 			{:else if cerrada}
 				<span class="chip neutro">Cerrada</span>
 			{/if}
@@ -261,12 +261,12 @@
 						>
 							<Icono nombre="checklist" />
 							{data.docente.evaluo
-								? `Ver lo que enviaste en la corrida ${data.corridaEnCurso.numero}`
-								: `Completar la técnica de la corrida ${data.corridaEnCurso.numero}`}
+								? `Ver lo que enviaste en el ciclo ${data.corridaEnCurso.numero}`
+								: `Completar la técnica del ciclo ${data.corridaEnCurso.numero}`}
 						</a>
 					{:else if !data.corridaEnCurso && !cerrada}
 						<p class="detalle" style="margin: 0">
-							Habilitá la primera corrida para empezar a evaluar.
+							Habilitá el primer ciclo para empezar a evaluar.
 						</p>
 					{/if}
 
@@ -332,7 +332,7 @@
 
 		<div class="tarjeta">
 			<div class="tarjeta-cabecera">
-				<h2>Corridas</h2>
+				<h2>Ciclos</h2>
 				<!-- Con una sola corrida la lista repetiría la línea de abajo. -->
 				{#if data.corridas.length > 1}
 					{@render desplegar(mostrarCorridas, () => (mostrarCorridas = !mostrarCorridas), 'Ver todas')}
@@ -341,23 +341,23 @@
 
 			{#if data.corridaEnCurso}
 				<p>
-					La <strong>corrida {data.corridaEnCurso.numero}</strong> está en curso desde las
+					El <strong>ciclo {data.corridaEnCurso.numero}</strong> está en curso desde las
 					{hora(data.corridaEnCurso.creada_en)}.
 				</p>
 			{:else if cerrada}
 				<p>
 					La mesa está cerrada, con
-					{data.corridas.length === 1 ? 'una corrida' : `${data.corridas.length} corridas`}.
+					{data.corridas.length === 1 ? 'un ciclo' : `${data.corridas.length} ciclos`}.
 				</p>
 			{:else}
 				<p>
-					Habilitá la primera corrida para que los participantes puedan escanear el QR.
+					Habilitá el primer ciclo para que los participantes puedan escanear el QR.
 				</p>
 			{/if}
 
 			{#if confirmandoAvance}
 				<p>
-					Habilitar la corrida {siguiente} cierra la corrida {data.corridaEnCurso?.numero}.
+					Habilitar el ciclo {siguiente} cierra el ciclo {data.corridaEnCurso?.numero}.
 				</p>
 
 				{@render quienesNoEnviaron()}
@@ -377,7 +377,7 @@
 					>
 						<button class="boton enviar bloque" type="submit" disabled={habilitando}>
 							<Icono nombre="corrida" />
-							{habilitando ? 'Habilitando…' : `Sí, habilitar la corrida ${siguiente}`}
+							{habilitando ? 'Habilitando…' : `Sí, habilitar el ciclo ${siguiente}`}
 						</button>
 					</form>
 					<button
@@ -386,12 +386,12 @@
 						onclick={() => (confirmandoAvance = false)}
 						disabled={habilitando}
 					>
-						Seguir en la corrida {data.corridaEnCurso?.numero}
+						Seguir en el ciclo {data.corridaEnCurso?.numero}
 					</button>
 				</div>
 			{:else if confirmandoCierre}
 				<p>
-					Cerrar la mesa cierra la corrida {data.corridaEnCurso?.numero} y no abre otra.
+					Cerrar la mesa cierra el ciclo {data.corridaEnCurso?.numero} y no abre otro.
 				</p>
 
 				{@render quienesNoEnviaron()}
@@ -420,7 +420,7 @@
 						onclick={() => (confirmandoCierre = false)}
 						disabled={cerrando}
 					>
-						Seguir en la corrida {data.corridaEnCurso?.numero}
+						Seguir en el ciclo {data.corridaEnCurso?.numero}
 					</button>
 				</div>
 			{:else if data.corridaEnCurso}
@@ -430,7 +430,7 @@
 				<div class="confirmacion">
 					<button class="boton bloque" type="button" onclick={() => (confirmandoAvance = true)}>
 						<Icono nombre="corrida" />
-						Habilitar la corrida {siguiente}
+						Habilitar el ciclo {siguiente}
 					</button>
 					<button
 						class="boton secundario bloque"
@@ -466,9 +466,9 @@
 						{#if habilitando}
 							Habilitando…
 						{:else if cerrada}
-							Reabrirla con la corrida {siguiente}
+							Reabrirla con el ciclo {siguiente}
 						{:else}
-							Habilitar la primera corrida
+							Habilitar el primer ciclo
 						{/if}
 					</button>
 				</form>
@@ -478,12 +478,12 @@
 				<ul class="lista" style="margin-top: 16px">
 					{#each data.corridas as corrida (corrida.id)}
 						<li class:en-curso={corrida.habilitada}>
-							<span class="rotulo">Corrida {corrida.numero}</span>
+							<span class="rotulo">Ciclo {corrida.numero}</span>
 							<span class="detalle">
 								{#if corrida.habilitada}
 									en curso desde las {hora(corrida.creada_en)}
 								{:else}
-									cerrada · comenzó a las {hora(corrida.creada_en)}
+									cerrado · comenzó a las {hora(corrida.creada_en)}
 								{/if}
 							</span>
 							<!-- La puerta a las corridas ya cerradas, y la única que queda cuando
@@ -491,7 +491,7 @@
 							<a
 								class="icono-boton ver-evaluado"
 								href="/mesas/{data.curso.codigo}/{data.mesa.numero}/corridas/{corrida.numero}"
-								aria-label="Ver lo evaluado en la corrida {corrida.numero}"
+								aria-label="Ver lo evaluado en el ciclo {corrida.numero}"
 								title="Ver lo evaluado"
 							>
 								<Icono nombre="resultado" tamano={18} />
@@ -509,16 +509,16 @@
 				<h2>Participantes</h2>
 				{#if data.corridaEnCurso}
 					<span class="chip azul sin-punto">
-						{data.participantes.length} en la corrida {data.corridaEnCurso.numero}
+						{data.participantes.length} en el ciclo {data.corridaEnCurso.numero}
 					</span>
 				{/if}
 			</div>
 
 			{#if !data.corridaEnCurso}
-				<p class="detalle" style="margin: 0">Todavía no hay ninguna corrida habilitada.</p>
+				<p class="detalle" style="margin: 0">Todavía no hay ningún ciclo habilitado.</p>
 			{:else if data.participantes.length === 0}
 				<p class="detalle" style="margin: 0">
-					Todavía no se identificó nadie en esta corrida. Mostrales el código QR de arriba.
+					Todavía no se identificó nadie en este ciclo. Mostrales el código QR de arriba.
 				</p>
 			{:else}
 				<ul class="lista participantes">
@@ -550,7 +550,7 @@
 
 				{#if data.rolesLibres.length > 0}
 					<p class="detalle" style="margin: 12px 0 0">
-						Sin ocupar en esta corrida: {data.rolesLibres.join(', ')}.
+						Sin ocupar en este ciclo: {data.rolesLibres.join(', ')}.
 					</p>
 				{/if}
 
@@ -605,7 +605,7 @@
 				</ul>
 			{:else}
 				<p class="ayuda">
-					Cada número es una corrida en la que ocupó ese rol. El hueco es lo que le falta.
+					Cada número es un ciclo en el que ocupó ese rol. El hueco es lo que le falta.
 				</p>
 
 				<!-- Acá la primera columna lleva sólo el nombre: lo que le falta ya lo dice

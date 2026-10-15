@@ -69,7 +69,7 @@
 		sub={data.escenario?.nombre ?? ''}
 	>
 		{#snippet derecha()}
-			<span class="chip azul sin-punto">Corrida {data.corrida.numero}</span>
+			<span class="chip azul sin-punto">Ciclo {data.corrida.numero}</span>
 		{/snippet}
 	</BarraSuperior>
 
@@ -108,7 +108,7 @@
 		{#if !data.corrida.habilitada && !enviada}
 			<div class="aviso alerta">
 				<Icono nombre="reloj" />
-				<span>Esta corrida ya fue cerrada por el líder.</span>
+				<span>Este ciclo ya fue cerrado por el líder.</span>
 			</div>
 		{/if}
 
@@ -124,7 +124,7 @@
 				<div class="aviso alerta" style="margin: 0 0 12px">
 					<Icono nombre="alerta" />
 					<span>
-						<strong>Te quedó un checklist sin enviar</strong> de la corrida
+						<strong>Te quedó un checklist sin enviar</strong> del ciclo
 						{pendiente.corridaNumero}, cuando fuiste {pendiente.rol}:
 						{pendiente.marcados} de {pendiente.items} ítems marcados.
 					</span>
@@ -301,12 +301,12 @@
 		{:else if practica}
 			<div class="tarjeta">
 				<div class="tarjeta-cabecera">
-					<h2>Durante la corrida</h2>
+					<h2>Durante el ciclo</h2>
 				</div>
 				<p>Tu rol es practicar la técnica: no vas a usar el sistema mientras la ejecutás.</p>
 				<a class="boton secundario bloque" href="/m/{data.curso?.codigo}/{data.mesa.numero}/consulta">
 					<Icono nombre="resultado" />
-					Ver lo registrado sobre tu corrida
+					Ver lo registrado sobre tu ciclo
 				</a>
 			</div>
 		{/if}
@@ -329,9 +329,9 @@
 				{#if data.mesaCerrada}
 					<h2 class="t-sub">La mesa está cerrada</h2>
 				{:else if !data.siguienteCorrida}
-					<h2 class="t-sub">La corrida {data.corrida.numero} es la que sigue abierta</h2>
+					<h2 class="t-sub">El ciclo {data.corrida.numero} es el que sigue abierto</h2>
 					<p class="detalle" style="margin-bottom: 12px">
-						Cuando el líder de mesa habilite la siguiente, vas a poder entrar desde acá.
+						Cuando el líder de mesa habilite el siguiente, vas a poder entrar desde acá.
 					</p>
 					<a
 						class="boton secundario bloque"
@@ -343,19 +343,19 @@
 					</a>
 				{:else if data.siguienteCorrida.participacionId}
 					<h2 class="t-sub" style="margin-bottom: 12px">
-						Ya estás en la corrida {data.siguienteCorrida.numero}
+						Ya estás en el ciclo {data.siguienteCorrida.numero}
 					</h2>
 					<a
 						class="boton bloque"
 						href="/m/{data.curso?.codigo}/{data.mesa.numero}/participacion/{data.siguienteCorrida
 							.participacionId}"
 					>
-						Ir a la corrida {data.siguienteCorrida.numero}
+						Ir al ciclo {data.siguienteCorrida.numero}
 						<Icono nombre="adelante" />
 					</a>
 				{:else}
 					<h2 class="t-sub" style="margin-bottom: 12px">
-						Avanzar a la corrida {data.siguienteCorrida.numero}
+						Avanzar al ciclo {data.siguienteCorrida.numero}
 					</h2>
 					<form
 						method="POST"
@@ -369,7 +369,7 @@
 						}}
 					>
 						<fieldset class="roles">
-							<legend>El rol que vas a ocupar en la corrida {data.siguienteCorrida.numero}</legend>
+							<legend>El rol que vas a ocupar en el ciclo {data.siguienteCorrida.numero}</legend>
 							{#each data.roles as rol (rol.codigo)}
 								<label class="rol">
 									<input type="radio" name="rolCodigo" value={rol.codigo} required />
@@ -387,7 +387,7 @@
 
 						<div class="barra-accion">
 							<button class="boton bloque" type="submit" disabled={avanzando}>
-								{avanzando ? 'Registrando…' : `Entrar a la corrida ${data.siguienteCorrida.numero}`}
+								{avanzando ? 'Registrando…' : `Entrar al ciclo ${data.siguienteCorrida.numero}`}
 								{#if !avanzando}<Icono nombre="adelante" />{/if}
 							</button>
 						</div>

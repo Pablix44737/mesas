@@ -20,13 +20,13 @@
 </script>
 
 <svelte:head>
-	<title>Corrida {data.corrida.numero} · Mesa {data.mesa.numero} — SIMUNaM</title>
+	<title>Ciclo {data.corrida.numero} · Mesa {data.mesa.numero} — SIMUNaM</title>
 </svelte:head>
 
 <div class="app">
 	<BarraSuperior
 		volverA={raiz}
-		titulo="Corrida {data.corrida.numero}"
+		titulo="Ciclo {data.corrida.numero}"
 		sub="Mesa {data.mesa.numero} · {data.mesa.escenario ?? ''}"
 	>
 		{#snippet derecha()}
@@ -40,15 +40,15 @@
 		<!-- Las corridas de la mesa, para moverse entre ellas sin volver atrás: en un
 		     debriefing se mira la que terminó, pero también la anterior. -->
 		{#if data.corridas.length > 1}
-			<nav class="corridas-solapas" aria-label="Corridas de la mesa">
+			<nav class="corridas-solapas" aria-label="Ciclos de la mesa">
 				{#each data.corridas as corrida (corrida.numero)}
 					{#if corrida.numero === data.corrida.numero}
 						<span class="solapa elegida" aria-current="page">
-							Corrida {corrida.numero}
+							Ciclo {corrida.numero}
 						</span>
 					{:else}
 						<a class="solapa" href="{raiz}/corridas/{corrida.numero}">
-							Corrida {corrida.numero}
+							Ciclo {corrida.numero}
 						</a>
 					{/if}
 				{/each}
@@ -114,10 +114,10 @@
 				<Icono nombre="alerta" />
 				<span>
 					{#if data.corrida.habilitada}
-						Todavía no se envió ninguna evaluación en esta corrida. Van apareciendo acá a medida
+						Todavía no se envió ninguna evaluación en este ciclo. Van apareciendo acá a medida
 						que los observadores las envían.
 					{:else}
-						En esta corrida no se envió ninguna evaluación.
+						En este ciclo no se envió ninguna evaluación.
 					{/if}
 				</span>
 			</div>

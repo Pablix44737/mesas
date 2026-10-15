@@ -20,7 +20,7 @@
 <div class="pagina-cabecera">
 	<div class="titulo">
 		<h1>Checklists</h1>
-		<p class="bajada">Los criterios con que los observadores evalúan la corrida</p>
+		<p class="bajada">Los criterios con que los observadores evalúan el ciclo</p>
 	</div>
 </div>
 

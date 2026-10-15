@@ -6,7 +6,7 @@ import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const numeroCorrida = Number(params.corrida);
-	if (!Number.isInteger(numeroCorrida) || numeroCorrida <= 0) error(404, 'Corrida inexistente');
+	if (!Number.isInteger(numeroCorrida) || numeroCorrida <= 0) error(404, 'Ciclo inexistente');
 
 	const { curso, mesa: encontrada } = await mesaDelCurso(params.curso, params.numero);
 
@@ -26,7 +26,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		.eq('numero', numeroCorrida)
 		.maybeSingle();
 
-	if (!corrida) error(404, `La mesa ${mesa.numero} no tiene una corrida ${numeroCorrida}`);
+	if (!corrida) error(404, `La mesa ${mesa.numero} no tiene un ciclo ${numeroCorrida}`);
 
 	return {
 		curso,

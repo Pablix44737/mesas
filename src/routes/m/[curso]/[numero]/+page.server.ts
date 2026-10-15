@@ -65,7 +65,7 @@ export const actions: Actions = {
 
 		const { curso, mesa, corrida } = await traerMesaYCorrida(params.curso, params.numero);
 		if (!corrida) {
-			return rechazar(409, 'La mesa no tiene ninguna corrida habilitada.', '');
+			return rechazar(409, 'La mesa no tiene ningún ciclo habilitado.', '');
 		}
 
 		// Que sea uno de los roles que este curso ofrece, no sólo uno que exista.

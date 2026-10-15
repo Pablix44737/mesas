@@ -120,7 +120,7 @@ export const actions: Actions = {
 
 		const rechazar = (estado: number, mensaje: string) => fail(estado, { mensaje, exito: null });
 
-		if (!UUID.test(id)) return rechazar(400, 'Corrida inválida.');
+		if (!UUID.test(id)) return rechazar(400, 'Ciclo inválido.');
 
 		const { data, error: fallo } = await supabase.rpc('borrar_corrida', { p_corrida_id: id });
 
@@ -128,28 +128,28 @@ export const actions: Actions = {
 			// Los tres casos son carreras: entre que se dibujó la pantalla y se tocó
 			// el botón, alguien habilitó otra corrida o envió una evaluación.
 			if (fallo.message.includes('ya no existe')) {
-				return rechazar(404, 'Esa corrida ya no existe: alguien la eliminó antes.');
+				return rechazar(404, 'Ese ciclo ya no existe: alguien lo eliminó antes.');
 			}
 			if (fallo.message.includes('ultima corrida')) {
 				return rechazar(
 					409,
-					'Mientras tanto se habilitó otra corrida, así que ésta dejó de ser la última. Recargá la página.'
+					'Mientras tanto se habilitó otro ciclo, así que este dejó de ser el último. Recargá la página.'
 				);
 			}
 			if (fallo.message.includes('evaluaciones enviadas')) {
 				return rechazar(
 					409,
-					'Mientras tanto alguien envió una evaluación en esta corrida, así que ya no se puede eliminar.'
+					'Mientras tanto alguien envió una evaluación en este ciclo, así que ya no se puede eliminar.'
 				);
 			}
-			return rechazar(500, 'No se pudo eliminar la corrida. Intentá de nuevo.');
+			return rechazar(500, 'No se pudo eliminar el ciclo. Intentá de nuevo.');
 		}
 
 		const resumen = data as unknown as Resumen;
 		const arrastro =
 			resumen.participaciones === 0
-				? 'No se había identificado nadie en ella'
-				: `Se fueron con ella ${cuantas(resumen.participaciones, 'rol ocupado', 'roles ocupados')}` +
+				? 'No se había identificado nadie en él'
+				: `Se fueron con él ${cuantas(resumen.participaciones, 'rol ocupado', 'roles ocupados')}` +
 					(resumen.checklists_abiertos > 0
 						? ` y ${cuantas(resumen.checklists_abiertos, 'checklist abierto sin enviar', 'checklists abiertos sin enviar')}`
 						: '');
@@ -157,10 +157,10 @@ export const actions: Actions = {
 		return {
 			mensaje: null,
 			exito:
-				`La corrida ${resumen.numero} quedó eliminada. ${arrastro}. ` +
+				`El ciclo ${resumen.numero} quedó eliminado. ${arrastro}. ` +
 				(resumen.vuelve_a !== null
-					? `La mesa vuelve a la corrida ${resumen.vuelve_a}, que quedó habilitada de nuevo.`
-					: 'La mesa queda sin corridas: el líder puede habilitar la primera cuando corresponda.')
+					? `La mesa vuelve al ciclo ${resumen.vuelve_a}, que quedó habilitado de nuevo.`
+					: 'La mesa queda sin ciclos: el líder puede habilitar el primero cuando corresponda.')
 		};
 	},
 
@@ -200,7 +200,7 @@ export const actions: Actions = {
 		return {
 			mensaje: null,
 			exito:
-				`El DNI ${mostrarDni(resumen.dni)} dejó de estar registrado como ${resumen.rol} en la corrida ${resumen.corrida}` +
+				`El DNI ${mostrarDni(resumen.dni)} dejó de estar registrado como ${resumen.rol} en el ciclo ${resumen.corrida}` +
 				(resumen.marcas > 0
 					? `, y con eso se fueron ${cuantas(resumen.marcas, 'marca que había hecho', 'marcas que había hecho')} con ese rol`
 					: '') +

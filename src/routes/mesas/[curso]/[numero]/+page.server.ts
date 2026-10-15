@@ -263,14 +263,14 @@ export const actions: Actions = {
 
 		if (fallo || !corrida) {
 			return fail(400, {
-				mensaje: 'No se pudo habilitar la corrida. Intentá de nuevo.',
+				mensaje: 'No se pudo habilitar el ciclo. Intentá de nuevo.',
 				exito: null
 			});
 		}
 
 		return {
 			mensaje: null,
-			exito: `Corrida ${corrida.numero} habilitada. Los participantes ya pueden identificarse.`
+			exito: `Ciclo ${corrida.numero} habilitado. Los participantes ya pueden identificarse.`
 		};
 	},
 
@@ -332,7 +332,7 @@ export const actions: Actions = {
 			if (fallo.message.includes('ya esta en la corrida')) {
 				return rechazar(
 					409,
-					'Ese documento ya está en la corrida con otro rol. Pedile al administrador que elimine ese registro y volvé a intentarlo.'
+					'Ese documento ya está en el ciclo con otro rol. Pedile al administrador que elimine ese registro y volvé a intentarlo.'
 				);
 			}
 			return rechazar(500, 'No se pudo declarar al docente. Intentá de nuevo.');

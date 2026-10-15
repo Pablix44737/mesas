@@ -34,7 +34,7 @@
 				<span class="avatar-rol"><Icono nombre="mesa" /></span>
 				<span class="texto">
 					<span class="titulo">Líder de mesa</span>
-					<span class="detalle">Crear la mesa y habilitar sus corridas</span>
+					<span class="detalle">Crear la mesa y habilitar sus ciclos</span>
 				</span>
 				<Icono nombre="adelante" clase="flecha" />
 			</a>

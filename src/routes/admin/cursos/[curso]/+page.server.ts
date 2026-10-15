@@ -220,7 +220,7 @@ export const actions: Actions = {
 			eliminando: null,
 			exito:
 				`La mesa ${resumen.numero} quedó eliminada, y con ella ` +
-				`${cuantas(resumen.corridas, 'corrida', 'corridas')}, ` +
+				`${cuantas(resumen.corridas, 'ciclo', 'ciclos')}, ` +
 				`${cuantas(resumen.participaciones, 'rol ocupado', 'roles ocupados')} y ` +
 				`${evaluaciones()}. El padrón y el material del escenario quedaron intactos.`
 		};

@@ -44,7 +44,7 @@ export const load: PageServerLoad = async () => {
 		const dni = p.dni ?? '';
 		const entrada = porDni.get(dni) ?? { dni, registros: [] };
 		entrada.registros.push(
-			`Mesa ${p.mesa_numero} · corrida ${p.corrida_numero} · ${p.rol_nombre}`
+			`Mesa ${p.mesa_numero} · ciclo ${p.corrida_numero} · ${p.rol_nombre}`
 		);
 		porDni.set(dni, entrada);
 	}

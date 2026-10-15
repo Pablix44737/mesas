@@ -68,7 +68,7 @@ export const actions: Actions = {
 			return fail(404, {
 				dni,
 				mensaje:
-					'No encontramos ninguna corrida de esta mesa en la que hayas practicado la técnica. Esta consulta es para quien ocupó el rol de operador o de asistente.',
+					'No encontramos ningún ciclo de esta mesa en la que hayas practicado la técnica. Esta consulta es para quien ocupó el rol de operador o de asistente.',
 				corridas: null,
 				nombre: null
 			});

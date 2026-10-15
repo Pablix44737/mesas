@@ -20,7 +20,7 @@
 </script>
 
 <svelte:head>
-	<title>Tu corrida — Mesa {data.mesa.numero}</title>
+	<title>Tu ciclo — Mesa {data.mesa.numero}</title>
 </svelte:head>
 
 <div class="app">
@@ -33,7 +33,7 @@
 	<div class="envoltorio">
 		<div class="pagina-cabecera">
 			<div class="titulo">
-				<h1>Lo registrado sobre tu corrida</h1>
+				<h1>Lo registrado sobre tu ciclo</h1>
 				<p class="bajada">Identificate con tu DNI para ver cómo te evaluaron.</p>
 			</div>
 		</div>
@@ -68,7 +68,7 @@
 				</div>
 				<button class="boton bloque" type="submit" disabled={buscando}>
 					<Icono nombre="buscar" />
-					{buscando ? 'Buscando…' : 'Ver mi corrida'}
+					{buscando ? 'Buscando…' : 'Ver mi ciclo'}
 				</button>
 			</form>
 		</div>
@@ -91,7 +91,7 @@
 			{#each form.corridas as corrida (corrida.numero)}
 				<div class="pagina-cabecera" style="margin: 24px 0 12px">
 					<div class="titulo">
-						<h2 class="t-seccion">Corrida {corrida.numero}</h2>
+						<h2 class="t-seccion">Ciclo {corrida.numero}</h2>
 						<p class="bajada">Fuiste {corrida.rol}</p>
 					</div>
 					{#if corrida.enCurso}
@@ -107,7 +107,7 @@
 				{/if}
 
 				{#if corrida.evaluaciones.length === 0}
-					<div class="vacio">Todavía no hay checklists enviados sobre esta corrida.</div>
+					<div class="vacio">Todavía no hay checklists enviados sobre este ciclo.</div>
 				{:else}
 					{#each corrida.evaluaciones as evaluacion (evaluacion.instanciaId)}
 						<div class="tarjeta">

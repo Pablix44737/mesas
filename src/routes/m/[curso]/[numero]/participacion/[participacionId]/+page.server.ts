@@ -311,7 +311,7 @@ export const actions: Actions = {
 		const formulario = await request.formData();
 		const rolCodigo = String(formulario.get('rolCodigo') ?? '');
 
-		if (!rolCodigo) return rechazar(400, 'Elegí el rol que vas a ocupar en la corrida nueva.');
+		if (!rolCodigo) return rechazar(400, 'Elegí el rol que vas a ocupar en el ciclo nuevo.');
 
 		// Que el rol sea uno de los que ocupa este curso, no sólo que exista: el
 		// facilitador de un curso de alumnos es el docente y no se elige desde acá.
@@ -326,14 +326,14 @@ export const actions: Actions = {
 		]);
 
 		if (!elegible) return rechazar(400, 'Ese rol no se ocupa en este curso.');
-		if (!vigente) return rechazar(409, 'La mesa no tiene ninguna corrida habilitada.');
+		if (!vigente) return rechazar(409, 'La mesa no tiene ningún ciclo habilitado.');
 
 		// Pudo haber quedado abierta esta pantalla desde antes de que el líder
 		// habilitara la corrida siguiente —o sin que la habilitara nunca.
 		if (vigente.id === participacion.corrida?.id) {
 			return rechazar(
 				409,
-				`El líder todavía no habilitó la corrida siguiente: la ${vigente.numero} sigue siendo la abierta.`
+				`El líder todavía no habilitó el ciclo siguiente: el ${vigente.numero} sigue siendo el abierto.`
 			);
 		}
 
@@ -356,7 +356,7 @@ export const actions: Actions = {
 			.single();
 
 		if (fallo || !nueva) {
-			return rechazar(400, 'No se pudo registrarte en la corrida nueva. Intentá de nuevo.');
+			return rechazar(400, 'No se pudo registrarte en el ciclo nuevo. Intentá de nuevo.');
 		}
 
 		redirect(303, `/m/${params.curso}/${params.numero}/participacion/${nueva.id}`);

@@ -19,7 +19,7 @@
 		<div class="pagina-cabecera">
 			<div class="titulo">
 				<h1>Tus mesas</h1>
-				<p class="bajada">Dar de alta la mesa que vas a coordinar y habilitar sus corridas</p>
+				<p class="bajada">Dar de alta la mesa que vas a coordinar y habilitar sus ciclos</p>
 			</div>
 		</div>
 
@@ -146,12 +146,12 @@
 								<span class="titulo">{mesa.escenario?.nombre}</span>
 								<span class="detalle">
 									{#if mesa.corridaEnCurso}
-										Corrida {mesa.corridaEnCurso} en curso
+										Ciclo {mesa.corridaEnCurso} en curso
 									{:else if mesa.corridas > 0}
 										Cerrada · {mesa.corridas}
-										{mesa.corridas === 1 ? 'corrida' : 'corridas'}
+										{mesa.corridas === 1 ? 'ciclo' : 'ciclos'}
 									{:else}
-										<span class="pendiente">Sin corridas habilitadas</span>
+										<span class="pendiente">Sin ciclos habilitados</span>
 									{/if}
 								</span>
 							</span>

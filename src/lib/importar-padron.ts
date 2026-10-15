@@ -12,7 +12,7 @@ export type Lectura =
 
 export const EXTENSIONES_DEL_LISTADO = ['.xlsx', '.xls', '.ods', '.csv'];
 
-/** Más que esto no es un listado de alumnos: es un archivo equivocado. */
+/** Más que esto no es un listado de estudiantes: es un archivo equivocado. */
 export const MAXIMO_DE_FILAS = 2000;
 
 type Columna = 'dni' | 'apellido' | 'nombre' | 'apellidoYNombre';

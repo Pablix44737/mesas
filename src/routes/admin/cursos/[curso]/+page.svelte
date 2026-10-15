@@ -217,7 +217,7 @@
 					<tr>
 						<th>Mesa</th>
 						<th>Escenario</th>
-						<th>Corridas</th>
+						<th>Ciclos</th>
 						<th>Evaluaciones</th>
 						<th class="acciones"></th>
 					</tr>
@@ -229,11 +229,11 @@
 							<td>{mesa.escenario}</td>
 							<td>
 								{#if mesa.corridas === 0}
-									<span class="chip alerta">Sin corridas</span>
+									<span class="chip alerta">Sin ciclos</span>
 								{:else if mesa.corridaEnCurso}
-									<span class="chip exito">Corrida {mesa.corridaEnCurso} en curso</span>
+									<span class="chip exito">Ciclo {mesa.corridaEnCurso} en curso</span>
 								{:else}
-									<span class="chip neutro">{mesa.corridas} cerradas</span>
+									<span class="chip neutro">{mesa.corridas} cerrados</span>
 								{/if}
 							</td>
 							<td class="detalle">{mesa.evaluaciones}</td>
@@ -274,7 +274,7 @@
 										<div>
 											<strong>
 												Eliminar la mesa {mesa.numero} borra también
-												{mesa.corridas === 1 ? 'su corrida' : `sus ${mesa.corridas} corridas`},
+												{mesa.corridas === 1 ? 'su ciclo' : `sus ${mesa.corridas} ciclos`},
 												quiénes ocuparon cada rol
 												{#if mesa.evaluaciones > 0}
 													y {mesa.evaluaciones === 1
@@ -358,7 +358,7 @@
 				{#if data.mesas.length > 0}
 					Se van con él
 					{data.mesas.length === 1 ? 'su mesa' : `sus ${data.mesas.length} mesas`},
-					{corridasDelCurso === 1 ? '1 corrida' : `${corridasDelCurso} corridas`} y
+					{corridasDelCurso === 1 ? '1 ciclo' : `${corridasDelCurso} ciclos`} y
 					{data.evaluacionesDelCurso === 1
 						? '1 evaluación enviada'
 						: `${data.evaluacionesDelCurso} evaluaciones enviadas`}.

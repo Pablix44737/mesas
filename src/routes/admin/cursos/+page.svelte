@@ -128,7 +128,7 @@
 
 			<span class="curso-cifras">
 				<span><strong>{curso.mesas}</strong> {curso.mesas === 1 ? 'mesa' : 'mesas'}</span>
-				<span><strong>{curso.corridas}</strong> {curso.corridas === 1 ? 'corrida' : 'corridas'}</span>
+				<span><strong>{curso.corridas}</strong> {curso.corridas === 1 ? 'ciclo' : 'ciclos'}</span>
 				<span>
 					<strong>{curso.evaluaciones}</strong>
 					{curso.evaluaciones === 1 ? 'evaluación' : 'evaluaciones'}
