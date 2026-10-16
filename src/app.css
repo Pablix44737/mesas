@@ -1270,47 +1270,477 @@ fieldset.roles.invalido legend {
 	scroll-margin-top: var(--e-10);
 }
 
-/* --- lo evaluado en una corrida --- */
+/* --- lo evaluado en un ciclo (líder) ---
+   Mismo encabezado que la pantalla de la mesa. Arriba, un resumen con una fila
+   por evaluación; abajo, las tarjetas, que muestran primero lo que no se hizo.
+   Desde 960px el resumen queda fijo a la izquierda y las tarjetas van en dos
+   columnas. */
 
-/* Las corridas de la mesa, para pasar de una a otra sin volver atrás. Se van al
-   costado cuando no entran: una mesa puede llevar seis o siete. */
-.corridas-solapas {
-	display: flex;
-	gap: var(--e-2);
-	overflow-x: auto;
-	margin-bottom: var(--e-4);
-	padding-bottom: 2px;
+.evaluado-pagina {
+	min-height: 100vh;
+	padding-bottom: var(--e-8);
+	background: var(--fondo);
 }
 
-.solapa {
-	flex: 0 0 auto;
-	padding: 8px 14px;
-	border: 1px solid var(--borde);
-	border-radius: var(--r-full);
-	background: var(--superficie);
+.evaluado-pagina .rotulo-chico {
 	color: var(--tinta-suave);
-	font-size: 14px;
+	font-size: 12px;
 	font-weight: 600;
-	line-height: 20px;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.evaluado-titulo {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--e-2) var(--e-3);
+}
+
+.evaluado-titulo h1 {
+	margin: 0;
+	font-family: var(--fuente-titulo);
+	font-size: 30px;
+	font-weight: 800;
+	line-height: 1.1;
+	letter-spacing: -0.01em;
+}
+
+.evaluado-titulo .estado-mesa {
+	margin-top: 0;
+	padding: 5px 12px 5px 10px;
+	font-size: 14px;
+}
+
+.estado-mesa.cerrado {
+	gap: 6px;
+}
+
+.evaluado-pagina .mesa-escenario {
+	margin-top: 3px;
+}
+
+/* Un botón numerado por ciclo; el actual en azul y un punto en el que sigue en
+   curso. Con muchos ciclos se desplaza de costado. */
+.selector-ciclos {
+	max-width: 100%;
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+
+.selector-ciclos > div {
+	display: flex;
+	box-sizing: border-box;
+	width: max-content;
+	max-width: 100%;
+	min-width: 0;
+	padding: 3px;
+	border-radius: 10px;
+	background: var(--superficie-media);
+}
+
+.selector-ciclos a {
+	position: relative;
+	display: flex;
+	flex: 1 1 44px;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	min-width: 40px;
+	height: 44px;
+	border-radius: var(--r-md);
+	color: var(--tinta);
+	font-size: 16px;
+	font-weight: 700;
 	text-decoration: none;
+}
+
+.selector-ciclos a:hover {
+	background: var(--superficie);
+}
+
+.selector-ciclos a[aria-current='page'] {
+	background: var(--azul);
+	color: #fff;
+	box-shadow: 0 1px 2px rgba(18, 48, 63, 0.2);
+}
+
+.selector-ciclos .vivo {
+	position: absolute;
+	top: 6px;
+	right: 6px;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--verde);
+	box-shadow: 0 0 0 2px var(--superficie-media);
+}
+
+.evaluado-cuerpo {
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-3);
+	max-width: 1240px;
+	margin: 0 auto;
+	padding: var(--e-3);
+}
+
+.evaluado-vacio {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--e-2);
+	width: 100%;
+	max-width: 640px;
+	box-sizing: border-box;
+	margin: 0 auto;
+	padding: 36px var(--e-6);
+	text-align: center;
+}
+
+.evaluado-vacio-icono {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 52px;
+	height: 52px;
+	margin-bottom: 6px;
+	border-radius: 50%;
+	background: var(--azul-claro);
+	color: var(--azul);
+}
+
+.evaluado-vacio strong {
+	font-size: 17px;
+	font-weight: 600;
+}
+
+.evaluado-vacio span:not(.evaluado-vacio-icono) {
+	color: var(--tinta-suave);
+	font-size: 15px;
+}
+
+/* Resumen: una fila por evaluación, que lleva a su tarjeta */
+
+.evaluado-resumen-cabecera {
+	padding: 14px var(--e-4) 10px;
+}
+
+.evaluado-resumen-cabecera h2 {
+	margin: 0;
+	font-family: var(--fuente-titulo);
+	font-size: 19px;
+	font-weight: 700;
+}
+
+.evaluado-resumen-cabecera .detalle {
+	margin: 2px 0 0;
+	font-size: 14px;
+}
+
+.evaluado-resumen ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.evaluado-resumen a {
+	display: flex;
+	flex-direction: column;
+	gap: 7px;
+	min-height: 64px;
+	padding: 10px 14px var(--e-3) var(--e-4);
+	border-top: 1px solid var(--borde);
+	color: var(--tinta);
+	text-decoration: none;
+}
+
+.evaluado-resumen a:hover {
+	background: #f0f5f9;
+}
+
+.evaluado-resumen a.elegida {
+	background: var(--azul-claro);
+}
+
+.resumen-fila {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.resumen-quien {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.resumen-quien .nombre {
+	font-size: 15px;
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+.resumen-quien .detalle {
+	font-size: 13px;
+}
+
+.cuenta-no-hizo {
+	display: inline-flex;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: 3px;
+	padding: 3px var(--e-2) 3px 6px;
+	border-radius: var(--r-full);
+	background: var(--error-claro);
+	color: var(--error);
+	font-size: 13px;
+	font-weight: 700;
+}
+
+.resumen-puntaje {
+	display: flex;
+	flex: 0 0 auto;
+	flex-direction: column;
+	min-width: 58px;
+	text-align: right;
+}
+
+.resumen-puntaje strong {
+	font-family: var(--fuente-titulo);
+	font-size: 20px;
+	font-weight: 800;
+	line-height: 1.1;
+}
+
+.resumen-puntaje span {
+	color: var(--tinta-suave);
+	font-size: 12px;
 	white-space: nowrap;
 }
 
-.solapa:hover {
-	border-color: var(--borde-fuerte);
-	color: var(--tinta);
+.barra-fina {
+	display: block;
+	height: 6px;
+	overflow: hidden;
+	border-radius: 3px;
+	background: var(--borde);
 }
 
-.solapa.elegida {
+.barra-fina > span {
+	display: block;
+	height: 100%;
+	border-radius: 3px;
 	background: var(--azul);
+}
+
+.barra-fina.gruesa {
+	height: 8px;
+	margin-top: var(--e-3);
+	border-radius: 4px;
+}
+
+/* Cada evaluación */
+
+.evaluado-tarjetas {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr));
+	gap: var(--e-3) var(--e-4);
+	align-items: start;
+	min-width: 0;
+}
+
+.evaluacion {
+	scroll-margin-top: var(--e-3);
+}
+
+/* La que se eligió: desde «Envió ›» o desde el resumen. */
+.evaluacion.elegida {
 	border-color: var(--azul);
+	box-shadow: 0 0 0 2px var(--azul);
+}
+
+.evaluacion-cabecera {
+	padding: var(--e-4) var(--e-4) 14px;
+	border-bottom: 1px solid var(--borde);
+}
+
+.evaluacion.elegida .evaluacion-cabecera {
+	background: var(--azul-claro);
+}
+
+.evaluacion-encabezado {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--e-3);
+}
+
+.evaluacion-quien {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.evaluacion-quien .detalle {
+	font-size: 14px;
+}
+
+.evaluacion-quien .detalle:last-child {
+	margin-top: var(--e-1);
+}
+
+.evaluacion-nombre {
+	margin-top: 2px;
+	font-family: var(--fuente-titulo);
+	font-size: 20px;
+	font-weight: 700;
+	line-height: 1.2;
+	overflow-wrap: anywhere;
+}
+
+.evaluacion-puntaje {
+	display: flex;
+	flex: 0 0 auto;
+	flex-direction: column;
+	text-align: right;
+}
+
+.evaluacion-puntaje strong {
+	font-family: var(--fuente-titulo);
+	font-size: 34px;
+	font-weight: 800;
+	line-height: 1;
+}
+
+.evaluacion-puntaje span {
+	margin-top: var(--e-1);
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.evaluacion-lista {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--e-1) var(--e-3);
+	margin-top: 10px;
+	color: var(--tinta-suave);
+	font-size: 14px;
+}
+
+.evaluacion-lista > span {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+}
+
+.evaluacion-lista strong {
+	color: var(--tinta);
+	font-weight: 600;
+}
+
+.evaluacion-items {
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-1);
+	margin: 0;
+	padding: 0 var(--e-3) 14px;
+	list-style: none;
+}
+
+.evaluacion-items li {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 10px var(--e-3) 10px var(--e-2);
+	border-radius: var(--r-md);
+}
+
+.evaluacion-items li.no-hizo {
+	background: var(--error-claro);
+}
+
+.evaluacion-items .orden {
+	flex: 0 0 auto;
+	width: 22px;
+	padding-top: 2px;
+	color: var(--tinta-suave);
+	font-size: 13px;
+	font-weight: 600;
+	text-align: right;
+}
+
+.evaluacion-items .marca {
+	display: flex;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+}
+
+.evaluacion-items .marca.hizo {
+	background: var(--verde-claro);
+	color: var(--verde-oscuro);
+}
+
+.evaluacion-items .marca.no-hizo {
+	background: var(--error);
 	color: #fff;
 }
 
-/* Al llegar desde el chip de «Evaluó» se salta a la tarjeta de esa persona, y sin
-   esto quedaría debajo de la barra superior, que es fija. */
-.envoltorio .tarjeta[id^='p-'] {
-	scroll-margin-top: calc(var(--barra-alto) + var(--e-4));
+.evaluacion-items .texto {
+	flex: 1 1 auto;
+	min-width: 0;
+	padding-top: 1px;
+	font-size: 16px;
+	line-height: 1.35;
+}
+
+.evaluacion-items li.no-hizo .texto {
+	font-weight: 600;
+}
+
+.evaluacion-items .peso-item {
+	flex: 0 0 auto;
+	padding-top: 3px;
+	color: var(--tinta-suave);
+	font-size: 13px;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.evaluacion-items li.todo-hizo {
+	align-items: center;
+	padding: var(--e-3);
+	background: var(--verde-claro);
+	color: var(--verde-oscuro);
+	font-size: 15px;
+	font-weight: 600;
+}
+
+@media (min-width: 960px) {
+	.evaluado-cuerpo {
+		flex-direction: row;
+		align-items: flex-start;
+		gap: var(--e-5);
+	}
+
+	.evaluado-resumen {
+		position: sticky;
+		top: var(--e-3);
+		z-index: 1;
+		flex: 1 1 320px;
+		min-width: 0;
+	}
+
+	.evaluado-tarjetas {
+		flex: 999 1 560px;
+	}
 }
 
 /* Un bloque que no es parte de lo que la pantalla viene haciendo sino de lo que
@@ -1739,81 +2169,289 @@ fieldset.roles.invalido legend {
 	color: var(--azul);
 }
 
-/* --- carpeta de un curso, con sus mesas adentro --- */
+/* --- mis mesas (líder) ---
+   Una sección por curso en marcha, siempre a la vista, con sus mesas en orden de
+   número. Crear una mesa se abre en la misma hoja que las confirmaciones de la
+   pantalla de la mesa. */
 
-/* La cabecera se ve como una tarjeta-enlace más, para que se lea como algo que
-   se toca; la flecha hacia abajo, en vez de hacia el costado, dice que abre ahí
-   mismo en lugar de llevar a otra pantalla. */
-.carpeta > summary {
-	display: flex;
-	align-items: center;
-	gap: var(--e-4);
-	padding: var(--e-4) var(--e-5);
-	margin-bottom: var(--e-2);
-	background: var(--superficie);
-	border: 1px solid var(--borde);
-	border-radius: var(--r-lg);
-	box-shadow: var(--sombra-sm);
-	list-style: none;
-	cursor: pointer;
-	transition:
-		border-color 120ms ease,
-		background-color 120ms ease;
+.mesas-pagina {
+	min-height: 100vh;
+	padding-bottom: var(--e-8);
+	background: var(--fondo);
 }
 
-.carpeta > summary::-webkit-details-marker {
-	display: none;
-}
-
-.carpeta > summary:hover {
-	background: var(--azul-tenue);
+.boton.secundario.mesas-crear {
+	padding: 0 14px 0 var(--e-3);
 	border-color: var(--azul);
 }
 
-.carpeta > summary .texto {
+.mesas-cuerpo {
 	display: flex;
 	flex-direction: column;
-	gap: 1px;
+	gap: var(--e-2);
+	max-width: 1240px;
+	margin: 0 auto;
+	padding: var(--e-2) var(--e-3) var(--e-3);
+}
+
+.mesas-curso {
+	display: flex;
+	flex-direction: column;
+}
+
+.mesas-curso-cabecera {
+	display: flex;
+	align-items: center;
+	gap: var(--e-3);
+	min-height: 56px;
+	padding: 10px var(--e-1);
+	border: 0;
+	background: none;
+	color: var(--tinta);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.mesas-curso-cabecera:disabled {
+	cursor: default;
+}
+
+.mesas-curso-cabecera > .icono {
+	margin-right: 10px;
+	color: var(--tinta-suave);
+}
+
+.mesas-curso-titulo {
 	flex: 1 1 auto;
 	min-width: 0;
 }
 
-.carpeta > summary .titulo {
+.mesas-curso-titulo h2 {
+	margin: 0;
 	font-family: var(--fuente-titulo);
+	font-size: 19px;
+	font-weight: 700;
+	line-height: 1.25;
+}
+
+.mesas-curso-titulo .detalle {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--e-1) var(--e-2);
+	margin-top: 2px;
+	font-size: 14px;
+	font-weight: 500;
+}
+
+.mesas-en-curso {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--verde-oscuro);
+	font-weight: 600;
+}
+
+.mesas-en-curso::before {
+	content: '';
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--verde);
+}
+
+.mesas-curso-vacio {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	padding: var(--e-6) var(--e-4);
+	border: 1px dashed var(--borde-fuerte);
+	border-radius: var(--r-lg);
+	background: var(--superficie);
+	text-align: center;
+}
+
+.mesas-curso-vacio strong {
 	font-size: 16px;
 	font-weight: 600;
-	line-height: 22px;
 }
 
-.carpeta > summary .flecha {
-	color: var(--tinta-tenue);
-	transition: transform 120ms ease;
+.mesas-grilla {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 272px), 1fr));
+	gap: var(--e-2) var(--e-3);
+	margin: 0;
+	padding: 0;
+	list-style: none;
 }
 
-.carpeta[open] > summary .flecha {
-	transform: rotate(180deg);
+.mesa-ficha {
+	display: flex;
+	align-items: center;
+	gap: var(--e-3);
+	height: 100%;
+	min-height: 80px;
+	box-sizing: border-box;
+	padding: 10px;
+	border: 1px solid var(--borde);
+	border-radius: var(--r-lg);
+	background: var(--superficie);
+	color: var(--tinta);
+	text-decoration: none;
 }
 
-/* Las mesas cuelgan de su curso: sangradas y con una línea que las une a la
-   carpeta, así no se confunden con las del curso siguiente. */
-.carpeta-mesas {
-	margin: 0 0 var(--e-4) var(--e-5);
-	padding-left: var(--e-4);
-	border-left: 2px solid var(--borde);
+.mesa-ficha:hover {
+	border-color: var(--borde-fuerte);
+	box-shadow: 0 2px 6px rgba(18, 48, 63, 0.08);
 }
 
-/* En el teléfono la sangría entera dejaba el nombre del escenario en cuatro
-   renglones: alcanza con la línea para ver de qué curso son. */
-@media (max-width: 719px) {
-	.carpeta-mesas {
-		margin-left: var(--e-2);
-		padding-left: var(--e-2);
-	}
+.mesa-ficha > .icono {
+	color: var(--tinta-suave);
+}
 
-	.carpeta-mesas .tarjeta-enlace {
-		gap: var(--e-3);
-		padding: var(--e-4);
-	}
+/* El número es lo que se busca: grande, y en azul lleno si la mesa está andando. */
+.mesa-numero {
+	display: flex;
+	flex: 0 0 auto;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	width: 58px;
+	height: 58px;
+	border-radius: var(--r-md);
+	background: var(--superficie-media);
+	color: var(--tinta);
+	line-height: 1;
+}
+
+.mesa-numero.en-curso {
+	background: var(--azul);
+	color: #fff;
+}
+
+.mesa-numero span {
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	opacity: 0.8;
+}
+
+.mesa-numero strong {
+	margin-top: 2px;
+	font-family: var(--fuente-titulo);
+	font-size: 30px;
+	font-weight: 800;
+}
+
+.mesa-ficha-texto {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 6px;
+	min-width: 0;
+}
+
+.mesa-ficha-texto .nombre {
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+.estado-mesa.chica {
+	gap: 6px;
+	margin-top: 0;
+	padding: 3px 10px 3px var(--e-2);
+	font-size: 13px;
+}
+
+.estado-mesa.chica .punto {
+	width: 7px;
+	height: 7px;
+}
+
+.estado-mesa.chica.en-curso .punto {
+	box-shadow: 0 0 0 2px #d9edb4;
+}
+
+.estado-mesa.chica.sin-ciclos .punto {
+	width: 8px;
+	height: 8px;
+	box-sizing: border-box;
+}
+
+/* La hoja de crear una mesa */
+
+.dialogo-cabecera {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--e-2);
+}
+
+.dialogo-cabecera h2 {
+	margin: 0;
+}
+
+.dialogo-cabecera .icono-boton {
+	margin-right: -10px;
+}
+
+.dialogo-aviso {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	margin-top: var(--e-3);
+	padding: 14px;
+	border-radius: var(--r-lg);
+	background: var(--alerta-claro);
+	font-size: 15px;
+}
+
+.dialogo-aviso .icono {
+	color: var(--alerta);
+}
+
+.dialogo-error {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--e-2);
+	margin: var(--e-3) 0 0;
+	padding: var(--e-3) 14px;
+	border-radius: var(--r-md);
+	background: var(--error-claro);
+	color: var(--error);
+	font-size: 15px;
+	font-weight: 500;
+}
+
+.crear-campos {
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-4);
+	margin-top: var(--e-4);
+}
+
+.crear-campos label {
+	font-size: 15px;
+}
+
+.crear-campos .ayuda {
+	margin: 6px 0 0;
+	font-size: 14px;
+}
+
+input.crear-numero {
+	width: 132px;
+	font-size: 18px;
+	font-weight: 600;
+}
+
+.mesa-dialogo .dialogo-botones .crear-confirmar {
+	flex-grow: 2;
 }
 
 /* --- pantalla de bienvenida: por dónde entra cada quien --- */
@@ -2118,144 +2756,254 @@ fieldset.roles.invalido legend {
 	background: var(--superficie-media);
 }
 
-/* --- cartel de la mesa: el QR para proyectar, imprimir o dejar sobre la mesa --- */
+/* --- cartel de la mesa: el QR para proyectar, imprimir o mostrar en la mano ---
+   Llena la ventana sin scrollear y sin que el líder toque nada. En vertical
+   (teléfono, tablet), una columna con los textos arriba y el código abajo. En una
+   pantalla horizontal ancha (el proyector), el código a la izquierda y los textos
+   a la derecha. En papel, una hoja A4 en negro sobre blanco. */
 
 .cartel-pagina {
 	display: flex;
 	flex-direction: column;
-	align-items: center;
-	gap: var(--e-4);
 	min-height: 100vh;
-	padding: var(--e-5) var(--e-4) var(--e-8);
+	min-height: 100dvh;
+	background: #fff;
+	color: var(--tinta);
 }
 
 .cartel-controles {
 	display: flex;
-	flex-wrap: wrap;
-	justify-content: center;
+	align-items: center;
+	justify-content: space-between;
 	gap: var(--e-2);
+	padding: 10px var(--e-3);
+}
+
+.cartel-controles .mesa-volver {
+	margin-left: 0;
+	padding-left: var(--e-2);
+}
+
+.boton.secundario.cartel-imprimir {
+	padding: 0 14px 0 var(--e-3);
+	color: var(--tinta);
 }
 
 .cartel {
 	display: flex;
+	flex: 1 1 auto;
 	flex-direction: column;
 	align-items: center;
-	width: 100%;
-	max-width: 520px;
-	padding: var(--e-8) var(--e-5);
-	background: var(--superficie);
-	border: 1px solid var(--borde);
-	border-radius: var(--r-lg);
-	box-shadow: var(--sombra-sm);
+	justify-content: center;
+	gap: min(3.2vh, 24px);
+	padding: 0 var(--e-6) var(--e-5);
 	text-align: center;
 }
 
+/* Sin peso propio, para que los márgenes de cada texto le ganen. */
+:where(.cartel p) {
+	margin: 0;
+}
+
+.cartel-textos {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: min(3.2vh, 24px);
+	max-width: 100%;
+}
+
 .cartel-curso {
-	max-width: 34ch;
-	margin: 0 0 var(--e-4);
-	font-family: var(--fuente-titulo);
-	font-size: 15px;
+	max-width: 100%;
+	padding-bottom: min(1.6vh, 14px);
+	border-bottom: 2px solid var(--borde-fuerte);
+	font-size: min(4.4vw, 2.4vh);
 	font-weight: 600;
-	line-height: 20px;
-	color: var(--azul);
+	line-height: 1.3;
 	text-wrap: balance;
 }
 
 .cartel-rotulo {
-	margin: 0;
-	font-size: 15px;
-	color: var(--tinta-suave);
+	color: var(--azul);
+	font-size: min(5.2vw, 2.8vh);
+	font-weight: 600;
 }
 
 .cartel-numero {
-	margin: 0;
+	margin-top: 4px;
 	font-family: var(--fuente-titulo);
-	font-size: 44px;
-	line-height: 52px;
-	font-weight: 700;
+	font-size: min(18vw, 11vh);
+	font-weight: 800;
+	line-height: 1;
 	letter-spacing: -0.02em;
-	color: var(--azul);
+	white-space: nowrap;
 }
 
 .cartel-escenario {
-	max-width: 34ch;
-	margin: var(--e-1) 0 0;
-	font-size: 15px;
-	color: var(--tinta-suave);
+	max-width: 100%;
+	font-size: min(5vw, 2.6vh);
+	font-weight: 500;
+	line-height: 1.3;
+	text-wrap: balance;
 }
 
+/* El código no cambia: sólo su tamaño. */
 .cartel-qr {
-	/* El margen va acá y no bajo el escenario, que es opcional: así el aire sobre
-	   el código es el mismo esté o no el nombre del escenario. */
-	width: min(320px, 72vw);
+	display: block;
+	flex: 0 0 auto;
+	width: min(calc(100vw - 48px), 46vh);
 	height: auto;
 	aspect-ratio: 1;
-	margin-top: var(--e-6);
-	padding: var(--e-3);
-	background: #fff;
-	border: 1px solid var(--borde);
-	border-radius: var(--r-md);
-}
-
-.cartel-url {
-	margin: var(--e-4) 0 0;
-	font-size: 13px;
-	color: var(--tinta-suave);
-	word-break: break-all;
-	user-select: all;
+	image-rendering: pixelated;
 }
 
 .cartel-firma {
 	display: flex;
 	align-items: center;
-	justify-content: center;
-	gap: 6px;
-	margin: var(--e-6) 0 0;
+	gap: var(--e-2);
+	color: var(--tinta-suave);
 	font-family: var(--fuente-titulo);
-	font-size: 11px;
+	font-size: 15px;
 	font-weight: 700;
-	letter-spacing: 0.08em;
-	text-transform: uppercase;
-	color: var(--tinta-tenue);
+}
+
+.cartel-firma .marca-silueta {
+	width: auto;
+	height: 1.3em;
+}
+
+/* Proyector: horizontal y ancho. Todo en unidades de la ventana, así llena
+   1280×720, 1920×1080 o lo que haya, sin scrollear. */
+@media screen and (orientation: landscape) and (min-width: 900px) {
+	.cartel-pagina {
+		position: relative;
+		height: 100vh;
+		height: 100dvh;
+		overflow: hidden;
+	}
+
+	.cartel-controles {
+		position: absolute;
+		top: 0;
+		right: 0;
+		left: 0;
+		z-index: 2;
+	}
+
+	.cartel {
+		flex-direction: row;
+		gap: 5vw;
+		padding: max(72px, 10vh) 6vw 7vh;
+		text-align: left;
+	}
+
+	.cartel-qr {
+		order: -1;
+		width: min(76vh, 44vw);
+	}
+
+	.cartel-textos {
+		flex: 1 1 0;
+		align-items: stretch;
+		gap: 2.2vh;
+		min-width: 0;
+		max-width: 62vw;
+	}
+
+	.cartel-curso {
+		padding-bottom: 2vh;
+		font-size: min(3.6vh, 2.2vw);
+		line-height: 1.25;
+		text-wrap: pretty;
+	}
+
+	.cartel-rotulo {
+		font-size: min(4.8vh, 2.9vw);
+	}
+
+	.cartel-numero {
+		margin-top: 0.6vh;
+		font-size: min(21vh, 10.5vw);
+		line-height: 0.95;
+	}
+
+	.cartel-escenario {
+		font-size: min(4.6vh, 2.8vw);
+		line-height: 1.25;
+		text-wrap: pretty;
+	}
+
+	.cartel-firma {
+		position: absolute;
+		right: 3vw;
+		bottom: 3.5vh;
+		font-size: max(14px, 2.2vh);
+	}
 }
 
 @media print {
-	/* En papel no hacen falta ni los botones ni el marco de la tarjeta: queda el
-	   número, el código y la firma. */
 	.no-imprimir {
 		display: none !important;
 	}
 
+	@page {
+		size: A4 portrait;
+		margin: 15mm;
+	}
+
+	/* En papel, todo en negro: los navegadores no imprimen fondos y el gris claro
+	   se pierde en muchas impresoras. Las medidas van en milímetros: lo que importa
+	   es que el código se escanee desde el otro lado de la mesa. */
 	.cartel-pagina {
 		min-height: 0;
-		padding: 0;
-	}
-
-	.cartel {
-		max-width: none;
-		padding: 0;
-		border: 0;
-		box-shadow: none;
-	}
-
-	/* Los navegadores no imprimen fondos, así que el azul sobre papel depende de
-	   la tinta de color; en negro se lee en cualquier impresora. */
-	.cartel-numero,
-	.cartel-curso {
 		color: #000;
 	}
 
-	.cartel-qr {
-		/* En centímetros y no en píxeles: sobre papel lo que importa es que se
-		   pueda escanear desde el otro lado de la mesa. */
-		width: 11cm;
-		margin-top: 1cm;
+	.cartel {
+		justify-content: flex-start;
+		gap: 0;
+		height: 267mm;
 		padding: 0;
-		border: 0;
 	}
 
-	@page {
-		margin: 1.5cm;
+	.cartel-textos {
+		gap: 0;
+		width: 100%;
+	}
+
+	.cartel-curso {
+		width: 100%;
+		padding-bottom: 4mm;
+		border-bottom: 0.5mm solid #000;
+		font-size: 5.5mm;
+	}
+
+	.cartel-rotulo {
+		margin-top: 8mm;
+		color: #000;
+		font-size: 7mm;
+	}
+
+	.cartel-numero {
+		margin-top: 0;
+		font-size: 30mm;
+	}
+
+	.cartel-escenario {
+		max-width: 170mm;
+		margin-top: 3mm;
+		font-size: 6.5mm;
+	}
+
+	/* El aire que sobra se reparte arriba y abajo del código. */
+	.cartel-qr {
+		width: 110mm;
+		margin: auto 0;
+	}
+
+	.cartel-firma {
+		color: #000;
+		font-size: 4mm;
 	}
 }
 

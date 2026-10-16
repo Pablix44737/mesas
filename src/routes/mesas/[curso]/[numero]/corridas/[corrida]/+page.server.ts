@@ -24,7 +24,7 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	const { data: mesa, error: fallo } = await supabase
 		.from('mesas')
-		.select('id, numero, escenario:escenarios(nombre)')
+		.select('id, numero, docente_dni, escenario:escenarios(nombre)')
 		.eq('id', encontrada.id)
 		.maybeSingle();
 
@@ -47,6 +47,10 @@ export const load: PageServerLoad = async ({ params }) => {
 		mesa: { numero: mesa.numero, escenario: mesa.escenario?.nombre ?? null },
 		corrida: { numero: corrida.numero, habilitada: corrida.habilitada },
 		corridas: (corridas ?? []).map((c) => ({ numero: c.numero, habilitada: c.habilitada })),
-		evaluaciones: await evaluacionesDeLaCorrida(corrida.id)
+		// En un curso de alumnos, la del facilitador es la del docente que conduce la mesa.
+		evaluaciones: (await evaluacionesDeLaCorrida(corrida.id)).map((evaluacion) => ({
+			...evaluacion,
+			conduceLaMesa: curso.destinado_a === 'alumnos' && evaluacion.dni === mesa.docente_dni
+		}))
 	};
 };

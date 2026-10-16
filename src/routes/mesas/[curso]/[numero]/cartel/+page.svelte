@@ -12,25 +12,32 @@
 <div class="cartel-pagina">
 	<!-- Los controles no se imprimen: el papel se queda sólo con el cartel. -->
 	<div class="cartel-controles no-imprimir">
-		<a class="boton fantasma" href="/mesas/{data.curso.codigo}/{data.mesa.numero}">
-			<Icono nombre="atras" tamano={16} />
-			Volver a la mesa
+		<a class="mesa-volver" href="/mesas/{data.curso.codigo}/{data.mesa.numero}">
+			<Icono nombre="atras" />
+			Mesa {data.mesa.numero}
 		</a>
-		<button class="boton" type="button" onclick={() => window.print()}>
-			<Icono nombre="descargar" tamano={16} />
+		<button class="boton secundario cartel-imprimir" type="button" onclick={() => window.print()}>
+			<Icono nombre="imprimir" tamano={18} />
 			Imprimir
 		</button>
 	</div>
 
-	<div class="cartel">
-		<!-- El curso va arriba del número porque cada edición numera sus mesas desde
-		     1: sin él, dos carteles «Mesa 4» del mismo edificio serían iguales. -->
-		<p class="cartel-curso">{data.curso.nombre}</p>
-		<p class="cartel-rotulo">Escaneá para entrar a</p>
-		<p class="cartel-numero">Mesa {data.mesa.numero}</p>
-		{#if data.mesa.escenario?.nombre}
-			<p class="cartel-escenario">{data.mesa.escenario.nombre}</p>
-		{/if}
+	<!-- Ocupa toda la ventana sin que el líder toque nada: en vertical, una columna
+	     con el código abajo; en una pantalla horizontal ancha, el código a la
+	     izquierda y los textos a la derecha; en papel, una hoja A4. -->
+	<main class="cartel">
+		<div class="cartel-textos">
+			<!-- El curso va primero porque cada edición numera sus mesas desde 1: sin
+			     él, dos carteles «Mesa 4» del mismo edificio serían iguales. -->
+			<p class="cartel-curso">{data.curso.nombre}</p>
+			<div>
+				<p class="cartel-rotulo">Escaneá para entrar a</p>
+				<p class="cartel-numero">Mesa {data.mesa.numero}</p>
+			</div>
+			{#if data.mesa.escenario?.nombre}
+				<p class="cartel-escenario">{data.mesa.escenario.nombre}</p>
+			{/if}
+		</div>
 
 		<img
 			class="cartel-qr"
@@ -38,16 +45,9 @@
 			alt="Código QR para entrar a la mesa {data.mesa.numero}"
 		/>
 
-		<!-- <p class="cartel-url">{data.origen}/m/{data.curso.codigo}/{data.mesa.numero}</p> -->
-
 		<p class="cartel-firma">
-			<Marca alto={14} />
+			<Marca alto={20} />
 			SIMUNaM
 		</p>
-	</div>
-
-	<!-- <p class="pie no-imprimir">
-		Desde el teléfono, «Imprimir» abre el diálogo del sistema: sirve tanto para mandarlo a una
-		impresora como para guardarlo en PDF.
-	</p> -->
+	</main>
 </div>
