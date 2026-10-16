@@ -8,6 +8,16 @@ export const iconoDeRol: Record<string, string> = {
 	asistente: 'asistente'
 };
 
+/** Para encabezados angostos, como las columnas del recorrido en el teléfono. */
+export const abreviaturaDeRol: Record<string, string> = {
+	observador_operacion: 'Obs. facil.',
+	observador_proceso: 'Obs. proc.',
+	observador_tecnica: 'Obs. téc.',
+	facilitador: 'Facil.',
+	operador: 'Oper.',
+	asistente: 'Asist.'
+};
+
 export const queHaceElRol: Record<string, string> = {
 	observador_operacion: 'Evaluás el desempeño del facilitador',
 	observador_proceso: 'Evaluás cómo se desarrolla la simulación',

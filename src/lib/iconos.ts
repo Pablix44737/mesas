@@ -97,7 +97,18 @@ export const iconos: Record<string, string[]> = {
 		'M9 5h.01', 'M9 12h.01', 'M9 19h.01',
 		'M15 5h.01', 'M15 12h.01', 'M15 19h.01'
 	],
-	buscar: ['M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', 'M21 21l-4.35-4.35']
+	buscar: ['M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', 'M21 21l-4.35-4.35'],
+	avanzar: ['M5 12h14', 'M12 5l7 7-7 7'],
+	externo: [
+		'M15 3h6v6',
+		'M10 14L21 3',
+		'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'
+	],
+	reabrir: ['M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8', 'M3 3v5h5'],
+	libro: [
+		'M12 7v14',
+		'M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z'
+	]
 };
 
 export type NombreDeIcono = keyof typeof iconos;

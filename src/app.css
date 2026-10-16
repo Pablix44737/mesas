@@ -597,32 +597,6 @@ a {
 	display: none;
 }
 
-/* Un chip que además lleva a algún lado: el de «Evaluó» en la lista de
-   participantes abre lo que esa persona evaluó. Mismo aspecto, porque sigue
-   diciendo lo mismo; lo que cambia es que ahora se puede tocar. */
-.chip-enlace {
-	position: relative;
-	text-decoration: none;
-	cursor: pointer;
-}
-
-/* El chip mide 24px de alto, que es poco para un dedo. Esto le agranda el área
-   tocable sin agrandarlo a él ni mover nada de lugar. */
-.chip-enlace::after {
-	content: '';
-	position: absolute;
-	inset: -8px -6px;
-}
-
-.chip-enlace:hover {
-	filter: brightness(0.96);
-}
-
-.chip-enlace:focus-visible {
-	outline: 3px solid var(--azul);
-	outline-offset: 2px;
-}
-
 .chip.exito,
 .chip.disponible {
 	background: var(--verde-claro);
@@ -879,22 +853,6 @@ input[type='file'] {
 .avatar-rol.gris {
 	background: var(--superficie-media);
 	color: var(--tinta-suave);
-}
-
-/* --- material heredado --- */
-
-.material {
-	display: grid;
-	gap: var(--e-4);
-	margin: 0;
-}
-
-.material > div {
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-	padding-left: var(--e-4);
-	border-left: 3px solid var(--verde);
 }
 
 /* --- selección de rol (tarjetas) --- */
@@ -1349,234 +1307,10 @@ fieldset.roles.invalido legend {
 	color: #fff;
 }
 
-/* El acceso a lo evaluado desde la fila de cada corrida. Va al final, separado de
-   la hora, para que la fila siga leyéndose como un dato y no como un botón. */
-.lista .ver-evaluado {
-	margin-left: auto;
-	flex: 0 0 auto;
-}
-
 /* Al llegar desde el chip de «Evaluó» se salta a la tarjeta de esa persona, y sin
    esto quedaría debajo de la barra superior, que es fija. */
 .envoltorio .tarjeta[id^='p-'] {
 	scroll-margin-top: calc(var(--barra-alto) + var(--e-4));
-}
-
-/* --- recorrido de la mesa: personas por roles --- */
-
-/* Las columnas son los roles y no las corridas. Así son siempre las mismas cuatro
-   o cinco, no importa cuántas corridas lleve la mesa, y «qué le falta a esta
-   persona» se contesta mirando el hueco en vez de leyendo. */
-.tabla.recorrido th[scope='col'] {
-	/* El resto de las tablas no deja cortar los encabezados, pero acá son nombres
-	   de rol largos y la alternativa serían columnas de media pantalla. */
-	white-space: normal;
-	min-width: 5.5rem;
-	vertical-align: bottom;
-	/* Sin mayúsculas ni interletrado: partidos en dos renglones, «OBS. DEL /
-	   FACILITADOR» ocupaba más ancho que el nombre en minúscula, y con el
-	   interlineado del cuerpo cada renglón quedaba flotando lejos del otro. */
-	font-size: 12px;
-	font-weight: 600;
-	line-height: 15px;
-	letter-spacing: normal;
-	text-transform: none;
-}
-
-/* El nombre entero queda en el `title`, pero sin subrayado punteado: acá no es una
-   sigla que haya que descifrar, es el mismo nombre un poco más corto. */
-.tabla.recorrido th[scope='col'] abbr {
-	text-decoration: none;
-	cursor: inherit;
-}
-
-/* El encabezado de la primera columna se fija con ella: si no, los nombres de rol
-   se corren por encima del lugar donde quedaron los de las personas. */
-.tabla.recorrido thead th:first-child {
-	position: sticky;
-	left: 0;
-	z-index: 2;
-	background: var(--superficie-baja);
-	border-right: 1px solid var(--borde);
-}
-
-/* La primera columna queda fija mientras las demás se corren: el nombre y lo que
-   le falta son justamente lo que hay que tener a la vista al mirar cualquier rol. */
-.tabla.recorrido th[scope='row'] {
-	position: sticky;
-	left: 0;
-	z-index: 1;
-	min-width: 11rem;
-	padding: var(--e-4) var(--e-5);
-	background: var(--superficie);
-	border-right: 1px solid var(--borde);
-	border-bottom: 1px solid var(--borde);
-	font-size: 15px;
-	font-weight: 400;
-	line-height: 20px;
-	letter-spacing: normal;
-	text-transform: none;
-	/* `.tabla th` no deja partir: un nombre largo se salía de la columna fija y
-	   quedaba escrito encima de las celdas de los roles. */
-	white-space: normal;
-	color: inherit;
-}
-
-.tabla.recorrido tbody tr:last-child th[scope='row'] {
-	border-bottom: 0;
-}
-
-/* Sin esto la celda fija se queda blanca mientras el resto de la fila se ilumina. */
-.tabla.recorrido tbody tr:hover th[scope='row'] {
-	background: var(--azul-tenue);
-}
-
-.recorrido-quien {
-	display: block;
-	font-weight: 600;
-}
-
-.recorrido-nota {
-	display: block;
-	margin-top: 2px;
-	font-size: 13px;
-	line-height: 18px;
-	color: var(--tinta-suave);
-}
-
-/* Las corridas de un rol van en fila: apiladas, una celda con tres corridas
-   estiraba la fila entera y las marcas de al lado quedaban flotando al medio. */
-.tabla.recorrido td {
-	white-space: nowrap;
-}
-
-/* Cada corrida en que ocupó ese rol. Dos marcas en una celda es alguien que lo
-   repitió; ninguna, un rol que todavía no hizo. */
-.corrida-marca {
-	display: inline-grid;
-	place-items: center;
-	min-width: 26px;
-	height: 26px;
-	padding: 0 6px;
-	margin: 2px 4px 2px 0;
-	border: 1px solid var(--borde);
-	border-radius: var(--r-sm);
-	background: var(--superficie-baja);
-	font-size: 13px;
-	font-weight: 600;
-	font-variant-numeric: tabular-nums;
-}
-
-/* La corrida en curso, para separar lo que está pasando de lo que ya pasó. */
-.corrida-marca.ahora {
-	border-color: var(--azul);
-	background: var(--azul-tenue);
-	color: var(--azul);
-}
-
-.sin-ocupar {
-	color: var(--borde-fuerte);
-}
-
-/* En el teléfono, con los anchos de arriba entraba una sola columna de rol por
-   vez y había que barrer la tabla entera para contestar algo. Apretando la
-   columna fija y las de rol entran dos o tres. Los encabezados se parten en dos
-   líneas y está bien: son los nombres de los roles, no texto que haya que seguir. */
-@media (max-width: 719px) {
-	.tabla.recorrido th[scope='row'] {
-		min-width: 0;
-		padding-left: var(--e-4);
-		padding-right: var(--e-3);
-	}
-
-	/* El tope va en el contenido y no en la celda: en una tabla de ancho automático
-	   `width` sobre un `th` es apenas una sugerencia y la columna igual se estira
-	   hasta el nombre más largo, comiéndose el lugar de los roles. Acotando lo de
-	   adentro, el nombre se parte en dos líneas, que en una columna fija no molesta. */
-	.recorrido-quien,
-	.recorrido-nota {
-		width: 7rem;
-	}
-
-	.tabla.recorrido th[scope='col'] {
-		min-width: 0;
-		padding-left: var(--e-3);
-		padding-right: var(--e-3);
-	}
-
-	.tabla.recorrido td {
-		padding-left: var(--e-3);
-		padding-right: var(--e-3);
-	}
-
-	.recorrido-quien {
-		font-size: 14px;
-	}
-
-	.recorrido-nota {
-		font-size: 12px;
-		line-height: 16px;
-	}
-
-	.corrida-marca {
-		min-width: 24px;
-		height: 24px;
-		padding: 0 5px;
-		margin-right: 3px;
-		font-size: 12px;
-	}
-}
-
-/* Los participantes de la corrida en curso. En línea, como el resto de las
-   `.lista`, el chip de «Evaluó» caía a la derecha o debajo a la izquierda según
-   cuánto midieran el rol y el nombre, y los nombres arrancaban cada uno en otra
-   columna porque «Observador del facilitador» no entra en la del rótulo. Así el
-   rol va arriba, a todo el ancho, y el chip siempre a la derecha del nombre. */
-.lista.participantes li {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto;
-	align-items: center;
-	gap: 2px var(--e-4);
-}
-
-.lista.participantes .rotulo {
-	grid-column: 1 / -1;
-	min-width: 0;
-}
-
-/* Fijado a la primera columna: sin chip, el nombre se acomodaba solo en la
-   segunda y quedaba corrido a la derecha. */
-.lista.participantes .quien {
-	grid-column: 1;
-	min-width: 0;
-}
-
-.lista.participantes .chip {
-	grid-column: 2;
-	grid-row: 2;
-}
-
-/* El resumen del recorrido: una fila por persona, el nombre y debajo lo que le
-   falta. Apilados y no en línea como el resto de las `.lista`: con nombres y
-   roles de largos distintos, en línea cada fila quedaba cortada en otro lugar. */
-.lista.recorrido-resumen li {
-	display: grid;
-	gap: 2px;
-}
-
-/* Las dos acciones secundarias de quién conduce la mesa. Se envuelven en el
-   teléfono en vez de apretarse: antes compartían `.acciones-fila`, que está hecha
-   para botones de icono de 40px en una fila de tabla, y con texto los dejaba a 2px
-   uno del otro, leyéndose como un solo enlace. */
-.acciones-docente {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--e-2);
-	margin-top: var(--e-4);
-}
-
-.acciones-docente .boton {
-	flex: 1 1 auto;
 }
 
 /* Un bloque que no es parte de lo que la pantalla viene haciendo sino de lo que
@@ -1690,12 +1424,6 @@ fieldset.roles.invalido legend {
 
 /* Las filas con borde de acento llevan más padding a la izquierda: si no, el
    texto queda pegado al marco. */
-.lista li.en-curso {
-	background: var(--verde-claro);
-	border-left: 3px solid var(--verde);
-	padding-left: var(--e-5);
-}
-
 .lista li.pendiente-padron {
 	background: var(--alerta-claro);
 	border-left: 3px solid var(--alerta);
@@ -2086,38 +1814,6 @@ fieldset.roles.invalido legend {
 		gap: var(--e-3);
 		padding: var(--e-4);
 	}
-}
-
-/* --- código QR de la mesa, dentro de su pantalla --- */
-
-.qr-panel {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: var(--e-3);
-	text-align: center;
-}
-
-.qr-panel .qr {
-	width: 240px;
-	max-width: 100%;
-	height: auto;
-	padding: var(--e-3);
-	background: #fff;
-	border: 1px solid var(--borde);
-	border-radius: var(--r-md);
-}
-
-.qr-panel .qr-url {
-	margin: 0;
-	padding: var(--e-2) var(--e-3);
-	background: var(--superficie-baja);
-	border: 1px solid var(--borde);
-	border-radius: var(--r-sm);
-	font-size: 13px;
-	color: var(--tinta-suave);
-	word-break: break-all;
-	user-select: all;
 }
 
 /* --- pantalla de bienvenida: por dónde entra cada quien --- */
@@ -2608,4 +2304,1094 @@ fieldset.roles.invalido legend {
    libera sin despegar la barra mientras se desplaza. */
 form:has(> .barra-accion) + .pie {
 	margin-top: calc(var(--e-10) + var(--e-5));
+}
+
+/* --- pantalla de la mesa (líder) ---
+   Encabezado con el estado, la acción del momento —fija abajo en el teléfono, al
+   lado del título en pantallas anchas— y dos columnas desde 900px: las personas
+   a la izquierda; el QR, lo evaluado y el material a la derecha. */
+
+.mesa-pagina {
+	min-height: 100vh;
+	padding-bottom: calc(96px + env(safe-area-inset-bottom));
+	background: var(--fondo);
+}
+
+.mesa-cabecera {
+	padding: 6px var(--e-4) var(--e-4);
+	background: var(--superficie);
+	border-bottom: 1px solid var(--borde);
+}
+
+.mesa-cabecera-dentro {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	max-width: 1216px;
+	margin: 0 auto;
+}
+
+.mesa-navegacion {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--e-2);
+}
+
+.mesa-volver {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-height: 44px;
+	margin-left: -4px;
+	padding: 0 10px 0 4px;
+	border-radius: var(--r-md);
+	color: var(--azul);
+	font-size: 15px;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.mesa-volver:hover {
+	background: var(--azul-claro);
+}
+
+.boton.secundario.mesa-boton-qr {
+	padding: 0 14px;
+	color: var(--tinta);
+	font-size: 14px;
+}
+
+.mesa-titulo-fila {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: var(--e-4);
+}
+
+.mesa-titulo {
+	flex: 1 1 300px;
+	min-width: 0;
+}
+
+.mesa-titulo h1 {
+	margin: 0;
+	font-family: var(--fuente-titulo);
+	font-size: 30px;
+	font-weight: 800;
+	line-height: 1.1;
+	letter-spacing: -0.01em;
+}
+
+.mesa-escenario {
+	margin: 2px 0 0;
+	color: var(--tinta-suave);
+	font-size: 16px;
+	font-weight: 500;
+}
+
+.estado-mesa {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--e-2);
+	margin-top: var(--e-3);
+	padding: 6px 12px 6px 10px;
+	border-radius: var(--r-full);
+	background: var(--superficie-media);
+	color: var(--tinta-suave);
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.estado-mesa .punto {
+	flex: 0 0 auto;
+	width: 9px;
+	height: 9px;
+	border-radius: 50%;
+}
+
+.estado-mesa.en-curso {
+	background: var(--verde-claro);
+	color: var(--verde-oscuro);
+}
+
+.estado-mesa.en-curso .punto {
+	background: var(--verde);
+	box-shadow: 0 0 0 3px #d9edb4;
+}
+
+.estado-mesa.sin-ciclos .punto {
+	border: 2px solid currentColor;
+}
+
+.estado-mesa.cerrada {
+	color: var(--tinta);
+}
+
+/* En el teléfono, fija abajo y al alcance del pulgar. */
+.acciones-mesa {
+	position: fixed;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	z-index: 30;
+	display: flex;
+	gap: 10px;
+	padding: var(--e-3) var(--e-4) calc(var(--e-4) + env(safe-area-inset-bottom));
+	background: var(--superficie);
+	border-top: 1px solid var(--borde);
+	box-shadow: var(--sombra-barra);
+}
+
+.acciones-mesa .boton {
+	min-height: 52px;
+	padding: 0 14px;
+	font-size: 15px;
+	white-space: nowrap;
+}
+
+.acciones-mesa .boton.enviar,
+.mesa-dialogo .boton.enviar {
+	font-size: 16px;
+	font-weight: 700;
+}
+
+.acciones-mesa > .boton.enviar,
+.acciones-mesa > form,
+.acciones-mesa > form .boton {
+	flex: 1 1 auto;
+	width: 100%;
+}
+
+.acciones-mesa > .boton.secundario {
+	flex: 0 0 auto;
+	color: var(--tinta);
+}
+
+.boton.secundario.reabrir {
+	border-color: var(--azul);
+}
+
+.boton.peligro:hover:not(:disabled) {
+	background: #8f1e18;
+}
+
+.mesa-aviso {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	box-sizing: border-box;
+	width: min(1216px, calc(100% - 24px));
+	margin: var(--e-3) auto 0;
+	padding: var(--e-2) var(--e-1) var(--e-2) 14px;
+	border: 1px solid #d5ebb0;
+	border-radius: var(--r-lg);
+	background: var(--verde-claro);
+	color: #3d6a06;
+	font-weight: 500;
+}
+
+.mesa-aviso > .icono {
+	margin-top: 12px;
+}
+
+.mesa-aviso > span {
+	flex: 1 1 auto;
+	padding: 10px 0;
+}
+
+.mesa-aviso.error {
+	border-color: #f5c9c5;
+	background: var(--error-claro);
+	color: var(--error);
+}
+
+.mesa-cuerpo {
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-3);
+	max-width: 1240px;
+	margin: 0 auto;
+	padding: var(--e-3);
+}
+
+.mesa-columna {
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-3);
+	min-width: 0;
+}
+
+.mesa-cuerpo .solo-escritorio {
+	display: none;
+}
+
+.mesa-tarjeta {
+	overflow: hidden;
+	background: var(--superficie);
+	border: 1px solid var(--borde);
+	border-radius: var(--r-lg);
+}
+
+.mesa-tarjeta-cabecera {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--e-3);
+	padding: var(--e-4) var(--e-4) var(--e-2);
+}
+
+.mesa-tarjeta-cabecera h2 {
+	margin: 0;
+	font-family: var(--fuente-titulo);
+	font-size: 19px;
+	font-weight: 700;
+}
+
+.mesa-tarjeta-cabecera .detalle {
+	font-size: 14px;
+	font-weight: 500;
+}
+
+.mesa-pagina .rotulo-chico {
+	color: var(--tinta-suave);
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.mesa-pagina .nombre {
+	font-size: 16px;
+	font-weight: 600;
+}
+
+/* Botón con aspecto de enlace: para lo que no es la acción principal. */
+.enlace-accion {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	align-self: flex-start;
+	min-height: 44px;
+	margin-left: -8px;
+	padding: 0 var(--e-2);
+	border: 0;
+	border-radius: var(--r-md);
+	background: none;
+	color: var(--azul);
+	font: inherit;
+	font-size: 15px;
+	font-weight: 600;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.enlace-accion:hover {
+	background: var(--azul-claro);
+}
+
+.enlace-accion.peligroso {
+	color: var(--error);
+}
+
+.enlace-accion.peligroso:hover {
+	background: var(--error-claro);
+}
+
+/* QR */
+
+.qr-grande {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--e-3);
+	padding: var(--e-5) var(--e-4) var(--e-4);
+	text-align: center;
+}
+
+.qr-grande img {
+	display: block;
+	width: 232px;
+	height: 232px;
+}
+
+.qr-grande.solo-escritorio img {
+	width: 208px;
+	height: 208px;
+}
+
+.qr-grande .detalle {
+	margin: 0;
+	font-size: 14px;
+}
+
+.qr-direccion {
+	margin: 0;
+	font-size: 15px;
+	font-weight: 600;
+	word-break: break-all;
+}
+
+.qr-compacto {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: var(--e-3);
+}
+
+.qr-compacto img {
+	display: block;
+	flex: 0 0 auto;
+	width: 104px;
+	height: 104px;
+}
+
+.qr-compacto-texto {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.qr-compacto-texto .detalle {
+	font-size: 13px;
+	font-weight: 500;
+}
+
+.qr-compacto-texto .qr-direccion {
+	font-size: 14px;
+}
+
+.qr-compacto-texto .enlace-accion {
+	font-size: 14px;
+}
+
+/* Quién conduce la mesa */
+
+.docente {
+	padding: var(--e-1) var(--e-4) var(--e-4);
+	border-bottom: 1px solid var(--borde);
+}
+
+.docente-fila {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--e-3);
+}
+
+.docente-identidad {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.docente-identidad .nombre {
+	margin-top: 2px;
+}
+
+.docente-identidad .detalle {
+	font-size: 14px;
+}
+
+.docente-fila .enlace-accion {
+	margin: 0 -8px 0 0;
+}
+
+.docente-tecnica {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-height: 48px;
+	margin-top: var(--e-3);
+	padding: 0 var(--e-3) 0 14px;
+	border-radius: var(--r-md);
+	background: var(--azul-claro);
+	color: var(--azul-oscuro);
+	font-size: 15px;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.docente-tecnica:hover {
+	background: #d5e6f2;
+}
+
+.docente-tecnica span {
+	flex: 1 1 auto;
+}
+
+.docente-nota {
+	margin: 10px 0 0;
+	font-size: 14px;
+}
+
+.docente label {
+	margin-top: 10px;
+}
+
+.docente-campo {
+	display: flex;
+	gap: var(--e-2);
+}
+
+.docente-campo input {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.docente-campo .boton {
+	min-height: 46px;
+}
+
+.docente .ayuda {
+	margin: 6px 0 0;
+}
+
+.campo-error {
+	display: flex;
+	align-items: flex-start;
+	gap: 6px;
+	margin: 6px 0 0;
+	color: var(--error);
+	font-size: 14px;
+	font-weight: 500;
+}
+
+.campo-error .icono {
+	margin-top: 2px;
+}
+
+.docente-edicion {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: var(--e-2);
+	margin-top: 10px;
+}
+
+.docente-edicion .enlace-accion {
+	margin: 0;
+}
+
+.docente-quitar {
+	margin-top: 10px;
+	padding: 14px;
+	border-radius: var(--r-lg);
+	background: var(--error-claro);
+}
+
+.docente-quitar p {
+	margin: 0;
+	font-size: 15px;
+	font-weight: 500;
+}
+
+.docente-quitar-botones {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--e-2);
+	margin-top: var(--e-3);
+}
+
+.docente-quitar-botones > * {
+	flex: 1 1 140px;
+}
+
+.docente-quitar-botones .boton {
+	padding: 0 var(--e-3);
+}
+
+/* Pestañas: los roles del ciclo o el recorrido de toda la mesa */
+
+.pestanas {
+	display: flex;
+	gap: var(--e-1);
+	margin: var(--e-3) var(--e-4) var(--e-2);
+	padding: var(--e-1);
+	border-radius: 10px;
+	background: var(--superficie-media);
+}
+
+.pestanas button {
+	flex: 1 1 0;
+	min-height: 44px;
+	border: 0;
+	border-radius: var(--r-md);
+	background: transparent;
+	color: var(--tinta-suave);
+	font: inherit;
+	font-size: 15px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.pestanas button[aria-pressed='true'] {
+	background: var(--superficie);
+	color: var(--tinta);
+	box-shadow: 0 1px 2px rgba(18, 48, 63, 0.12);
+}
+
+.mesa-vacio {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	padding: 28px var(--e-5) var(--e-6);
+	border-top: 1px solid var(--borde);
+	text-align: center;
+}
+
+.mesa-vacio strong {
+	font-size: 16px;
+	font-weight: 600;
+}
+
+.mesa-vacio span {
+	color: var(--tinta-suave);
+	font-size: 14px;
+}
+
+.mesa-vacio .boton {
+	margin-top: var(--e-2);
+}
+
+/* Roles del ciclo */
+
+.roles-del-ciclo {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.roles-del-ciclo li {
+	display: flex;
+	align-items: center;
+	gap: var(--e-3);
+	min-height: 52px;
+	padding: var(--e-3) var(--e-4);
+	border-top: 1px solid var(--borde);
+}
+
+.rol-persona {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.rol-persona .nombre {
+	margin-top: 1px;
+}
+
+.rol-persona .detalle {
+	font-size: 13px;
+}
+
+.rol-persona .falta {
+	margin-top: 2px;
+	color: var(--tinta-suave);
+	font-size: 14px;
+}
+
+.rol-persona .falta.completo {
+	color: var(--verde-oscuro);
+}
+
+.rol-persona .sin-ocupar {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin-top: 2px;
+	color: var(--alerta);
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.rol-persona .sin-ocupar::before {
+	content: '';
+	width: 8px;
+	height: 8px;
+	border: 2px solid currentColor;
+	border-radius: 50%;
+	box-sizing: border-box;
+}
+
+.roles-del-ciclo .envio {
+	display: inline-flex;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: var(--e-1);
+	min-height: 44px;
+	padding: 0 var(--e-2) 0 var(--e-3);
+	border-radius: var(--r-md);
+	background: var(--verde-claro);
+	color: var(--verde-oscuro);
+	font-size: 14px;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.roles-del-ciclo .envio:hover {
+	background: #e2f1c8;
+}
+
+.progreso-lista {
+	flex: 0 0 auto;
+	padding: var(--e-1) 10px;
+	border-radius: var(--r-full);
+	background: var(--alerta-claro);
+	color: var(--alerta);
+	font-size: 13px;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+/* Recorrido: personas por roles, con los ciclos en que ocupó cada uno */
+
+.recorrido-ayuda {
+	margin: 0;
+	padding: var(--e-1) var(--e-4) var(--e-3);
+	font-size: 14px;
+}
+
+.recorrido-envoltorio {
+	overflow-x: auto;
+}
+
+.recorrido-tabla {
+	width: 100%;
+	min-width: 340px;
+	border-collapse: collapse;
+	table-layout: fixed;
+}
+
+.recorrido-tabla th:first-child {
+	width: calc(100% * 1.35 / (1.35 + var(--roles)));
+	min-width: 92px;
+}
+
+.recorrido-tabla thead th {
+	padding: var(--e-2) 2px;
+	border-top: 1px solid var(--borde);
+	background: var(--fondo);
+	color: var(--tinta-suave);
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 1.2;
+	text-align: center;
+	vertical-align: bottom;
+}
+
+.recorrido-tabla thead th:first-child {
+	padding-left: var(--e-4);
+	text-align: left;
+}
+
+.recorrido-tabla abbr {
+	text-decoration: none;
+	cursor: help;
+}
+
+.recorrido-tabla tbody th {
+	padding: var(--e-2) var(--e-2) var(--e-2) var(--e-4);
+	border-top: 1px solid var(--borde);
+	font-size: 14px;
+	font-weight: 600;
+	line-height: 1.25;
+	text-align: left;
+}
+
+.recorrido-tabla tbody td {
+	padding: 6px 2px;
+	border-top: 1px solid var(--borde);
+}
+
+.recorrido-tabla .celda {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 3px;
+	min-height: 40px;
+	border-radius: var(--r-md);
+}
+
+.recorrido-tabla .hueco .celda {
+	background: var(--alerta-claro);
+	color: var(--alerta);
+	font-size: 16px;
+	font-weight: 700;
+}
+
+.recorrido-tabla .celda.conduce {
+	margin-right: var(--e-1);
+	background: var(--azul-claro);
+	color: var(--azul-oscuro);
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.ciclo-marca {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 22px;
+	height: 22px;
+	padding: 0 var(--e-1);
+	box-sizing: border-box;
+	border-radius: 6px;
+	background: var(--azul-claro);
+	color: var(--azul-oscuro);
+	font-size: 13px;
+	font-weight: 700;
+}
+
+.ciclo-marca.ahora {
+	background: var(--azul);
+	color: #fff;
+}
+
+.recorrido-referencias {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 14px;
+	padding: var(--e-3) var(--e-4) var(--e-4);
+	border-top: 1px solid var(--borde);
+	color: var(--tinta-suave);
+	font-size: 13px;
+}
+
+.recorrido-referencias > span {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.recorrido-referencias b {
+	color: var(--tinta);
+	font-weight: 600;
+}
+
+.recorrido-referencias .ciclo-marca {
+	min-width: 18px;
+	height: 18px;
+	font-size: 11px;
+}
+
+.recorrido-nadie {
+	margin: 0 var(--e-4) var(--e-4);
+	padding: 10px var(--e-3);
+	border-radius: var(--r-md);
+	background: var(--alerta-claro);
+	color: var(--alerta);
+	font-size: 14px;
+	font-weight: 500;
+}
+
+/* Lo evaluado: un renglón por ciclo, la puerta a sus evaluaciones */
+
+.lo-evaluado {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.lo-evaluado a {
+	display: flex;
+	align-items: center;
+	gap: var(--e-3);
+	min-height: 60px;
+	padding: 10px var(--e-3) 10px var(--e-4);
+	border-top: 1px solid var(--borde);
+	color: var(--tinta);
+	text-decoration: none;
+}
+
+.lo-evaluado a:hover {
+	background: var(--fondo);
+}
+
+.lo-evaluado .ciclo {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.lo-evaluado .detalle {
+	font-size: 14px;
+}
+
+.lo-evaluado .enviadas {
+	color: var(--tinta-suave);
+	font-size: 14px;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.lo-evaluado .enviadas.incompleto {
+	color: var(--alerta);
+}
+
+.lo-evaluado a > .icono {
+	color: var(--tinta-suave);
+}
+
+/* Material del escenario */
+
+.material-cabecera {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	min-height: 56px;
+	padding: 0 14px 0 var(--e-4);
+	border: 0;
+	background: var(--superficie);
+	color: var(--tinta);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.material-cabecera > .icono {
+	color: var(--tinta-suave);
+}
+
+.material-cabecera > span {
+	flex: 1 1 auto;
+	font-family: var(--fuente-titulo);
+	font-size: 17px;
+	font-weight: 700;
+}
+
+.material-lista {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.material-lista li {
+	display: flex;
+	flex-direction: column;
+	padding: var(--e-3) var(--e-4);
+	border-top: 1px solid var(--borde);
+}
+
+.material-lista .detalle {
+	font-size: 13px;
+	font-weight: 500;
+}
+
+.material-lista .nombre {
+	font-size: 15px;
+}
+
+.material-archivo {
+	display: flex;
+	align-items: center;
+	gap: var(--e-3);
+	color: var(--azul);
+	text-decoration: none;
+}
+
+.material-archivo > span {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.material-archivo .archivo {
+	font-size: 15px;
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+/* Confirmaciones: hoja que sube desde abajo en el teléfono, diálogo en pantallas anchas */
+
+.mesa-velo {
+	position: fixed;
+	inset: 0;
+	z-index: 60;
+	display: flex;
+	align-items: flex-end;
+	justify-content: center;
+	background: rgba(18, 48, 63, 0.5);
+}
+
+.mesa-dialogo {
+	box-sizing: border-box;
+	width: 100%;
+	max-width: 520px;
+	max-height: 90vh;
+	overflow-y: auto;
+	padding: var(--e-3) var(--e-5) calc(var(--e-5) + env(safe-area-inset-bottom));
+	border-radius: 16px 16px 0 0;
+	background: var(--superficie);
+	box-shadow: 0 20px 50px rgba(18, 48, 63, 0.25);
+	outline: none;
+}
+
+.mesa-dialogo .asa {
+	display: block;
+	width: 40px;
+	height: 4px;
+	margin: 0 auto var(--e-3);
+	border-radius: 2px;
+	background: var(--borde-fuerte);
+}
+
+.mesa-dialogo h2 {
+	margin: var(--e-2) 0 0;
+	font-family: var(--fuente-titulo);
+	font-size: 23px;
+	font-weight: 700;
+	line-height: 1.2;
+}
+
+.dialogo-texto {
+	margin: var(--e-2) 0 0;
+	color: var(--tinta-suave);
+	font-size: 16px;
+}
+
+.dialogo-pendientes {
+	margin-top: var(--e-4);
+	padding: 14px 14px var(--e-3);
+	border-radius: var(--r-lg);
+	background: var(--alerta-claro);
+}
+
+.dialogo-pendientes strong {
+	display: flex;
+	align-items: center;
+	gap: var(--e-2);
+	color: var(--alerta);
+	font-size: 15px;
+	font-weight: 700;
+}
+
+.dialogo-pendientes ul {
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-2);
+	margin: var(--e-2) 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.dialogo-pendientes li {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 10px;
+	padding-top: var(--e-2);
+	border-top: 1px solid #f3dfbd;
+}
+
+.dialogo-pendientes li > span:first-child {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.dialogo-pendientes .nombre {
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.dialogo-pendientes .detalle {
+	font-size: 14px;
+}
+
+.dialogo-pendientes .items-marcados {
+	flex: 0 0 auto;
+	color: var(--alerta);
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.dialogo-pendientes p {
+	margin: 10px 0 0;
+	font-size: 14px;
+}
+
+.dialogo-botones {
+	display: flex;
+	flex-wrap: wrap-reverse;
+	gap: 10px;
+	margin-top: var(--e-5);
+}
+
+.dialogo-botones > * {
+	flex: 1 1 180px;
+}
+
+.dialogo-botones .boton {
+	width: 100%;
+	min-height: 52px;
+}
+
+@media (min-width: 900px) {
+	.mesa-pagina {
+		padding-bottom: var(--e-8);
+	}
+
+	.acciones-mesa {
+		position: static;
+		flex: 0 0 auto;
+		flex-wrap: wrap;
+		justify-content: flex-end;
+		padding: 0;
+		background: none;
+		border: 0;
+		box-shadow: none;
+	}
+
+	.acciones-mesa > .boton.enviar,
+	.acciones-mesa > form,
+	.acciones-mesa > form .boton {
+		flex: 0 0 auto;
+		width: auto;
+	}
+
+	.mesa-cuerpo {
+		flex-direction: row;
+		align-items: flex-start;
+		gap: var(--e-5);
+	}
+
+	.mesa-columna.mesa-izquierda {
+		flex: 1 1 520px;
+	}
+
+	.mesa-columna.mesa-derecha {
+		flex: 0 1 400px;
+	}
+
+	.mesa-cuerpo .solo-movil {
+		display: none;
+	}
+
+	.mesa-cuerpo .solo-escritorio {
+		display: flex;
+	}
+
+	.mesa-velo {
+		align-items: center;
+		padding: var(--e-6);
+	}
+
+	.mesa-dialogo {
+		padding: var(--e-5);
+		border-radius: var(--r-lg);
+	}
+
+	.mesa-dialogo .asa {
+		display: none;
+	}
 }

@@ -2,7 +2,7 @@ import { error, fail } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
 import { mesaDelCurso } from '$lib/server/mesas';
 import { dniValido, mostrarDni, normalizarDni } from '$lib/dni';
-import { checklistComunDe, rolesDelDestinatario } from '$lib/server/roles';
+import { checklistComunDe, rolesQueSeEligen } from '$lib/server/roles';
 import type { Actions, PageServerLoad } from './$types';
 
 type Resumen = { id: string; nombre: string; ponderado: boolean; items: number; maximo: number };
@@ -74,28 +74,30 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	const { data: sinEnviar } = corridaEnCurso
 		? await supabase
 				.from('checklists_sin_enviar')
-				.select('dni, participante_nombre, rol_nombre, marcados, items')
+				.select('participacion_id, dni, participante_nombre, rol_nombre, marcados, items')
 				.eq('corrida_id', corridaEnCurso.id)
 		: { data: null };
 
 	// Quiénes entraron a la mesa y con qué rol. Al líder le sirve para saber, sin
 	// andar preguntando, quién ya está y si los observadores enviaron lo suyo.
 	const idsDeCorridas = (corridas ?? []).map((c) => c.id);
-	const [{ data: participaciones }, roles] = await Promise.all([
+	// Los roles que rotan entre los participantes, que son los de este curso y no
+	// todos los del sistema. En uno de alumnos el observador del facilitador no
+	// existe, y el facilitador no rota: lo ocupa el docente que conduce la mesa,
+	// así que no es algo que a un alumno le falte ni una columna del recorrido.
+	const [{ data: participaciones }, rolesQueRotan] = await Promise.all([
 		idsDeCorridas.length > 0
 			? supabase
 					.from('participaciones')
 					.select(
 						`id, dni, corrida_id, rol_codigo,
-						 rol:roles(nombre, orden),
+						 rol:roles(nombre, orden, checklist),
 						 participante:participantes(nombre, apellido),
 						 checklist_instancias(enviada_en)`
 					)
 					.in('corrida_id', idsDeCorridas)
 			: Promise.resolve({ data: null }),
-		// Los de este curso, no los del sistema: en uno de alumnos el observador del
-		// facilitador no existe y anunciarlo «sin ocupar» sería pedir lo imposible.
-		rolesDelDestinatario(curso.destinado_a)
+		rolesQueSeEligen(curso.destinado_a)
 	]);
 
 	const todasLasParticipaciones = participaciones ?? [];
@@ -115,8 +117,6 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		.sort(
 			(a, b) => a.orden - b.orden || (a.nombre ?? a.dni).localeCompare(b.nombre ?? b.dni)
 		);
-
-	const ocupados = new Set(enLaCorridaEnCurso.map((p) => p.rolCodigo));
 
 	/**
 	 * El recorrido de la mesa: una fila por persona, una columna por rol, y en cada
@@ -138,7 +138,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 
 	const porPersona = new Map<
 		string,
-		{ dni: string; nombre: string | null; porRol: Map<string, number[]> }
+		{ dni: string; nombre: string | null; corto: string | null; porRol: Map<string, number[]> }
 	>();
 
 	for (const participacion of todasLasParticipaciones) {
@@ -147,10 +147,12 @@ export const load: PageServerLoad = async ({ params, url }) => {
 
 		let persona = porPersona.get(participacion.dni);
 		if (!persona) {
+			const quien = participacion.participante;
 			persona = {
 				dni: participacion.dni,
-				nombre: participacion.participante
-					? `${participacion.participante.nombre} ${participacion.participante.apellido}`
+				nombre: quien ? `${quien.nombre} ${quien.apellido}` : null,
+				corto: quien
+					? `${quien.nombre.split(' ')[0]} ${quien.apellido.charAt(0)}.`
 					: null,
 				porRol: new Map()
 			};
@@ -166,9 +168,10 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		.map((persona) => ({
 			dni: persona.dni,
 			nombre: persona.nombre,
+			corto: persona.corto,
 			enLaCorridaEnCurso: enLaCorridaEnCurso.some((p) => p.dni === persona.dni),
 			corridas: [...persona.porRol.values()].reduce((total, n) => total + n.length, 0),
-			porRol: roles.map((rol) => ({
+			porRol: rolesQueRotan.map((rol) => ({
 				codigo: rol.codigo,
 				numeros: (persona.porRol.get(rol.codigo) ?? []).sort((a, b) => a - b)
 			})),
@@ -176,13 +179,15 @@ export const load: PageServerLoad = async ({ params, url }) => {
 			// le falta ser observador sería recomendarle algo que no va a hacer.
 			conduceLaMesa: curso.destinado_a === 'alumnos' && persona.dni === mesa.docente_dni,
 			// Lo que le falta por ocupar: es la recomendación para la corrida que viene.
-			faltan: roles.filter((rol) => !persona.porRol.has(rol.codigo)).map((rol) => rol.nombre)
+			faltan: rolesQueRotan
+				.filter((rol) => !persona.porRol.has(rol.codigo))
+				.map((rol) => rol.nombre)
 		}))
 		.sort((a, b) => (a.nombre ?? a.dni).localeCompare(b.nombre ?? b.dni));
 
 	// Roles que en esta mesa no ocupó nadie, nunca. Pasa más de lo que parece: el
 	// asistente se ocupó una sola vez en todo el sistema.
-	const nadieLosOcupo = roles
+	const nadieLosOcupo = rolesQueRotan
 		.filter((rol) => !todasLasParticipaciones.some((p) => p.rol_codigo === rol.codigo))
 		.map((rol) => rol.nombre);
 
@@ -221,17 +226,17 @@ export const load: PageServerLoad = async ({ params, url }) => {
 				}
 			: null,
 		participantes: enLaCorridaEnCurso,
-		// Informativo, no una falta: una mesa puede correr sin asistente, por ejemplo.
-		rolesLibres: roles.filter((r) => !ocupados.has(r.codigo)).map((r) => r.nombre),
-		// Las columnas del recorrido: los roles que ocupa este curso, en su orden.
-		rolesDeLaMesa: roles.map((r) => ({ codigo: r.codigo, nombre: r.nombre })),
+		// Los roles que se reparten en cada ciclo, en su orden: las filas de «Roles
+		// del ciclo» y las columnas del recorrido.
+		rolesDeLaMesa: rolesQueRotan.map((r) => ({ codigo: r.codigo, nombre: r.nombre })),
 		recorrido,
 		nadieLosOcupo,
 		// Para mostrar junto al QR la dirección que codifica, por si alguien
 		// prefiere tipearla en vez de escanear.
 		origen: url.origin,
 		sinEnviar: (sinEnviar ?? []).map((p) => ({
-			quien: p.participante_nombre ?? `DNI ${p.dni}`,
+			participacionId: p.participacion_id,
+			quien: p.participante_nombre ?? `DNI ${mostrarDni(p.dni ?? '')}`,
 			rol: p.rol_nombre ?? '',
 			marcados: p.marcados ?? 0,
 			items: p.items ?? 0
@@ -244,7 +249,18 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		checklistComun: operacion
 			? { ...resumir(operacion)!, rol: operacion.rolNombre }
 			: null,
-		corridas: corridas ?? [],
+		// Cada ciclo con cuántas evaluaciones se enviaron de las que se abrieron
+		// lugar: las de quienes ocuparon un rol que evalúa.
+		corridas: (corridas ?? []).map((corrida) => {
+			const evaluan = todasLasParticipaciones.filter(
+				(p) => p.corrida_id === corrida.id && p.rol?.checklist != null
+			);
+			return {
+				...corrida,
+				evaluaciones: evaluan.length,
+				enviadas: evaluan.filter((p) => p.checklist_instancias?.enviada_en != null).length
+			};
+		}),
 		corridaEnCurso: (corridas ?? []).find((c) => c.habilitada) ?? null
 	};
 };
@@ -313,7 +329,8 @@ export const actions: Actions = {
 		const formulario = await request.formData();
 		const dni = normalizarDni(String(formulario.get('dni') ?? ''));
 
-		const rechazar = (estado: number, mensaje: string) => fail(estado, { mensaje, exito: null });
+		const rechazar = (estado: number, mensaje: string) =>
+			fail(estado, { mensaje, exito: null, delDocente: true });
 
 		if (!dniValido(dni)) return rechazar(400, 'Ingresá el documento, sin puntos.');
 
