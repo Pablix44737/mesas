@@ -5,7 +5,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import Icono from '$lib/Icono.svelte';
 	import { dniValido, normalizarDni } from '$lib/dni';
-	import { iconoDeRol, queHaceElRol } from '$lib/roles';
+	import ElegirRol from '$lib/ElegirRol.svelte';
 
 	let { data, form } = $props();
 
@@ -24,13 +24,6 @@
 		(form?.mensaje && form.campo === campo && !corregidos[campo] ? form.mensaje : null);
 	const errorGeneral = $derived(form?.mensaje && !form.campo ? form.mensaje : null);
 
-	const grupos = $derived(
-		[
-			{ titulo: 'Observás el escenario', roles: data.roles.filter((rol) => rol.observador) },
-			{ titulo: 'Participás del escenario', roles: data.roles.filter((rol) => !rol.observador) }
-		].filter((grupo) => grupo.roles.length > 0)
-	);
-
 	const pendientes = $derived(data.corrida && form?.pendientes?.length ? form.pendientes : null);
 	const raiz = $derived(`/m/${data.curso.codigo}/${data.mesa.numero}`);
 
@@ -41,8 +34,7 @@
 		corregidos.dni = true;
 	}
 
-	function elegirRol(codigo: string) {
-		rolElegido = codigo;
+	function elegirRol() {
 		delete errores.rolCodigo;
 		corregidos.rolCodigo = true;
 	}
@@ -228,42 +220,13 @@
 					{/if}
 				</div>
 
-				<fieldset class="sumarse-roles" aria-describedby="rol-error">
-					<legend>Tu rol en el ciclo {data.corrida.numero}</legend>
-					{#each grupos as grupo (grupo.titulo)}
-						<p class="rotulo-chico">{grupo.titulo}</p>
-						{#each grupo.roles as rol (rol.codigo)}
-							<label
-								class="sumarse-rol"
-								class:observa={rol.observador}
-								class:invalido={Boolean(errorDe('rolCodigo'))}
-							>
-								<input
-									type="radio"
-									name="rolCodigo"
-									value={rol.codigo}
-									checked={rolElegido === rol.codigo}
-									onchange={() => elegirRol(rol.codigo)}
-								/>
-								<span class="sumarse-rol-icono">
-									<Icono nombre={iconoDeRol[rol.codigo] ?? 'operador'} tamano={22} grosor={2} />
-								</span>
-								<span class="sumarse-rol-texto">
-									<strong>{rol.nombre}</strong>
-									<span>{queHaceElRol[rol.codigo] ?? ''}</span>
-								</span>
-								<span class="sumarse-rol-marca">
-									<Icono nombre="tilde" tamano={14} grosor={3.5} />
-								</span>
-							</label>
-						{/each}
-					{/each}
-					{#if errorDe('rolCodigo')}
-						<p class="campo-error" id="rol-error">
-							<Icono nombre="error" tamano={16} />{errorDe('rolCodigo')}
-						</p>
-					{/if}
-				</fieldset>
+				<ElegirRol
+					roles={data.roles}
+					leyenda="Tu rol en el ciclo {data.corrida.numero}"
+					bind:elegido={rolElegido}
+					error={errorDe('rolCodigo')}
+					onelegir={elegirRol}
+				/>
 
 				<div class="sumarse-accion">
 					<button class="boton enviar bloque" type="submit" disabled={enviando}>

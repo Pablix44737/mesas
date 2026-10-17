@@ -984,21 +984,6 @@ fieldset.roles.invalido legend {
 	transition: width 200ms ease-out;
 }
 
-/* Bloque pegajoso de progreso mientras se recorre un checklist largo. */
-.progreso-fijo {
-	position: sticky;
-	top: var(--barra-alto);
-	z-index: 20;
-	margin: 0 calc(var(--e-4) * -1) var(--e-4);
-	padding: var(--e-3) var(--e-4) var(--e-2);
-	background: var(--superficie);
-	border-bottom: 1px solid var(--borde);
-}
-
-.progreso-fijo .barra {
-	margin-bottom: 0;
-}
-
 .resultado {
 	display: flex;
 	align-items: baseline;
@@ -1027,109 +1012,6 @@ fieldset.roles.invalido legend {
 	display: grid;
 	gap: var(--e-2);
 	margin-bottom: var(--e-5);
-}
-
-.items form {
-	margin: 0;
-}
-
-/* Cada ítem pide una decisión: «Hizo» o «No hizo». Sin marcar no es lo mismo
-   que «No hizo», por eso las dos son botones y ninguna viene elegida. */
-.item {
-	padding: var(--e-3) var(--e-4) var(--e-4);
-	background: var(--superficie);
-	border: 1px solid var(--borde);
-	border-left: 3px solid var(--borde-fuerte);
-	border-radius: var(--r-lg);
-	/* Al llevar al primer ítem sin marcar, que no quede tapado por el progreso. */
-	scroll-margin-top: calc(var(--barra-alto) + 96px);
-	transition:
-		background-color 160ms ease,
-		border-color 160ms ease;
-}
-
-.item.hizo {
-	background: var(--verde-claro);
-	border-color: var(--verde);
-	border-left-color: var(--verde-oscuro);
-}
-
-.item.no-hizo {
-	background: var(--error-claro);
-	border-color: var(--error-borde);
-	border-left-color: var(--error);
-}
-
-.item.falta {
-	background: var(--alerta-claro);
-	border-color: var(--alerta-borde);
-	border-left-color: var(--alerta);
-}
-
-.item-enunciado {
-	display: flex;
-	align-items: flex-start;
-	gap: var(--e-3);
-	margin-bottom: var(--e-3);
-	font-size: 16px;
-	line-height: 22px;
-}
-
-.item-enunciado .texto {
-	flex: 1 1 auto;
-}
-
-.decision {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: var(--e-2);
-}
-
-.decision form {
-	margin: 0;
-}
-
-.decision button {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	gap: var(--e-2);
-	width: 100%;
-	min-height: 44px;
-	padding: 8px var(--e-3);
-	font: inherit;
-	font-size: 15px;
-	font-weight: 600;
-	background: var(--superficie);
-	border: 1px solid var(--borde-fuerte);
-	border-radius: var(--r-md);
-	color: var(--tinta-suave);
-	cursor: pointer;
-	transition:
-		background-color 160ms ease,
-		border-color 160ms ease,
-		color 160ms ease;
-}
-
-.decision .opcion-hizo[aria-pressed='true'] {
-	background: var(--verde-oscuro);
-	border-color: var(--verde-oscuro);
-	color: #fff;
-}
-
-.decision .opcion-no-hizo[aria-pressed='true'] {
-	background: var(--error);
-	border-color: var(--error);
-	color: #fff;
-}
-
-.decision button:disabled {
-	cursor: default;
-}
-
-/* Enviado, queda a la vista solo lo que se eligió. */
-.decision button:disabled:not([aria-pressed='true']) {
-	opacity: 0.45;
 }
 
 .peso {
@@ -1744,10 +1626,9 @@ fieldset.roles.invalido legend {
 }
 
 /* Un bloque que no es parte de lo que la pantalla viene haciendo sino de lo que
-   sigue después —deshacerlo, o pasar a la corrida siguiente—, separado con una
-   línea para que no se lea como un paso más de lo de arriba. */
-.dar-de-baja,
-.avanzar {
+   sigue después —deshacerlo—, separado con una línea para que no se lea como un
+   paso más de lo de arriba. */
+.dar-de-baja {
 	margin-top: var(--e-8);
 	padding-top: var(--e-5);
 	border-top: 1px solid var(--borde);
@@ -3280,12 +3161,8 @@ input.entrar-numero[aria-invalid='true'] {
 	cursor: pointer;
 }
 
-/* Dos grupos que antes iban dentro de una tarjeta: el checklist que alguien dejó
-   a medias y el cierre de un checklist en construcción. En los dos casos lo que
-   va adentro —un aviso, un botón— ya trae su propio marco, así que la tarjeta
-   sumaba un recuadro sin agrupar nada que no se entendiera solo. Queda el
-   espaciado, que es lo único que hacía falta. */
-.pendiente-sin-enviar,
+/* El cierre de un checklist en construcción: lo que va adentro —un aviso, un
+   botón— ya trae su propio marco, así que alcanza con el espaciado. */
 .cerrar-checklist {
 	margin-bottom: var(--e-4);
 }
@@ -3395,9 +3272,13 @@ input.sumarse-dni[aria-invalid='true'] {
 }
 
 .sumarse-roles .rotulo-chico {
-	margin-top: 6px;
+	margin: 6px 0 0;
 	padding: 0 2px;
+	color: var(--tinta-suave);
 	font-size: 13px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
 }
 
 .sumarse-rol {
@@ -3653,6 +3534,936 @@ input.sumarse-dni[aria-invalid='true'] {
 		border-top: 0;
 		background: none;
 		box-shadow: none;
+	}
+}
+
+/* --- mi rol en el ciclo (participante): el checklist y el paso al ciclo siguiente ---
+   Una columna de 680px como máximo. Mientras se marca, el progreso y «Enviar» van
+   en una barra pegada abajo que, al final de la lista, queda en su lugar. */
+
+.cotejo-pagina {
+	min-height: 100vh;
+	background: var(--fondo);
+}
+
+.mesa-cabecera-dentro.cotejo-angosto,
+.entrar-cuerpo.cotejo-angosto {
+	max-width: 680px;
+}
+
+.cotejo-pagina .entrar-cuerpo {
+	gap: 14px;
+	padding-bottom: var(--e-6);
+}
+
+.cotejo-pagina .rotulo-chico {
+	margin: 0;
+	color: var(--tinta-suave);
+	font-size: 13px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.cotejo-pagina .dialogo-error {
+	margin: 0;
+}
+
+.cotejo-suave {
+	margin: 0;
+	color: var(--tinta-suave);
+	font-size: 15px;
+	text-wrap: pretty;
+}
+
+/* Quién soy */
+
+.cotejo-yo {
+	display: flex;
+	align-items: center;
+	gap: var(--e-3);
+	padding: var(--e-3) 14px;
+}
+
+.cotejo-yo p {
+	margin: 0;
+}
+
+.cotejo-yo-icono {
+	display: flex;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	border-radius: var(--r-md);
+	background: var(--superficie-media);
+	color: var(--tinta-suave);
+}
+
+.cotejo-yo-icono.evalua {
+	background: var(--azul-claro);
+	color: var(--azul);
+}
+
+.cotejo-yo-intro {
+	color: var(--tinta-suave);
+	font-size: 13px;
+	font-weight: 500;
+}
+
+.cotejo-yo-nombre {
+	font-size: 17px;
+	font-weight: 700;
+	line-height: 1.25;
+}
+
+.cotejo-yo-detalle {
+	color: var(--tinta-suave);
+	font-size: 14px;
+}
+
+/* Checklists sin enviar de ciclos anteriores */
+
+.cotejo-pendiente {
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-3);
+	padding: 14px;
+	border-radius: var(--r-lg);
+	background: var(--alerta-claro);
+}
+
+.cotejo-pendiente p {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	margin: 0;
+	font-size: 15px;
+	text-wrap: pretty;
+}
+
+.cotejo-pendiente p > .icono {
+	margin-top: 1px;
+	color: var(--alerta);
+}
+
+.cotejo-pendiente strong {
+	font-weight: 700;
+}
+
+.boton.cotejo-pendiente-boton {
+	min-height: 48px;
+	border-color: var(--alerta);
+	background: var(--superficie);
+	color: var(--tinta);
+}
+
+.boton.cotejo-pendiente-boton:hover:not(:disabled) {
+	background: #fffaf2;
+}
+
+/* Planificación (facilitador) */
+
+.cotejo-planificacion {
+	display: flex;
+	align-items: center;
+	gap: var(--e-3);
+	min-height: 64px;
+	padding: 10px 14px;
+	border: 1px solid var(--borde);
+	border-radius: var(--r-lg);
+	background: var(--superficie);
+	color: var(--tinta);
+	text-decoration: none;
+}
+
+.cotejo-planificacion:hover {
+	border-color: var(--azul);
+}
+
+.cotejo-planificacion-icono {
+	display: flex;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	border-radius: var(--r-md);
+	background: var(--azul-claro);
+	color: var(--azul);
+}
+
+.cotejo-planificacion-texto {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.cotejo-planificacion-texto strong {
+	font-size: 16px;
+	font-weight: 700;
+}
+
+.cotejo-planificacion-texto span {
+	color: var(--azul);
+	font-size: 14px;
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+.cotejo-planificacion > .icono {
+	color: var(--tinta-suave);
+}
+
+.cotejo-nota {
+	margin: 0;
+	padding: 14px var(--e-4);
+	color: var(--tinta-suave);
+	font-size: 15px;
+	text-wrap: pretty;
+}
+
+/* Tarjetas de un bloque: durante el ciclo, el ciclo siguiente, conducir la mesa */
+
+.cotejo-bloque {
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-3);
+	padding: 18px var(--e-4) var(--e-4);
+}
+
+.cotejo-bloque h2 {
+	margin: 0;
+	font-family: var(--fuente-titulo);
+	font-size: 20px;
+	font-weight: 700;
+	line-height: 1.25;
+}
+
+.cotejo-bloque > p:not([class]) {
+	margin: 0;
+	font-size: 16px;
+	text-wrap: pretty;
+}
+
+.cotejo-bloque .boton {
+	min-height: 48px;
+}
+
+.cotejo-bloque .boton.enviar {
+	min-height: 52px;
+	font-size: 16px;
+	font-weight: 700;
+}
+
+.cotejo-cerrada {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 0;
+	font-size: 16px;
+	font-weight: 600;
+}
+
+.cotejo-cerrada .icono {
+	color: var(--tinta-suave);
+}
+
+.cotejo-avanzar {
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-3);
+}
+
+.cotejo-avanzar .sumarse-roles legend {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+}
+
+.boton.enviar.cotejo-entrar {
+	min-height: 56px;
+	margin-top: 6px;
+	font-size: 17px;
+}
+
+/* Checklist enviado */
+
+.cotejo-enviado {
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-3);
+	padding: var(--e-4);
+}
+
+.cotejo-enviado-aviso {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	margin: 0;
+	color: #3d6a06;
+	font-size: 15px;
+	font-weight: 600;
+	text-wrap: pretty;
+}
+
+.cotejo-enviado-puntaje {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: var(--e-1) var(--e-3);
+	margin: 0;
+	padding-top: var(--e-3);
+	border-top: 1px solid var(--borde);
+}
+
+.cotejo-enviado-puntaje strong {
+	font-family: var(--fuente-titulo);
+	font-size: 30px;
+	font-weight: 800;
+	line-height: 1;
+}
+
+.cotejo-enviado-puntaje span {
+	color: var(--tinta-suave);
+	font-size: 15px;
+}
+
+/* La lista */
+
+.cotejo-lista {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.cotejo-lista-cabecera {
+	padding: var(--e-1) 2px 2px;
+}
+
+.cotejo-lista-cabecera h2 {
+	margin: 2px 0 0;
+	font-family: var(--fuente-titulo);
+	font-size: 21px;
+	font-weight: 700;
+	line-height: 1.25;
+	text-wrap: pretty;
+}
+
+.cotejo-lista-cabecera .cotejo-suave {
+	margin-top: 6px;
+}
+
+.cotejo-item {
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-3);
+	padding: 14px 14px 14px var(--e-3);
+	border: 1px solid var(--borde-fuerte);
+	border-radius: var(--r-lg);
+	background: var(--superficie);
+	scroll-margin: var(--e-3) 0 200px;
+}
+
+.cotejo-item.marcado {
+	border-color: var(--borde);
+}
+
+.cotejo-item.seguis {
+	border-color: var(--azul);
+	box-shadow: inset 0 0 0 1px var(--azul);
+}
+
+.cotejo-item.falta {
+	border-color: var(--alerta);
+	background: var(--alerta-claro);
+	box-shadow: inset 0 0 0 1px var(--alerta);
+}
+
+.cotejo-item-fila {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+}
+
+.cotejo-numero {
+	display: flex;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	min-width: 28px;
+	height: 28px;
+	padding: 0 var(--e-1);
+	border: 2px solid var(--azul);
+	border-radius: var(--r-full);
+	background: var(--superficie);
+	color: var(--azul);
+	font-size: 14px;
+	font-weight: 700;
+}
+
+.cotejo-numero.hizo {
+	border-color: var(--verde-oscuro);
+	background: var(--verde-oscuro);
+	color: #fff;
+}
+
+.cotejo-numero.no-hizo {
+	border-color: var(--error);
+	background: var(--error);
+	color: #fff;
+}
+
+.cotejo-item-texto {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 6px;
+	min-width: 0;
+}
+
+.cotejo-item-texto p {
+	margin: 0;
+	font-size: 16px;
+	line-height: 1.45;
+	text-wrap: pretty;
+}
+
+.cotejo-etiqueta {
+	padding: 2px var(--e-2);
+	border-radius: var(--r-full);
+	background: var(--azul);
+	color: #fff;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+}
+
+.cotejo-etiqueta.falta {
+	background: var(--alerta);
+}
+
+.cotejo-peso {
+	color: var(--tinta-suave);
+	font-size: 13px;
+	font-weight: 600;
+}
+
+/* Hizo / No hizo: siempre debajo del texto y a lo ancho, para no tocarlos sin querer. */
+.cotejo-decision {
+	display: flex;
+	gap: 10px;
+}
+
+.cotejo-decision form {
+	display: flex;
+	flex: 1 1 0;
+}
+
+.cotejo-decision button {
+	display: flex;
+	flex: 1 1 auto;
+	align-items: center;
+	justify-content: center;
+	gap: var(--e-2);
+	min-height: 52px;
+	border: 1px solid var(--borde-fuerte);
+	border-radius: var(--r-md);
+	background: var(--superficie);
+	color: var(--tinta);
+	font: inherit;
+	font-size: 16px;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.cotejo-decision .opcion-hizo .icono {
+	color: var(--verde-oscuro);
+}
+
+.cotejo-decision .opcion-no-hizo .icono {
+	color: var(--error);
+}
+
+.cotejo-decision .opcion-hizo:hover {
+	border-color: var(--verde-oscuro);
+}
+
+.cotejo-decision .opcion-no-hizo:hover {
+	border-color: var(--error);
+}
+
+.cotejo-decision .opcion-hizo[aria-pressed='true'] {
+	border-color: var(--verde-oscuro);
+	background: var(--verde-oscuro);
+	color: #fff;
+}
+
+.cotejo-decision .opcion-no-hizo[aria-pressed='true'] {
+	border-color: var(--error);
+	background: var(--error);
+	color: #fff;
+}
+
+.cotejo-decision button[aria-pressed='true'] .icono {
+	color: #fff;
+}
+
+.cotejo-item .campo-error {
+	margin: 0;
+}
+
+/* Ya enviado: la marca como pastilla, a la derecha del texto */
+.cotejo-marca {
+	display: inline-flex;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: var(--e-1);
+	padding: var(--e-1) 10px var(--e-1) var(--e-2);
+	border-radius: var(--r-full);
+	background: var(--error-claro);
+	color: var(--error);
+	font-size: 13px;
+	font-weight: 700;
+	white-space: nowrap;
+}
+
+.cotejo-marca.hizo {
+	background: var(--verde-claro);
+	color: var(--verde-oscuro);
+}
+
+.cotejo-marca:empty {
+	display: none;
+}
+
+/* La barra de abajo, mientras se marca */
+
+.cotejo-barra {
+	position: sticky;
+	bottom: 0;
+	z-index: 2;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	margin: 0 calc(-1 * var(--e-4));
+	padding: 10px var(--e-4) calc(var(--e-4) + env(safe-area-inset-bottom));
+	border-top: 1px solid var(--borde);
+	background: var(--superficie);
+	box-shadow: 0 -6px 18px rgba(18, 48, 63, 0.08);
+}
+
+.cotejo-barra-aviso {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--e-2);
+	margin: 0;
+	padding: 10px var(--e-3);
+	border-radius: var(--r-md);
+	background: var(--alerta-claro);
+	font-size: 14px;
+	font-weight: 500;
+	text-wrap: pretty;
+}
+
+.cotejo-barra-aviso > .icono {
+	margin-top: 1px;
+	color: var(--alerta);
+}
+
+.cotejo-barra-aviso.error {
+	background: var(--error-claro);
+	color: var(--error);
+}
+
+.cotejo-barra-aviso.error > .icono {
+	color: var(--error);
+}
+
+.cotejo-progreso {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.cotejo-progreso-datos {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.cotejo-progreso-datos p {
+	margin: 5px 0 0;
+	color: var(--tinta-suave);
+	font-size: 13px;
+	font-weight: 500;
+}
+
+.cotejo-progreso-fila {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.cotejo-progreso-fila strong {
+	flex: 0 0 auto;
+	font-family: var(--fuente-titulo);
+	font-size: 22px;
+	font-weight: 800;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+.cotejo-progreso-barra {
+	display: flex;
+	flex: 1 1 auto;
+	min-width: 40px;
+	height: 8px;
+	overflow: hidden;
+	border-radius: 4px;
+	background: var(--borde);
+}
+
+.cotejo-progreso-barra .hizo {
+	background: var(--verde-oscuro);
+}
+
+.cotejo-progreso-barra .no-hizo {
+	background: var(--error);
+}
+
+.cotejo-ir {
+	display: inline-flex;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: var(--e-1);
+	min-height: 44px;
+	padding: 0 10px 0 var(--e-3);
+	border: 1px solid var(--borde-fuerte);
+	border-radius: var(--r-md);
+	background: var(--superficie);
+	color: var(--azul);
+	font: inherit;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.cotejo-ir:hover {
+	border-color: var(--azul);
+}
+
+.cotejo-barra .boton.enviar {
+	min-height: 52px;
+	font-size: 17px;
+	font-weight: 700;
+}
+
+.cotejo-resumen strong {
+	color: var(--tinta);
+}
+
+/* --- lo registrado sobre tu ciclo (participante) ---
+   El DNI arriba; después, un bloque por ciclo con el resumen —una fila por
+   checklist— y las mismas tarjetas que ve el líder en «Lo evaluado». En pantallas
+   anchas, las tarjetas van en dos columnas, hasta 1000px en total. */
+
+.consulta-pagina {
+	min-height: 100vh;
+	background: var(--fondo);
+}
+
+.mesa-cabecera-dentro.consulta-ancho,
+.entrar-cuerpo.consulta-ancho {
+	max-width: 1000px;
+}
+
+.consulta-pagina .entrar-cuerpo {
+	padding-bottom: var(--e-10);
+}
+
+.consulta-pagina .rotulo-chico {
+	color: var(--tinta-suave);
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.consulta-titulo p {
+	margin: 0;
+	color: var(--tinta-suave);
+	font-size: 15px;
+	text-wrap: pretty;
+}
+
+.consulta-titulo p:first-child {
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.consulta-titulo h1 {
+	margin: var(--e-1) 0;
+	font-family: var(--fuente-titulo);
+	font-size: 28px;
+	font-weight: 800;
+	line-height: 1.15;
+	letter-spacing: -0.01em;
+	text-wrap: balance;
+}
+
+/* El DNI */
+
+.consulta-dni {
+	padding: var(--e-4);
+}
+
+.consulta-dni label {
+	font-size: 15px;
+}
+
+.consulta-dni-fila {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin-top: 6px;
+}
+
+.consulta-dni-fila input {
+	flex: 1 1 180px;
+	min-width: 0;
+	height: 56px;
+	padding: 0 14px;
+	font-family: var(--fuente-titulo);
+	font-size: 24px;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+}
+
+.consulta-dni-fila input[aria-invalid='true'] {
+	border-width: 2px;
+}
+
+.consulta-dni-fila .boton {
+	flex: 1 1 140px;
+	width: auto;
+	min-height: 56px;
+	font-size: 16px;
+	font-weight: 700;
+}
+
+.consulta-dni-fila .boton.secundario {
+	border-color: var(--azul);
+}
+
+.consulta-dni .dialogo-error {
+	margin-top: var(--e-3);
+}
+
+.consulta-identificado {
+	margin: var(--e-3) 0 0;
+	padding-top: var(--e-3);
+	border-top: 1px solid var(--borde);
+	font-size: 15px;
+}
+
+.consulta-identificado strong {
+	font-weight: 700;
+}
+
+/* Cada ciclo */
+
+.consulta-ciclo {
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-3);
+	min-width: 0;
+}
+
+.consulta-ciclo-cabecera {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px var(--e-3);
+	padding: var(--e-2) 2px 0;
+}
+
+.consulta-ciclo-cabecera h2 {
+	margin: 0;
+	font-family: var(--fuente-titulo);
+	font-size: 24px;
+	font-weight: 800;
+}
+
+.consulta-ciclo-cabecera > span:not(.estado-mesa) {
+	color: var(--tinta-suave);
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.consulta-ciclo-cabecera .estado-mesa {
+	margin-top: 0;
+	padding: 3px 10px 3px var(--e-2);
+	font-size: 13px;
+}
+
+.consulta-ciclo-cabecera .estado-mesa .punto {
+	width: 7px;
+	height: 7px;
+	box-shadow: 0 0 0 2px #d9edb4;
+}
+
+.consulta-vacio {
+	margin: 0;
+	padding: var(--e-5) var(--e-4);
+	border: 1px dashed var(--borde-fuerte);
+	border-radius: var(--r-lg);
+	background: var(--superficie);
+	color: var(--tinta-suave);
+	font-size: 15px;
+	text-align: center;
+}
+
+/* El resumen: sin cabecera, la primera fila no lleva línea arriba. */
+.consulta-resumen {
+	overflow: hidden;
+}
+
+.consulta-resumen li:first-child a {
+	border-top: 0;
+}
+
+.consulta-resumen .resumen-quien .nombre {
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.consulta-comparar-boton {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--e-2);
+	width: 100%;
+	min-height: 52px;
+	padding: 0 var(--e-4);
+	border: 0;
+	border-top: 1px solid var(--borde);
+	background: var(--superficie);
+	color: var(--azul);
+	font: inherit;
+	font-size: 15px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.consulta-comparar-boton:hover,
+.consulta-comparar-boton[aria-expanded='true'] {
+	background: var(--azul-claro);
+}
+
+/* La comparación: ítem × evaluador, con lo que no coincide en ámbar. */
+.consulta-comparar {
+	overflow: hidden;
+}
+
+.consulta-comparar-cabecera {
+	padding: 14px var(--e-4) 10px;
+}
+
+.consulta-comparar-cabecera h3 {
+	margin: 0;
+	font-family: var(--fuente-titulo);
+	font-size: 18px;
+	font-weight: 700;
+	line-height: 1.25;
+}
+
+.consulta-comparar-cabecera p {
+	margin: 2px 0 0;
+	color: var(--tinta-suave);
+	font-size: 14px;
+}
+
+.consulta-comparar-fila {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) repeat(var(--columnas), 56px);
+	border-top: 1px solid var(--borde);
+}
+
+.consulta-comparar-fila.encabezado {
+	background: var(--fondo);
+	font-size: 12px;
+}
+
+.consulta-comparar-fila.encabezado > span {
+	padding: var(--e-2) 2px;
+	font-weight: 700;
+	line-height: 1.2;
+	text-align: center;
+	hyphens: auto;
+}
+
+.consulta-comparar-fila.encabezado > span:first-child {
+	display: flex;
+	align-items: flex-end;
+	padding-left: var(--e-4);
+	color: var(--tinta-suave);
+	font-weight: 600;
+	text-align: left;
+}
+
+.consulta-comparar-fila.difiere {
+	background: var(--alerta-claro);
+}
+
+.consulta-comparar-fila:not(.encabezado) > span:first-child {
+	display: flex;
+	gap: var(--e-2);
+	padding: 10px var(--e-2) 10px var(--e-4);
+	font-size: 14px;
+	line-height: 1.35;
+	text-wrap: pretty;
+}
+
+.consulta-comparar-fila .orden {
+	flex: 0 0 auto;
+	min-width: 18px;
+	color: var(--tinta-suave);
+	font-weight: 700;
+}
+
+.consulta-comparar-fila:not(.encabezado) > span:not(:first-child) {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.consulta-comparar-marca {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	border-radius: 50%;
+	background: var(--error);
+	color: #fff;
+	font-size: 14px;
+	font-weight: 800;
+}
+
+.consulta-comparar-marca.hizo {
+	background: var(--verde-claro);
+	color: var(--verde-oscuro);
+}
+
+@media (min-width: 600px) {
+	.consulta-comparar-fila {
+		grid-template-columns: minmax(0, 1fr) repeat(var(--columnas), 80px);
 	}
 }
 

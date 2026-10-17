@@ -1,10 +1,11 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { enhance } from '$app/forms';
 	import Icono from '$lib/Icono.svelte';
-	import BarraSuperior from '$lib/BarraSuperior.svelte';
+	import ElegirRol from '$lib/ElegirRol.svelte';
 	import { mostrarDni } from '$lib/dni';
 	import { mostrarTamano } from '$lib/planificacion';
-	import { iconoDeRol, llevaChecklist, practicaLaTecnica, queHaceElRol } from '$lib/roles';
+	import { iconoDeRol, llevaChecklist, practicaLaTecnica } from '$lib/roles';
 
 	let { data, form } = $props();
 
@@ -19,24 +20,32 @@
 	 * el servidor la rechaza se vuelve atrás ese ítem.
 	 */
 	let marcas = $state<Record<string, boolean | null>>({});
-	let falloDeMarca = $state<string | null>(null);
+	/** La marca que el servidor rechazó: el error va debajo de ese ítem. */
+	let falloDeMarca = $state<{ itemId: string; mensaje: string } | null>(null);
 	let confirmandoEnvio = $state(false);
 	/** Se intentó enviar con ítems sin marcar: se los resalta hasta completarlos. */
 	let mostrarFaltantes = $state(false);
 	let enviando = $state(false);
 	let avanzando = $state(false);
+	let rolNuevo = $state('');
+	let rolNuevoFalta = $state(false);
+	/** Qué formulario mandó el último `form?.mensaje`, para mostrarlo en su lugar. */
+	let accion = $state<'enviar' | 'avanzar' | null>(null);
 
 	const enviada = $derived(data.enviadaEn !== null);
 	const practica = $derived(practicaLaTecnica(data.participacion.rolCodigo));
 	const evalua = $derived(llevaChecklist(data.participacion.checklistOrigen));
 	// El facilitador es el único que recibe las dos cosas: la planificación para
-	// guiar la corrida y la lista de cotejo de la técnica para evaluarla.
+	// guiar el ciclo y la lista de cotejo de la técnica para evaluarla.
 	const facilita = $derived(data.participacion.rolCodigo === 'facilitador');
+	const raiz = $derived(`/m/${data.curso?.codigo}/${data.mesa.numero}`);
+	const marcando = $derived(evalua && Boolean(data.checklist) && !enviada);
 
 	/** `true` es «Hizo», `false` es «No hizo» y `null`, sin marcar. */
 	const items = $derived(
-		(data.checklist?.items ?? []).map((item) => ({
+		(data.checklist?.items ?? []).map((item, posicion) => ({
 			...item,
+			numero: posicion + 1,
 			hizo: item.id in marcas ? marcas[item.id] : item.hizo
 		}))
 	);
@@ -48,9 +57,16 @@
 		items.reduce((total, item) => total + (item.hizo === true ? item.peso : 0), 0)
 	);
 	const maximo = $derived(data.checklist?.maximo ?? 0);
-	const porcentaje = $derived(maximo > 0 ? Math.round((puntos / maximo) * 100) : 0);
+	const primeroSinMarcar = $derived(items.find((item) => item.hizo === null)?.id ?? null);
 
-	const cifra = (n: number) => Math.round(n * 100) / 100;
+	const cifra = (n: number) => n.toLocaleString('es-AR', { maximumFractionDigits: 2 });
+	const conteos = $derived(`${hechos} hizo · ${noHechos} no hizo`);
+	const parte = (n: number) => (items.length > 0 ? (n / items.length) * 100 : 0);
+
+	const mensajeDe = (de: 'enviar' | 'avanzar') =>
+		form?.mensaje && accion === de ? form.mensaje : null;
+	// Sin JavaScript no se sabe qué formulario respondió: va arriba.
+	const mensajeSuelto = $derived(form?.mensaje && accion === null ? form.mensaje : null);
 
 	/**
 	 * Marca un ítem sin recargar la página. Tocar la marca que ya tiene la quita.
@@ -59,18 +75,23 @@
 	function marcar(item: { id: string; hizo: boolean | null }, elegida: boolean) {
 		const antes = item.hizo;
 		marcas[item.id] = antes === elegida ? null : elegida;
+		if (falloDeMarca?.itemId === item.id) falloDeMarca = null;
 		// Sin `update()`: recargar en cada toque hacía que respuestas fuera de orden
 		// pisaran marcas ya hechas.
 		return async ({ result }: { result: { type: string; data?: Record<string, unknown> } }) => {
 			if (result.type === 'failure') {
 				marcas[item.id] = antes;
-				falloDeMarca =
-					(result.data?.mensaje as string) ?? 'No se pudo registrar la marca. Probá de nuevo.';
+				falloDeMarca = {
+					itemId: item.id,
+					mensaje:
+						(result.data?.mensaje as string) ?? 'No se pudo registrar la marca. Probá de nuevo.'
+				};
 			} else if (result.type === 'error') {
 				marcas[item.id] = antes;
-				falloDeMarca = 'Se perdió la conexión. La marca no quedó registrada.';
-			} else {
-				falloDeMarca = null;
+				falloDeMarca = {
+					itemId: item.id,
+					mensaje: 'Se perdió la conexión. La marca no quedó registrada.'
+				};
 			}
 		};
 	}
@@ -79,19 +100,24 @@
 	const marcaAEnviar = (actual: boolean | null, elegida: boolean) =>
 		actual === elegida ? 'sin_marcar' : elegida ? 'hizo' : 'no_hizo';
 
+	function irAlPrimeroSinMarcar() {
+		if (!primeroSinMarcar) return;
+		document
+			.getElementById(`item-${primeroSinMarcar}`)
+			?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+	}
+
 	function pedirEnvio() {
+		accion = null;
 		if (faltan > 0) {
 			mostrarFaltantes = true;
-			const primero = items.find((item) => item.hizo === null);
-			if (primero) {
-				document
-					.getElementById(`item-${primero.id}`)
-					?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-			}
+			irAlPrimeroSinMarcar();
 			return;
 		}
 		confirmandoEnvio = true;
 	}
+
+	const enfocar = (nodo: HTMLElement) => nodo.focus();
 
 	const fechaDeEnvio = $derived(
 		data.enviadaEn
@@ -108,308 +134,204 @@
 	<title>{data.participacion.rolNombre} — Mesa {data.mesa.numero}</title>
 </svelte:head>
 
-<div class="app">
-	<BarraSuperior
-		volverA={data.volverA}
-		titulo="Mesa {data.mesa.numero}"
-		sub={data.escenario?.nombre ?? ''}
-	>
-		{#snippet derecha()}
-			<span class="chip azul sin-punto">Ciclo {data.corrida.numero}</span>
-		{/snippet}
-	</BarraSuperior>
+{#snippet senal(hizo: boolean)}
+	<Icono nombre={hizo ? 'tilde' : 'cerrar'} tamano={16} grosor={3} />
+{/snippet}
 
-	<div class="envoltorio">
-		<div class="tarjeta">
-			<div class="fila">
-				<span class="avatar-rol" class:gris={!evalua}>
-					<Icono nombre={iconoDeRol[data.participacion.rolCodigo] ?? 'operador'} tamano={22} />
-				</span>
-				<div class="identidad">
-					{#if data.participacion.nombre}
-						<span class="etiqueta">Te identificamos como</span>
-						<span class="nombre">{data.participacion.nombre}</span>
-						<span class="detalle">
-							DNI {mostrarDni(data.participacion.dni)} · {data.participacion.rolNombre}
+<div class="cotejo-pagina">
+	<header class="mesa-cabecera">
+		<div class="mesa-cabecera-dentro cotejo-angosto">
+			<div class="mesa-navegacion">
+				<a class="mesa-volver" href={data.volverA}>
+					<Icono nombre="atras" />
+					{data.conduceLaMesa ? 'Conducir la mesa' : `Mesa ${data.mesa.numero}`}
+				</a>
+			</div>
+			<div class="mesa-titulo-fila">
+				<div class="mesa-titulo">
+					<div class="sumarse-titulo">
+						<h1>Mesa {data.mesa.numero}</h1>
+						<span class="estado-mesa" class:en-curso={data.corrida.habilitada}>
+							{#if data.corrida.habilitada}<span class="punto"></span>{/if}
+							Ciclo {data.corrida.numero}
 						</span>
-					{:else}
-						<span class="etiqueta">Quedaste registrado como</span>
-						<span class="nombre">{data.participacion.rolNombre}</span>
-						<span class="detalle">DNI {mostrarDni(data.participacion.dni)}</span>
+					</div>
+					{#if data.escenario?.nombre}
+						<p class="sumarse-escenario">{data.escenario.nombre}</p>
+					{/if}
+					{#if data.curso?.nombre}
+						<p class="mesa-escenario sumarse-curso">{data.curso.nombre}</p>
 					{/if}
 				</div>
 			</div>
 		</div>
+	</header>
+
+	<main class="entrar-cuerpo cotejo-angosto">
+		<section class="mesa-tarjeta cotejo-yo">
+			<span class="cotejo-yo-icono" class:evalua>
+				<Icono nombre={iconoDeRol[data.participacion.rolCodigo] ?? 'operador'} tamano={22} grosor={2} />
+			</span>
+			<div>
+				{#if data.participacion.nombre}
+					<p class="cotejo-yo-intro">Te identificamos como</p>
+					<p class="cotejo-yo-nombre">{data.participacion.nombre}</p>
+					<p class="cotejo-yo-detalle">
+						DNI {mostrarDni(data.participacion.dni)} · {data.participacion.rolNombre}{data.conduceLaMesa
+							? ' · Conducís la mesa'
+							: ''}
+					</p>
+				{:else}
+					<p class="cotejo-yo-intro">Quedaste registrado como</p>
+					<p class="cotejo-yo-nombre">{data.participacion.rolNombre}</p>
+					<p class="cotejo-yo-detalle">DNI {mostrarDni(data.participacion.dni)}</p>
+				{/if}
+			</div>
+		</section>
 
 		{#if !data.participacion.nombre}
-			<div class="aviso alerta">
+			<div class="entrar-aviso">
 				<Icono nombre="alerta" />
 				<span>
-					<strong>No encontramos el DNI {mostrarDni(data.participacion.dni)} en el padrón.</strong>
-					Podés seguir igual. Si te equivocaste al tipear, avisale al líder de mesa.
+					No encontramos el DNI {mostrarDni(data.participacion.dni)} en el padrón. Podés seguir igual.
+					Si te equivocaste al tipear, avisale al líder de mesa.
 				</span>
 			</div>
 		{/if}
 
 		{#if !data.corrida.habilitada && !enviada}
-			<div class="aviso alerta">
-				<Icono nombre="reloj" />
+			<div class="entrar-aviso">
+				<Icono nombre="candado" />
 				<span>Este ciclo ya fue cerrado por el líder.</span>
 			</div>
 		{/if}
 
-		{#if form?.mensaje || falloDeMarca}
-			<div class="aviso error" role="alert">
-				<Icono nombre="error" />
-				<span>{form?.mensaje ?? falloDeMarca}</span>
-			</div>
+		{#if mensajeSuelto}
+			<p class="dialogo-error" role="alert">
+				<Icono nombre="error" tamano={18} />
+				{mensajeSuelto}
+			</p>
 		{/if}
 
 		{#each data.pendientes as pendiente (pendiente.participacionId)}
-			<div class="pendiente-sin-enviar">
-				<div class="aviso alerta" style="margin: 0 0 12px">
+			<section class="cotejo-pendiente">
+				<p>
 					<Icono nombre="alerta" />
 					<span>
-						<strong>Te quedó un checklist sin enviar</strong> del ciclo
-						{pendiente.corridaNumero}, cuando fuiste {pendiente.rol}:
-						{pendiente.marcados} de {pendiente.items} ítems marcados.
+						Te quedó un checklist sin enviar del ciclo {pendiente.corridaNumero}, cuando fuiste
+						{pendiente.rol}: <strong>{pendiente.marcados} de {pendiente.items} ítems marcados.</strong>
 					</span>
-				</div>
-				<a
-					class="boton enviar bloque"
-					href="/m/{data.curso?.codigo}/{data.mesa.numero}/participacion/{pendiente.participacionId}"
-				>
-					<Icono nombre="enviar" />
+				</p>
+				<a class="boton bloque cotejo-pendiente-boton" href="{raiz}/participacion/{pendiente.participacionId}">
 					Terminar y enviarlo
+					<Icono nombre="avanzar" tamano={18} grosor={2.25} />
 				</a>
-			</div>
+			</section>
 		{/each}
 
 		{#if facilita}
-			<div class="tarjeta">
-				<div class="tarjeta-cabecera">
-					<h2>Planificación del escenario</h2>
-				</div>
-				{#if data.escenario?.planificacion_archivo}
-					<a
-						class="boton secundario bloque"
-						href="/m/{data.curso?.codigo}/{data.mesa.numero}/planificacion"
-						target="_blank"
-						rel="noopener"
-					>
-						<Icono nombre="descargar" />
-						{data.escenario.planificacion_archivo}
-					</a>
-					<p class="detalle" style="margin: 8px 0 0; text-align: center">
-						{mostrarTamano(data.escenario.planificacion_tamano ?? 0)}
-					</p>
-				{:else}
-					<div class="aviso alerta" style="margin: 0">
-						<Icono nombre="alerta" />
-						<span>La planificación de este escenario todavía no está disponible.</span>
-					</div>
-				{/if}
-			</div>
-		{/if}
-
-		{#if evalua}
-			{#if !data.checklist}
-				<div class="aviso alerta">
-					<Icono nombre="alerta" />
-					<span>Todavía no hay un checklist cargado para tu rol. Avisale al líder de mesa.</span>
-				</div>
-			{:else}
-				{#if enviada}
-					<div class="aviso exito" role="status">
-						<Icono nombre="tilde-circulo" />
+			{#if data.escenario?.planificacion_archivo}
+				<a class="cotejo-planificacion" href="{raiz}/planificacion" target="_blank" rel="noopener">
+					<span class="cotejo-planificacion-icono"><Icono nombre="planificacion" tamano={22} /></span>
+					<span class="cotejo-planificacion-texto">
+						<strong>Planificación del escenario</strong>
 						<span>
-							<strong>Checklist enviado</strong> el {fechaDeEnvio}. Ya no admite cambios.
+							{data.escenario.planificacion_archivo} · {mostrarTamano(
+								data.escenario.planificacion_tamano ?? 0
+							)}
 						</span>
-					</div>
-				{/if}
-
-				<h2 class="t-sub" style="margin-bottom: 4px">{data.checklist.nombre}</h2>
-
-				<div class="progreso-fijo">
-					<div class="resultado">
-						<span class="valor">
-							<strong>{cifra(puntos)}</strong> de {cifra(maximo)}
-						</span>
-						<span class="detalle">
-							{hechos} hizo · {noHechos} no hizo{faltan > 0 ? ` · ${faltan} sin marcar` : ''}
-						</span>
-					</div>
-					<div class="barra" role="presentation">
-						<span style="width: {porcentaje}%"></span>
-					</div>
-				</div>
-
-				{#if !enviada}
-					<p class="detalle" style="margin-bottom: 12px">Marcá en cada ítem si lo hizo o no lo hizo.</p>
-				{/if}
-
-				<div class="items">
-					{#each items as item (item.id)}
-						<div
-							class="item"
-							id="item-{item.id}"
-							class:hizo={item.hizo === true}
-							class:no-hizo={item.hizo === false}
-							class:falta={mostrarFaltantes && item.hizo === null}
-						>
-							<div class="item-enunciado">
-								<span class="texto">{item.texto}</span>
-								{#if data.checklist.ponderado}
-									<span class="peso" title="Peso del ítem">{item.peso}</span>
-								{/if}
-							</div>
-							<div class="decision" role="group" aria-label={item.texto}>
-								{#each [true, false] as elegida (elegida)}
-									<form
-										method="POST"
-										action="?/marcar"
-										use:enhance={() => marcar(item, elegida)}
-									>
-										<input type="hidden" name="itemId" value={item.id} />
-										<input type="hidden" name="marca" value={marcaAEnviar(item.hizo, elegida)} />
-										<button
-											type="submit"
-											class={elegida ? 'opcion-hizo' : 'opcion-no-hizo'}
-											aria-pressed={item.hizo === elegida}
-											disabled={enviada}
-										>
-											<Icono nombre={elegida ? 'tilde' : 'cerrar'} tamano={16} grosor={3} />
-											{elegida ? 'Hizo' : 'No hizo'}
-										</button>
-									</form>
-								{/each}
-							</div>
-						</div>
-					{/each}
-				</div>
-
-				{#if !enviada}
-					{#if confirmandoEnvio}
-						<div class="tarjeta">
-							<p>
-								Vas a enviar el checklist con <strong>{hechos} hizo</strong> y
-								<strong>{noHechos} no hizo</strong>, {cifra(puntos)} de {cifra(maximo)} puntos.
-								Después no se puede modificar.
-							</p>
-							<div class="confirmacion">
-								<form
-									method="POST"
-									action="?/enviar"
-									use:enhance={() => {
-										enviando = true;
-										return async ({ update }) => {
-											await update({ reset: false });
-											// Enviado: a partir de acá manda lo que devuelve el servidor.
-											marcas = {};
-											falloDeMarca = null;
-											enviando = false;
-											confirmandoEnvio = false;
-										};
-									}}
-								>
-									<button class="boton enviar bloque" type="submit" disabled={enviando}>
-										<Icono nombre="enviar" />
-										{enviando ? 'Enviando…' : 'Confirmar el envío'}
-									</button>
-								</form>
-								<button
-									class="boton secundario bloque"
-									type="button"
-									onclick={() => (confirmandoEnvio = false)}
-									disabled={enviando}
-								>
-									Volver al checklist
-								</button>
-							</div>
-						</div>
-					{:else}
-						{#if mostrarFaltantes && faltan > 0}
-							<div class="aviso alerta" role="alert">
-								<Icono nombre="alerta" />
-								<span>
-									{faltan === 1
-										? 'Falta marcar 1 ítem: indicá si lo hizo o no lo hizo.'
-										: `Faltan marcar ${faltan} ítems: indicá en cada uno si lo hizo o no lo hizo.`}
-								</span>
-							</div>
-						{/if}
-						<div class="barra-accion">
-							<button class="boton enviar bloque" type="button" onclick={pedirEnvio}>
-								<Icono nombre="enviar" />
-								Enviar checklist
-							</button>
-						</div>
-					{/if}
-				{/if}
-			{/if}
-		{:else if practica}
-			<div class="tarjeta">
-				<div class="tarjeta-cabecera">
-					<h2>Durante el ciclo</h2>
-				</div>
-				<p>Tu rol es practicar la técnica: no vas a usar el sistema mientras la ejecutás.</p>
-				<a class="boton secundario bloque" href="/m/{data.curso?.codigo}/{data.mesa.numero}/consulta">
-					<Icono nombre="resultado" />
-					Ver lo registrado sobre tu ciclo
+					</span>
+					<Icono nombre="externo" tamano={18} />
 				</a>
-			</div>
+			{:else}
+				<p class="mesa-tarjeta cotejo-nota">La planificación de este escenario todavía no está disponible.</p>
+			{/if}
 		{/if}
 
-		<!-- El docente no rota: su lugar de facilitador se le abre en cada corrida que
-		     habilite. Lo que necesita es volver a conducir la mesa, y sin esto quedaba
-		     encerrado acá con la sola flecha de la barra. -->
+		{#if practica}
+			<section class="mesa-tarjeta cotejo-bloque">
+				<h2>Durante el ciclo</h2>
+				<p>Tu rol es practicar la técnica: no vas a usar el sistema mientras la ejecutás.</p>
+				<a class="boton secundario bloque" href="{raiz}/consulta">Ver lo registrado sobre tu ciclo</a>
+			</section>
+		{/if}
+
+		{#if enviada && data.checklist}
+			<section class="mesa-tarjeta cotejo-enviado" role="status">
+				<p class="cotejo-enviado-aviso">
+					<Icono nombre="tilde-circulo" />
+					<span>Checklist enviado el {fechaDeEnvio}. Ya no admite cambios.</span>
+				</p>
+				<p class="cotejo-enviado-puntaje">
+					<strong>{cifra(puntos)} de {cifra(maximo)}</strong>
+					<span>{conteos}</span>
+				</p>
+			</section>
+		{/if}
+
+		<!-- El docente no rota: su lugar de facilitador se le abre en cada ciclo que
+		     habilite. Lo que necesita es volver a conducir la mesa. -->
 		{#if data.conduceLaMesa}
-			<div class="avanzar">
-				<h2 class="t-sub" style="margin-bottom: 12px">Seguís conduciendo la mesa</h2>
-				<a class="boton bloque" href="/mesas/{data.curso?.codigo}/{data.mesa.numero}">
-					<Icono nombre="atras" />
-					Volver a conducir la mesa
-				</a>
-			</div>
-		{:else if enviada}
-			<!-- Enviado el checklist, lo que sigue es la corrida siguiente. Sin esto había
-			     que volver a escanear el QR y tipear el DNI de nuevo para rotar de rol. -->
-			<div class="avanzar">
+			{#if enviada}
+				<section class="mesa-tarjeta cotejo-bloque">
+					<h2>Seguís conduciendo la mesa</h2>
+					<a class="boton enviar bloque" href="/mesas/{data.curso?.codigo}/{data.mesa.numero}">
+						Volver a conducir la mesa
+						<Icono nombre="avanzar" tamano={20} grosor={2.25} />
+					</a>
+				</section>
+			{/if}
+		{:else if enviada || practica}
+			<!-- Lo que sigue es el ciclo siguiente: sin esto había que volver a escanear
+			     el QR y tipear el DNI de nuevo para rotar de rol. -->
+			<section class="mesa-tarjeta cotejo-bloque">
 				{#if data.mesaCerrada}
-					<h2 class="t-sub">La mesa está cerrada</h2>
+					<p class="cotejo-cerrada">
+						<Icono nombre="candado" />
+						La mesa está cerrada.
+					</p>
 				{:else if !data.siguienteCorrida}
-					<h2 class="t-sub">El ciclo {data.corrida.numero} es el que sigue abierto</h2>
-					<p class="detalle" style="margin-bottom: 12px">
+					<h2>El ciclo {data.corrida.numero} es el que sigue abierto</h2>
+					<p class="cotejo-suave">
 						Cuando el líder de mesa habilite el siguiente, vas a poder entrar desde acá.
 					</p>
 					<a
 						class="boton secundario bloque"
-						href="/m/{data.curso?.codigo}/{data.mesa.numero}/participacion/{data.participacion.id}"
+						href="{raiz}/participacion/{data.participacion.id}"
 						data-sveltekit-reload
 					>
-						<Icono nombre="reloj" />
+						<Icono nombre="reabrir" tamano={18} />
 						Buscar de nuevo
 					</a>
 				{:else if data.siguienteCorrida.participacionId}
-					<h2 class="t-sub" style="margin-bottom: 12px">
-						Ya estás en el ciclo {data.siguienteCorrida.numero}
-					</h2>
+					<h2>Ya estás en el ciclo {data.siguienteCorrida.numero}</h2>
 					<a
-						class="boton bloque"
-						href="/m/{data.curso?.codigo}/{data.mesa.numero}/participacion/{data.siguienteCorrida
-							.participacionId}"
+						class="boton enviar bloque"
+						href="{raiz}/participacion/{data.siguienteCorrida.participacionId}"
 					>
 						Ir al ciclo {data.siguienteCorrida.numero}
-						<Icono nombre="adelante" />
+						<Icono nombre="avanzar" tamano={20} grosor={2.25} />
 					</a>
 				{:else}
-					<h2 class="t-sub" style="margin-bottom: 12px">
-						Avanzar al ciclo {data.siguienteCorrida.numero}
-					</h2>
+					<h2>Avanzar al ciclo {data.siguienteCorrida.numero}</h2>
+					{#if mensajeDe('avanzar')}
+						<p class="dialogo-error" role="alert">
+							<Icono nombre="error" tamano={18} />
+							{mensajeDe('avanzar')}
+						</p>
+					{/if}
 					<form
+						class="cotejo-avanzar"
 						method="POST"
 						action="?/avanzar"
-						use:enhance={() => {
+						novalidate
+						use:enhance={({ cancel }) => {
+							if (!rolNuevo) {
+								rolNuevoFalta = true;
+								cancel();
+								return;
+							}
+							accion = 'avanzar';
 							avanzando = true;
 							return async ({ update }) => {
 								await update({ reset: false });
@@ -417,32 +339,215 @@
 							};
 						}}
 					>
-						<fieldset class="roles">
-							<legend>El rol que vas a ocupar en el ciclo {data.siguienteCorrida.numero}</legend>
-							{#each data.roles as rol (rol.codigo)}
-								<label class="rol">
-									<input type="radio" name="rolCodigo" value={rol.codigo} required />
-									<span class="avatar-rol" class:gris={!rol.observador}>
-										<Icono nombre={iconoDeRol[rol.codigo] ?? 'operador'} />
-									</span>
-									<span class="texto">
-										<span class="rol-nombre">{rol.nombre}</span>
-										<span class="detalle">{queHaceElRol[rol.codigo] ?? ''}</span>
-									</span>
-									<Icono nombre="tilde-circulo" clase="marca-elegido" />
-								</label>
-							{/each}
-						</fieldset>
-
-						<div class="barra-accion">
-							<button class="boton bloque" type="submit" disabled={avanzando}>
-								{avanzando ? 'Registrando…' : `Entrar al ciclo ${data.siguienteCorrida.numero}`}
-								{#if !avanzando}<Icono nombre="adelante" />{/if}
-							</button>
-						</div>
+						<ElegirRol
+							roles={data.roles}
+							leyenda="Tu rol en el ciclo {data.siguienteCorrida.numero}"
+							bind:elegido={rolNuevo}
+							error={rolNuevoFalta ? 'Elegí el rol que vas a ocupar en el ciclo nuevo.' : null}
+							onelegir={() => (rolNuevoFalta = false)}
+						/>
+						<button class="boton enviar bloque cotejo-entrar" type="submit" disabled={avanzando}>
+							{avanzando ? 'Registrando…' : `Entrar al ciclo ${data.siguienteCorrida.numero}`}
+							{#if !avanzando}<Icono nombre="avanzar" tamano={20} grosor={2.25} />{/if}
+						</button>
 					</form>
 				{/if}
-			</div>
+			</section>
 		{/if}
-	</div>
+
+		{#if evalua}
+			{#if !data.checklist}
+				<p class="mesa-tarjeta cotejo-nota">
+					Todavía no hay un checklist cargado para tu rol. Avisale al líder de mesa.
+				</p>
+			{:else}
+				<section class="cotejo-lista" aria-labelledby="cotejo-nombre">
+					<div class="cotejo-lista-cabecera">
+						<p class="rotulo-chico">{enviada ? 'Tus marcas' : 'Tu checklist'}</p>
+						<h2 id="cotejo-nombre">{data.checklist.nombre}</h2>
+						{#if !enviada}
+							<p class="cotejo-suave">Marcá en cada ítem si lo hizo o no lo hizo.</p>
+						{/if}
+					</div>
+
+					{#each items as item (item.id)}
+						{@const falta = marcando && mostrarFaltantes && item.hizo === null}
+						{@const seguis =
+							marcando && !mostrarFaltantes && item.id === primeroSinMarcar && faltan < items.length}
+						<article
+							class="cotejo-item"
+							id="item-{item.id}"
+							class:marcado={item.hizo !== null}
+							class:falta
+							class:seguis
+						>
+							<div class="cotejo-item-fila">
+								<span
+									class="cotejo-numero"
+									class:hizo={item.hizo === true}
+									class:no-hizo={item.hizo === false}
+								>
+									{item.numero}
+								</span>
+								<div class="cotejo-item-texto">
+									{#if falta}
+										<span class="cotejo-etiqueta falta">Falta marcar</span>
+									{:else if seguis}
+										<span class="cotejo-etiqueta">Seguís acá</span>
+									{/if}
+									<p>{item.texto}</p>
+									{#if data.checklist.ponderado}
+										<span class="cotejo-peso">Peso {cifra(item.peso)}</span>
+									{/if}
+								</div>
+								{#if enviada}
+									<span class="cotejo-marca" class:hizo={item.hizo === true}>
+										{#if item.hizo !== null}
+											{@render senal(item.hizo)}
+											{item.hizo ? 'Hizo' : 'No hizo'}
+										{/if}
+									</span>
+								{/if}
+							</div>
+
+							{#if !enviada}
+								<div class="cotejo-decision" role="group" aria-label="Ítem {item.numero}">
+									{#each [true, false] as elegida (elegida)}
+										<form
+											method="POST"
+											action="?/marcar"
+											use:enhance={() => marcar(item, elegida)}
+										>
+											<input type="hidden" name="itemId" value={item.id} />
+											<input type="hidden" name="marca" value={marcaAEnviar(item.hizo, elegida)} />
+											<button
+												type="submit"
+												class={elegida ? 'opcion-hizo' : 'opcion-no-hizo'}
+												aria-pressed={item.hizo === elegida}
+											>
+												{@render senal(elegida)}
+												{elegida ? 'Hizo' : 'No hizo'}
+											</button>
+										</form>
+									{/each}
+								</div>
+							{/if}
+
+							{#if falloDeMarca?.itemId === item.id}
+								<p class="campo-error" role="alert">
+									<Icono nombre="error" tamano={16} />{falloDeMarca.mensaje}
+								</p>
+							{/if}
+						</article>
+					{/each}
+				</section>
+
+				{#if marcando}
+					<!-- Fija abajo mientras se marca; al final de la lista queda en su lugar. -->
+					<div class="cotejo-barra">
+						{#if mensajeDe('enviar')}
+							<p class="cotejo-barra-aviso error" role="alert">
+								<Icono nombre="error" tamano={18} />
+								<span>{mensajeDe('enviar')}</span>
+							</p>
+						{:else if mostrarFaltantes && faltan > 0}
+							<p class="cotejo-barra-aviso" role="alert">
+								<Icono nombre="alerta" tamano={18} />
+								<span>
+									{faltan === 1
+										? 'Falta marcar 1 ítem: indicá si lo hizo o no lo hizo.'
+										: `Faltan marcar ${faltan} ítems: indicá en cada uno si lo hizo o no lo hizo.`}
+								</span>
+							</p>
+						{/if}
+
+						<div class="cotejo-progreso">
+							<div class="cotejo-progreso-datos">
+								<div class="cotejo-progreso-fila">
+									<strong>{cifra(puntos)} de {cifra(maximo)}</strong>
+									<span class="cotejo-progreso-barra" aria-hidden="true">
+										<span class="hizo" style="width: {parte(hechos)}%"></span>
+										<span class="no-hizo" style="width: {parte(noHechos)}%"></span>
+									</span>
+								</div>
+								<p>{conteos}{faltan === 0 ? ' · todo marcado' : ''}</p>
+							</div>
+							{#if faltan > 0}
+								<button class="cotejo-ir" type="button" onclick={irAlPrimeroSinMarcar}>
+									{faltan === 1 ? '1 sin marcar' : `${faltan} sin marcar`}
+									<Icono nombre="abajo" tamano={16} grosor={2.25} />
+								</button>
+							{/if}
+						</div>
+
+						<button class="boton enviar bloque" type="button" onclick={pedirEnvio}>
+							Enviar checklist
+							<Icono nombre="enviar" tamano={18} />
+						</button>
+					</div>
+				{/if}
+			{/if}
+		{/if}
+	</main>
 </div>
+
+{#if confirmandoEnvio && marcando}
+	<!-- Hoja que sube desde abajo en el teléfono; diálogo centrado en pantallas anchas. -->
+	<div
+		class="mesa-velo"
+		role="presentation"
+		onclick={(e) => e.target === e.currentTarget && !enviando && (confirmandoEnvio = false)}
+	>
+		<div
+			class="mesa-dialogo"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="envio-titulo"
+			tabindex="-1"
+			use:enfocar
+		>
+			<span class="asa" aria-hidden="true"></span>
+			<h2 id="envio-titulo">¿Enviar el checklist?</h2>
+			<p class="dialogo-texto cotejo-resumen">
+				Vas a enviar el checklist con <strong>{hechos} hizo</strong> y
+				<strong>{noHechos} no hizo</strong>, {cifra(puntos)} de {cifra(maximo)} puntos. Después no se
+				puede modificar.
+			</p>
+			<div class="dialogo-botones">
+				<button
+					class="boton secundario"
+					type="button"
+					onclick={() => (confirmandoEnvio = false)}
+					disabled={enviando}
+				>
+					Volver al checklist
+				</button>
+				<form
+					method="POST"
+					action="?/enviar"
+					use:enhance={() => {
+						accion = 'enviar';
+						enviando = true;
+						return async ({ update, result }) => {
+							await update({ reset: false });
+							enviando = false;
+							confirmandoEnvio = false;
+							if (result.type === 'success') {
+								// Enviado: a partir de acá manda lo que devuelve el servidor.
+								marcas = {};
+								falloDeMarca = null;
+								mostrarFaltantes = false;
+								await tick();
+								window.scrollTo({ top: 0, behavior: 'smooth' });
+							}
+						};
+					}}
+				>
+					<button class="boton enviar" type="submit" disabled={enviando}>
+						{enviando ? 'Enviando…' : 'Confirmar el envío'}
+					</button>
+				</form>
+			</div>
+		</div>
+	</div>
+{/if}

@@ -42,6 +42,7 @@ export const actions: Actions = {
 			return fail(400, {
 				dni,
 				mensaje: 'Ingresá tu DNI, sin puntos.',
+				campo: 'dni',
 				corridas: null,
 				nombre: null
 			});
@@ -69,6 +70,7 @@ export const actions: Actions = {
 				dni,
 				mensaje:
 					'No encontramos ningún ciclo de esta mesa en la que hayas practicado la técnica. Esta consulta es para quien ocupó el rol de operador o de asistente.',
+				campo: '',
 				corridas: null,
 				nombre: null
 			});
@@ -95,6 +97,7 @@ export const actions: Actions = {
 		return {
 			dni,
 			mensaje: null,
+			campo: '',
 			corridas,
 			nombre: identificado ? `${identificado.nombre} ${identificado.apellido}` : null
 		};
