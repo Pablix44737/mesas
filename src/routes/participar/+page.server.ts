@@ -36,10 +36,10 @@ export const actions: Actions = {
 		const valores = { numero: crudo, cursoId };
 
 		if (!UUID.test(cursoId)) {
-			return fail(400, { ...valores, mensaje: 'Elegí el curso al que pertenece tu mesa.' });
+			return fail(400, { ...valores, campo: 'cursoId', mensaje: 'Elegí el curso al que pertenece tu mesa.' });
 		}
 		if (!crudo || !Number.isInteger(numero) || numero <= 0) {
-			return fail(400, { ...valores, mensaje: 'El número de mesa tiene que ser un entero.' });
+			return fail(400, { ...valores, campo: 'numero', mensaje: 'El número de mesa tiene que ser un entero.' });
 		}
 
 		const { data: curso } = await supabase
@@ -49,7 +49,9 @@ export const actions: Actions = {
 			.eq('archivado', false)
 			.maybeSingle();
 
-		if (!curso) return fail(404, { ...valores, mensaje: 'Ese curso ya no está en marcha.' });
+		if (!curso) {
+			return fail(404, { ...valores, campo: 'cursoId', mensaje: 'Ese curso ya no está en marcha.' });
+		}
 
 		const { data: mesa, error: fallo } = await supabase
 			.from('mesas')
@@ -58,10 +60,13 @@ export const actions: Actions = {
 			.eq('numero', numero)
 			.maybeSingle();
 
-		if (fallo) return fail(500, { ...valores, mensaje: fallo.message });
+		if (fallo) {
+			return fail(500, { ...valores, campo: '', mensaje: 'No se pudo buscar la mesa. Probá de nuevo.' });
+		}
 		if (!mesa) {
 			return fail(404, {
 				...valores,
+				campo: 'numero',
 				mensaje: `${curso.nombre} no tiene una mesa ${numero}. Fijate el número en el cartel de tu mesa.`
 			});
 		}

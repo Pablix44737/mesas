@@ -3,7 +3,6 @@
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import Icono from '$lib/Icono.svelte';
-	import BarraSuperior from '$lib/BarraSuperior.svelte';
 
 	let { data, form } = $props();
 
@@ -16,12 +15,23 @@
 	 */
 	let hayLector = $state(false);
 	let escaneando = $state(false);
-	let avisoDeCamara = $state<string | null>(null);
+	/** No se pudo abrir la cámara: el número pasa a ser lo principal. */
+	let camaraFallo = $state(false);
+	/** La cámara leyó un código que no es de una mesa: sigue buscando. */
+	let codigoAjeno = $state(false);
 	let video = $state<HTMLVideoElement | null>(null);
+	let yendo = $state(false);
+	/** Los campos tocados después del último envío: su error ya no aplica. */
+	let corregidos = $state<Record<string, boolean>>({});
 
 	let flujo: MediaStream | null = null;
 	// Fuera de `$state`: sólo corta el bucle de lectura, no pinta nada.
 	let leyendo = false;
+
+	const camaraPrincipal = $derived(hayLector && !camaraFallo);
+	const errorDe = (campo: string) =>
+		form?.mensaje && form.campo === campo && !corregidos[campo] ? form.mensaje : null;
+	const errorGeneral = $derived(form?.mensaje && !form.campo ? form.mensaje : null);
 
 	onMount(() => {
 		hayLector = 'BarcodeDetector' in window;
@@ -52,12 +62,14 @@
 	function cerrarCamara() {
 		leyendo = false;
 		escaneando = false;
+		codigoAjeno = false;
 		flujo?.getTracks().forEach((pista) => pista.stop());
 		flujo = null;
 	}
 
 	async function abrirCamara() {
-		avisoDeCamara = null;
+		camaraFallo = false;
+		codigoAjeno = false;
 		escaneando = true;
 		await tick();
 
@@ -70,8 +82,7 @@
 			await video.play();
 		} catch {
 			cerrarCamara();
-			avisoDeCamara =
-				'No pudimos abrir la cámara. Revisá el permiso del navegador o escribí el número de mesa.';
+			camaraFallo = true;
 			return;
 		}
 
@@ -91,7 +102,7 @@
 					await goto(destino);
 					return;
 				}
-				avisoDeCamara = 'Ese código no es el de una mesa de SIMUNaM.';
+				codigoAjeno = true;
 			}
 		} catch {
 			// Fotograma ilegible (movimiento, poca luz): se intenta con el siguiente.
@@ -106,105 +117,185 @@
 	<title>Entrar a una mesa — SIMUNaM</title>
 </svelte:head>
 
-<div class="app">
-	<BarraSuperior volverA="/" titulo="Entrar a una mesa" sub="Participante" />
-
-	<div class="envoltorio">
-		<div class="tarjeta">
-			<div class="tarjeta-cabecera">
-				<h2>Escaneá el QR de tu mesa</h2>
+<div class="entrar-pagina">
+	<header class="mesa-cabecera">
+		<div class="mesa-cabecera-dentro entrar-angosto">
+			<div class="mesa-navegacion">
+				<a class="mesa-volver" href="/">
+					<Icono nombre="atras" />
+					Inicio
+				</a>
 			</div>
-
-			{#if escaneando}
-				<div class="lector">
-					<!-- svelte-ignore a11y_media_has_caption -->
-					<video bind:this={video} playsinline muted></video>
-					<p class="detalle">Apuntá al código QR que está en tu mesa.</p>
-					<button class="boton secundario bloque" type="button" onclick={cerrarCamara}>
-						Cancelar
-					</button>
+			<div class="mesa-titulo-fila">
+				<div class="mesa-titulo">
+					<h1>Entrar a una mesa</h1>
+					<p class="mesa-escenario">Participante</p>
 				</div>
-			{:else}
-				<p class="ayuda">
-					El QR está pegado en la mesa. Podés leerlo con la cámara de tu teléfono.
-				</p>
-
-				{#if hayLector}
-					<button class="boton bloque" type="button" onclick={abrirCamara}>
-						<Icono nombre="qr" />
-						Abrir la cámara
-					</button>
-				{/if}
-			{/if}
-
-			{#if avisoDeCamara}
-				<div class="aviso alerta" style="margin: 16px 0 0" role="alert">
-					<Icono nombre="alerta" />
-					<span>{avisoDeCamara}</span>
-				</div>
-			{/if}
+			</div>
 		</div>
+	</header>
 
-		<div class="tarjeta">
-			<div class="tarjeta-cabecera">
-				<h2>O entrá por el número</h2>
-			</div>
-
-			{#if form?.mensaje}
-				<div class="aviso error" role="alert">
-					<Icono nombre="error" />
-					<span>{form.mensaje}</span>
+	<main class="entrar-cuerpo entrar-angosto">
+		{#if data.cursos.length === 0}
+			<section class="mesa-tarjeta evaluado-vacio">
+				<span class="evaluado-vacio-icono alerta"><Icono nombre="alerta" tamano={24} /></span>
+				<strong>No hay ningún curso en marcha.</strong>
+				<span>Avisale al líder de mesa.</span>
+			</section>
+		{:else}
+			{#if camaraFallo}
+				<div class="entrar-aviso" role="alert">
+					<Icono nombre="camara-apagada" />
+					<span>
+						No pudimos abrir la cámara. Revisá el permiso del navegador o escribí el número de mesa.
+					</span>
 				</div>
 			{/if}
 
-			<form method="POST" use:enhance>
-				{#if data.cursos.length === 0}
-					<div class="aviso alerta" style="margin: 0">
-						<Icono nombre="alerta" />
-						<span>No hay ningún curso en marcha. Avisale al líder de mesa.</span>
-					</div>
+			{#if hayLector}
+				<button
+					class="entrar-escanear"
+					class:principal={camaraPrincipal}
+					type="button"
+					onclick={abrirCamara}
+				>
+					<span class="entrar-escanear-icono"><Icono nombre="escanear" tamano={32} grosor={2} /></span>
+					<span class="entrar-escanear-texto">
+						<strong>{camaraFallo ? 'Probar de nuevo' : 'Escanear el QR'}</strong>
+						<span>Con la cámara de tu celular</span>
+					</span>
+					<Icono nombre="avanzar" tamano={22} grosor={2.25} />
+				</button>
+
+				<p class="entrar-separador"><span>o con el número de mesa</span></p>
+			{/if}
+
+			<form
+				class="mesa-tarjeta entrar-formulario"
+				method="POST"
+				use:enhance={() => {
+					yendo = true;
+					return async ({ update }) => {
+						await update({ reset: false });
+						yendo = false;
+						corregidos = {};
+					};
+				}}
+			>
+				{#if !hayLector}
+					<h2>¿En qué mesa estás?</h2>
+				{/if}
+
+				{#if errorGeneral}
+					<p class="dialogo-error" role="alert">
+						<Icono nombre="error" tamano={18} />
+						{errorGeneral}
+					</p>
+				{/if}
+
+				{#if data.cursos.length === 1}
+					<input type="hidden" name="cursoId" value={data.cursos[0].id} />
+					<p class="entrar-curso-unico">
+						<Icono nombre="curso" tamano={18} />
+						{data.cursos[0].nombre}
+					</p>
 				{:else}
-					<div class="campo">
-						<label for="cursoId">Tu curso</label>
-						<select id="cursoId" name="cursoId" required>
-							{#if data.cursos.length > 1}
-								<option value="" disabled selected={!form?.cursoId}>Elegí el curso</option>
-							{/if}
+					<div>
+						<label for="cursoId">Curso</label>
+						<select
+							id="cursoId"
+							name="cursoId"
+							onchange={() => {
+								corregidos.cursoId = true;
+								corregidos.numero = true;
+							}}
+							aria-invalid={Boolean(errorDe('cursoId'))}
+							required
+						>
+							<option value="" disabled selected={!form?.cursoId}>Elegí tu curso</option>
 							{#each data.cursos as curso (curso.id)}
-								<option
-									value={curso.id}
-									selected={form?.cursoId === curso.id || data.cursos.length === 1}
-								>
-									{curso.nombre}
-								</option>
+								<option value={curso.id} selected={form?.cursoId === curso.id}>{curso.nombre}</option>
 							{/each}
 						</select>
+						{#if errorDe('cursoId')}
+							<p class="campo-error"><Icono nombre="error" tamano={16} />{errorDe('cursoId')}</p>
+						{/if}
 					</div>
+				{/if}
 
-					<div class="campo">
-						<label for="numero">Número de mesa</label>
-					<p class="ayuda">El que figura en el cartel, junto al código QR.</p>
+				<div>
+					<label for="numero">Número de mesa</label>
 					<input
 						id="numero"
+						class="entrar-numero"
 						name="numero"
-						type="number"
+						type="text"
 						inputmode="numeric"
-						min="1"
-						step="1"
-						placeholder="1"
+						pattern="[0-9]*"
+						autocomplete="off"
 						enterkeyhint="go"
+						placeholder="Ej.: 3"
 						value={form?.numero ?? ''}
-						aria-invalid={Boolean(form?.mensaje)}
+						oninput={() => (corregidos.numero = true)}
+						aria-invalid={Boolean(errorDe('numero'))}
+						aria-describedby="numero-ayuda"
 						required
 					/>
+					{#if errorDe('numero')}
+						<p class="campo-error" id="numero-ayuda">
+							<Icono nombre="error" tamano={16} />{errorDe('numero')}
+						</p>
+					{:else}
+						<p class="ayuda" id="numero-ayuda">El que figura en el cartel, junto al código QR.</p>
+					{/if}
 				</div>
 
-					<button class="boton bloque" type="submit">
-						Ir a la mesa
-						<Icono nombre="adelante" tamano={16} />
-					</button>
-				{/if}
+				<button
+					class="boton bloque"
+					class:enviar={!camaraPrincipal}
+					class:secundario={camaraPrincipal}
+					type="submit"
+					disabled={yendo}
+				>
+					{yendo ? 'Buscando la mesa…' : 'Ir a la mesa'}
+					{#if !yendo}<Icono nombre="avanzar" tamano={20} grosor={2.25} />{/if}
+				</button>
 			</form>
+
+			{#if !hayLector}
+				<p class="entrar-nota">
+					<Icono nombre="camara" />
+					También podés escanear el QR del cartel con la cámara del teléfono.
+				</p>
+			{/if}
+		{/if}
+	</main>
+</div>
+
+{#if escaneando}
+	<!-- La cámara a pantalla completa, con un recuadro que dice dónde va el código. -->
+	<div class="lector-qr" role="dialog" aria-modal="true" aria-label="Escanear el QR">
+		<!-- svelte-ignore a11y_media_has_caption -->
+		<video bind:this={video} playsinline muted></video>
+		<div class="lector-qr-arriba">
+			<p class="lector-qr-indicacion">Apuntá al QR de tu mesa</p>
+			{#if codigoAjeno}
+				<p class="lector-qr-aviso" role="status">
+					<Icono nombre="alerta" tamano={18} />
+					Ese código no es el de una mesa de SIMUNaM.
+				</p>
+			{/if}
+		</div>
+		<div class="lector-qr-centro">
+			<div class="lector-qr-guia" class:ajeno={codigoAjeno} aria-hidden="true">
+				<span></span><span></span><span></span><span></span>
+			</div>
+		</div>
+		<div class="lector-qr-abajo">
+			<button type="button" onclick={cerrarCamara}>
+				<Icono nombre="cerrar" tamano={18} grosor={2.25} />
+				Cancelar
+			</button>
 		</div>
 	</div>
-</div>
+{/if}

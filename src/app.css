@@ -2921,24 +2921,363 @@ input.crear-numero {
 	}
 }
 
-/* --- lector de QR del participante --- */
+/* --- entrar a una mesa (participante) ---
+   Con lector de QR, la cámara es lo principal y el número va como alternativa.
+   Sin lector, o si la cámara no abre, el número pasa a ser lo principal. */
 
-.lector {
+.entrar-pagina {
+	min-height: 100vh;
+	padding-bottom: var(--e-8);
+	background: var(--fondo);
+}
+
+.mesa-cabecera-dentro.entrar-angosto,
+.entrar-cuerpo.entrar-angosto {
+	max-width: 560px;
+}
+
+.entrar-cuerpo {
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-4);
+	box-sizing: border-box;
+	margin: 0 auto;
+	padding: var(--e-4);
+}
+
+.evaluado-vacio-icono.alerta {
+	background: var(--alerta-claro);
+	color: var(--alerta);
+}
+
+.entrar-aviso {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: var(--e-3) 14px;
+	border-radius: var(--r-lg);
+	background: var(--alerta-claro);
+	font-size: 15px;
+	font-weight: 500;
+}
+
+.entrar-aviso > .icono {
+	margin-top: 1px;
+	color: var(--alerta);
+}
+
+.entrar-escanear {
+	display: flex;
+	align-items: center;
+	gap: var(--e-4);
+	min-height: 104px;
+	padding: var(--e-4) var(--e-4) var(--e-4) 18px;
+	border: 0;
+	border-radius: var(--r-lg);
+	background: var(--superficie);
+	box-shadow: inset 0 0 0 1px var(--borde-fuerte);
+	color: var(--tinta);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.entrar-escanear.principal {
+	background: var(--verde);
+	box-shadow: inset 0 -3px 0 rgba(18, 48, 63, 0.14);
+}
+
+.entrar-escanear:hover {
+	filter: brightness(0.97);
+}
+
+.entrar-escanear-icono {
+	display: flex;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	width: 60px;
+	height: 60px;
+	border: 1px solid var(--borde);
+	border-radius: var(--r-lg);
+	background: #fff;
+}
+
+.entrar-escanear.principal .entrar-escanear-icono {
+	border: 0;
+}
+
+.entrar-escanear-texto {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.entrar-escanear-texto strong {
+	font-family: var(--fuente-titulo);
+	font-size: 22px;
+	font-weight: 800;
+	line-height: 1.15;
+}
+
+.entrar-escanear-texto span {
+	color: var(--tinta-suave);
+	font-size: 15px;
+	font-weight: 500;
+}
+
+.entrar-escanear.principal .entrar-escanear-texto span {
+	color: var(--tinta);
+}
+
+.entrar-separador {
+	display: flex;
+	align-items: center;
+	gap: var(--e-3);
+	margin: 0;
+	color: var(--tinta-suave);
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.entrar-separador::before,
+.entrar-separador::after {
+	content: '';
+	flex: 1 1 auto;
+	height: 1px;
+	background: var(--borde-fuerte);
+}
+
+.entrar-formulario {
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-4);
+	padding: 18px var(--e-4) var(--e-4);
+}
+
+.entrar-formulario h2 {
+	margin: 0;
+	font-family: var(--fuente-titulo);
+	font-size: 20px;
+	font-weight: 700;
+}
+
+.entrar-formulario label {
+	font-size: 15px;
+}
+
+.entrar-formulario .ayuda {
+	margin: 6px 0 0;
+	font-size: 14px;
+}
+
+.entrar-formulario select {
+	min-height: 52px;
+}
+
+.entrar-formulario .dialogo-error {
+	margin: 0;
+}
+
+.entrar-curso-unico {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 0;
+	padding: 10px var(--e-3);
+	border-radius: var(--r-md);
+	background: var(--fondo);
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.entrar-curso-unico .icono {
+	color: var(--tinta-suave);
+}
+
+input.entrar-numero {
+	height: 64px;
+	padding: 0 var(--e-4);
+	font-family: var(--fuente-titulo);
+	font-size: 30px;
+	font-weight: 800;
+}
+
+input.entrar-numero[aria-invalid='true'] {
+	border-width: 2px;
+}
+
+.entrar-formulario .boton.secundario {
+	border-color: var(--azul);
+	font-weight: 700;
+}
+
+.entrar-formulario .boton.enviar {
+	font-weight: 700;
+}
+
+.entrar-nota {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	margin: 0;
+	padding: 2px var(--e-1);
+	color: var(--tinta-suave);
+	font-size: 15px;
+}
+
+.entrar-nota .icono {
+	margin-top: 1px;
+}
+
+/* La cámara a pantalla completa. El recuadro guía oscurece lo de afuera con una
+   sombra enorme, así no hace falta recortar el video. */
+.lector-qr {
+	position: fixed;
+	inset: 0;
+	z-index: 60;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	background: #0b1c25;
+	color: #fff;
+}
+
+.lector-qr video {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.lector-qr-arriba,
+.lector-qr-abajo {
+	position: relative;
+	z-index: 1;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: var(--e-3);
+	gap: 10px;
+	padding: var(--e-4);
 	text-align: center;
 }
 
-.lector video {
-	width: 100%;
-	max-width: 320px;
+.lector-qr-arriba {
+	padding-top: calc(var(--e-4) + 28px);
+}
+
+.lector-qr-abajo {
+	padding-bottom: calc(var(--e-6) + env(safe-area-inset-bottom));
+}
+
+.lector-qr-indicacion {
+	margin: 0;
+	font-family: var(--fuente-titulo);
+	font-size: 22px;
+	font-weight: 700;
+	text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.lector-qr-aviso {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--e-2);
+	max-width: 340px;
+	margin: 0;
+	padding: 10px 14px;
+	border-radius: var(--r-lg);
+	background: var(--alerta-claro);
+	color: var(--tinta);
+	font-size: 15px;
+	font-weight: 600;
+	text-align: left;
+}
+
+.lector-qr-aviso .icono {
+	margin-top: 1px;
+	color: var(--alerta);
+}
+
+.lector-qr-centro {
+	position: relative;
+	display: flex;
+	flex: 1 1 auto;
+	align-items: center;
+	justify-content: center;
+}
+
+.lector-qr-guia {
+	--guia: var(--verde);
+	position: relative;
+	width: min(72vw, 260px);
 	aspect-ratio: 1;
-	object-fit: cover;
-	background: var(--tinta);
-	border: 1px solid var(--borde);
-	border-radius: var(--r-md);
+	border-radius: 16px;
+	box-shadow: 0 0 0 9999px rgba(11, 28, 37, 0.55);
+}
+
+.lector-qr-guia.ajeno {
+	--guia: #f0b44c;
+}
+
+.lector-qr-guia span {
+	position: absolute;
+	width: 44px;
+	height: 44px;
+	border: 0 solid var(--guia);
+}
+
+.lector-qr-guia span:nth-child(1) {
+	top: -3px;
+	left: -3px;
+	border-top-width: 5px;
+	border-left-width: 5px;
+	border-top-left-radius: 18px;
+}
+
+.lector-qr-guia span:nth-child(2) {
+	top: -3px;
+	right: -3px;
+	border-top-width: 5px;
+	border-right-width: 5px;
+	border-top-right-radius: 18px;
+}
+
+.lector-qr-guia span:nth-child(3) {
+	bottom: -3px;
+	left: -3px;
+	border-bottom-width: 5px;
+	border-left-width: 5px;
+	border-bottom-left-radius: 18px;
+}
+
+.lector-qr-guia span:nth-child(4) {
+	right: -3px;
+	bottom: -3px;
+	border-right-width: 5px;
+	border-bottom-width: 5px;
+	border-bottom-right-radius: 18px;
+}
+
+.lector-qr-abajo button {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--e-2);
+	min-width: 200px;
+	min-height: 52px;
+	padding: 0 var(--e-6);
+	border: 0;
+	border-radius: var(--r-full);
+	background: #fff;
+	color: var(--tinta);
+	font: inherit;
+	font-size: 16px;
+	font-weight: 700;
+	cursor: pointer;
 }
 
 /* Dos grupos que antes iban dentro de una tarjeta: el checklist que alguien dejó
