@@ -207,6 +207,47 @@ y fue incorporada después.
 
 ## Decisiones de diseño
 
+**El tenant va en cuatro tablas, no en todas.** Multitenencia: cada universidad ve
+lo suyo. `tenant_id` está sólo donde no se deduce de nada más —`cursos`,
+`escenarios`, `checklist_plantillas` y `participantes`—. En el resto ya está
+determinado por una clave foránea: una participación sabe su institución por
+corrida → mesa → curso. Repetirlo ahí sería una dependencia transitiva, que es
+exactamente lo que la tercera forma normal no admite, y las estadísticas que vienen
+después la necesitan limpia. Cuando quieran el tenant plano, va en las vistas, que
+no son relaciones almacenadas y por lo tanto no normalizan nada. `roles`,
+`destinatarios` y `roles_por_destinatario` no llevan tenant: son el modelo MESAS,
+igual para todas; si alguna necesitara los suyos, el patrón sería nulo = común.
+
+**Las claves únicas eran el peligro, y confirmaron el diseño.** De las doce del
+esquema rompían exactamente cuatro, y son las de esas mismas cuatro tablas:
+`participantes.dni` (dos universidades no podrían tener el mismo documento),
+`cursos.nombre`, `escenarios.nombre` y, la peor, el índice parcial del checklist
+común —una sola universidad en todo el sistema habría podido tener un checklist
+vigente del observador del proceso—. Las demás ya estaban acotadas por una clave
+foránea que pertenece a un tenant, así que no necesitaron nada. Que las que rompen
+sean las de las tablas que necesitan la columna no es casualidad: es la señal de que
+la descomposición está bien hecha.
+
+**`cursos.codigo` queda global.** Va en la URL del QR y el alta ya numera las
+colisiones. Meter la institución en la dirección obligaría a reimprimir todos los
+carteles para no ganar nada: un slug no es un secreto.
+
+**Y había cuatro funciones que buscaban sin saber de qué institución.** Funcionaban
+porque hay una sola. Con dos, `plantilla_de_la_participacion()` y
+`asignar_docente_a_la_mesa()` cortan con error —subconsulta de dos filas— y las
+otras dos hacen algo peor, que es seguir: `resolver_identidad_de_participacion()`
+le habría colgado a una participación el nombre de un homónimo de otra universidad,
+y `dar_por_terminado_el_checklist()` habría dejado sin checklist vigente a la otra
+institución al publicar el propio. Verificado con un segundo tenant en una
+transacción revertida: el mismo DNI en los dos padrones resuelve contra el suyo.
+
+**La columna no tiene valor por defecto, a propósito.** Un default haría que un alta
+que se olvidó del tenant funcionara igual, cayendo siempre en la misma institución
+—justo el error que no queremos que pase inadvertido—. Por eso `tenantActual()`
+falla si aparece una segunda institución antes de que la sesión diga a cuál
+pertenece quien administra: es preferible que el alta se plante y no que elija una
+al azar.
+
 **Paleta de la Escuela de Enfermería (UNaM).** Azul `#126199` y verde `#99cc33`,
 tomados del sitio de la institución. El verde de marca sobre blanco da 1.9:1, muy
 por debajo del mínimo legible, así que se usa como superficie y acento (chip del
@@ -701,7 +742,16 @@ supabase/
   aula.
 - **La clave de administración es una sola y compartida.** No hay usuarios ni
   registro de quién hizo qué en la administración. Alcanza para un evento; no para
-  auditar.
+  auditar. **Y es lo que bloquea la multitenencia**: el esquema ya separa las
+  instituciones, pero mientras la sesión no diga a cuál pertenece quien administra,
+  quien tenga la clave administraría todas. `tenantActual()` se niega a dar de alta
+  nada si aparece una segunda institución, justamente para que eso no pase inadvertido.
+- **Las consultas de lista todavía no filtran por institución.** Unas veinte piden
+  «todo X» sin acotar: `/mesas` lista todas las mesas, todos los escenarios y todos
+  los cursos; `/participar`, todos los cursos; `/admin/padron`, todo el padrón. Las
+  otras dos terceras partes de la aplicación resuelven desde la URL y heredan la
+  institución de `mesaDelCurso()`, así que son una lista finita y revisable, no
+  treinta puntos sueltos.
 - **Nada limita los intentos de clave.** Un ataque por fuerza bruta contra
   `/ingresar` no encuentra freno más que la latencia de la red.
 - **Cambiar de rol lo tiene que destrabar el administrador.** Quien se equivoca al

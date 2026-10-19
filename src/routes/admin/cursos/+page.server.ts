@@ -1,5 +1,6 @@
 import { error, fail } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
+import { tenantActual } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -91,7 +92,7 @@ export const actions: Actions = {
 
 		const { error: fallo } = await supabase
 			.from('cursos')
-			.insert({ nombre, codigo, destinado_a: destinadoA });
+			.insert({ nombre, codigo, destinado_a: destinadoA, tenant_id: await tenantActual() });
 
 		if (fallo) {
 			if (fallo.code === '23505') return rechazar(409, `Ya hay un curso que se llama «${nombre}».`);

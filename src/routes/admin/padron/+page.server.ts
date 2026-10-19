@@ -1,5 +1,6 @@
 import { error, fail } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
+import { tenantActual } from '$lib/server/tenant';
 import { dniValido, mostrarDni, normalizarDni } from '$lib/dni';
 import { MAXIMO_DE_FILAS } from '$lib/importar-padron';
 import type { Actions, PageServerLoad } from './$types';
@@ -86,7 +87,7 @@ export const actions: Actions = {
 
 		const { error: fallo } = await supabase
 			.from('participantes')
-			.insert({ dni, nombre, apellido });
+			.insert({ dni, nombre, apellido, tenant_id: await tenantActual() });
 
 		if (fallo) {
 			return fallo.code === '23505'
@@ -135,7 +136,12 @@ export const actions: Actions = {
 			return rechazar(400, `El listado tiene más de ${MAXIMO_DE_FILAS} personas.`);
 		}
 
-		const personas = new Map<string, { dni: string; nombre: string; apellido: string }>();
+		const tenant = await tenantActual();
+
+		const personas = new Map<
+			string,
+			{ dni: string; nombre: string; apellido: string; tenant_id: string }
+		>();
 		for (const fila of filas as Array<Record<string, unknown> | null>) {
 			const dni = normalizarDni(String(fila?.dni ?? ''));
 			const nombre = String(fila?.nombre ?? '').trim();
@@ -143,12 +149,15 @@ export const actions: Actions = {
 			if (!dniValido(dni) || nombre.length < 2 || apellido.length < 2) {
 				return rechazar(400, 'El listado tiene datos inválidos. Volvé a elegir el archivo.');
 			}
-			if (!personas.has(dni)) personas.set(dni, { dni, nombre, apellido });
+			if (!personas.has(dni)) personas.set(dni, { dni, nombre, apellido, tenant_id: tenant });
 		}
 
+		// `onConflict` tiene que nombrar la clave única tal como quedó: el padrón se
+		// repite entre instituciones, así que lo único es (tenant_id, dni) y no el
+		// DNI solo. Con el nombre viejo, PostgREST rechaza el lote entero.
 		const { data: nuevas, error: fallo } = await supabase
 			.from('participantes')
-			.upsert([...personas.values()], { onConflict: 'dni', ignoreDuplicates: true })
+			.upsert([...personas.values()], { onConflict: 'tenant_id,dni', ignoreDuplicates: true })
 			.select('dni');
 
 		if (fallo) return rechazar(500, 'No se pudo incorporar el listado. Intentá de nuevo.');

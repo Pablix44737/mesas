@@ -1,5 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
+import { tenantActual } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
@@ -44,7 +45,7 @@ export const actions: Actions = {
 
 		const { data: escenario, error: fallo } = await supabase
 			.from('escenarios')
-			.insert({ nombre })
+			.insert({ nombre, tenant_id: await tenantActual() })
 			.select('id')
 			.single();
 

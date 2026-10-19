@@ -127,6 +127,7 @@ export type Database = {
 					nombre: string;
 					ponderado: boolean;
 					rol_codigo: string;
+					tenant_id: string;
 				};
 				Insert: {
 					creada_en?: string;
@@ -135,6 +136,7 @@ export type Database = {
 					nombre: string;
 					ponderado?: boolean;
 					rol_codigo: string;
+					tenant_id: string;
 				};
 				Update: {
 					creada_en?: string;
@@ -143,6 +145,7 @@ export type Database = {
 					nombre?: string;
 					ponderado?: boolean;
 					rol_codigo?: string;
+					tenant_id?: string;
 				};
 				Relationships: [
 					{
@@ -198,6 +201,7 @@ export type Database = {
 					planificacion_subida_en: string | null;
 					planificacion_tamano: number | null;
 					planificacion_tipo: string | null;
+					tenant_id: string;
 				};
 				Insert: {
 					checklist_tecnica_id?: string | null;
@@ -210,6 +214,7 @@ export type Database = {
 					planificacion_subida_en?: string | null;
 					planificacion_tamano?: number | null;
 					planificacion_tipo?: string | null;
+					tenant_id?: string;
 				};
 				Update: {
 					checklist_tecnica_id?: string | null;
@@ -222,6 +227,7 @@ export type Database = {
 					planificacion_subida_en?: string | null;
 					planificacion_tamano?: number | null;
 					planificacion_tipo?: string | null;
+					tenant_id?: string;
 				};
 				Relationships: [
 					{
@@ -239,6 +245,7 @@ export type Database = {
 					codigo: string;
 					creado_en: string;
 					destinado_a: string;
+					tenant_id: string;
 					id: string;
 					nombre: string;
 				};
@@ -247,6 +254,7 @@ export type Database = {
 					codigo: string;
 					creado_en?: string;
 					destinado_a: string;
+					tenant_id: string;
 					id?: string;
 					nombre: string;
 				};
@@ -255,6 +263,7 @@ export type Database = {
 					codigo?: string;
 					creado_en?: string;
 					destinado_a?: string;
+					tenant_id?: string;
 					id?: string;
 					nombre?: string;
 				};
@@ -387,6 +396,7 @@ export type Database = {
 					dni: string;
 					id: string;
 					nombre: string;
+					tenant_id: string;
 				};
 				Insert: {
 					apellido: string;
@@ -394,11 +404,42 @@ export type Database = {
 					dni: string;
 					id?: string;
 					nombre: string;
+					tenant_id: string;
 				};
 				Update: {
 					apellido?: string;
 					creado_en?: string;
 					dni?: string;
+					id?: string;
+					nombre?: string;
+					tenant_id?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'participantes_tenant_id_fkey';
+						columns: ['tenant_id'];
+						isOneToOne: false;
+						referencedRelation: 'tenants';
+						referencedColumns: ['id'];
+					}
+				];
+			};
+			tenants: {
+				Row: {
+					codigo: string;
+					creado_en: string;
+					id: string;
+					nombre: string;
+				};
+				Insert: {
+					codigo: string;
+					creado_en?: string;
+					id?: string;
+					nombre: string;
+				};
+				Update: {
+					codigo?: string;
+					creado_en?: string;
 					id?: string;
 					nombre?: string;
 				};
@@ -587,6 +628,7 @@ export type Database = {
 					nombre: string;
 					ponderado: boolean;
 					rol_codigo: string;
+					tenant_id: string;
 				};
 				SetofOptions: {
 					from: '*';

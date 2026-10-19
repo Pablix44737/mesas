@@ -1,5 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
+import { tenantActual } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
@@ -54,7 +55,7 @@ export const actions: Actions = {
 
 		const { data: plantilla, error: fallo } = await supabase
 			.from('checklist_plantillas')
-			.insert({ nombre, rol_codigo: rolCodigo, ponderado })
+			.insert({ nombre, rol_codigo: rolCodigo, ponderado, tenant_id: await tenantActual() })
 			.select('id')
 			.single();
 
