@@ -15,18 +15,33 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  */
 const vacio = { dni: '', nombre: '', apellido: '', campo: '', editando: null as string | null };
 
-export const load: PageServerLoad = async () => {
-	const [{ data: padron, error: fallo }, { data: pendientes }, { data: registros }] =
-		await Promise.all([
-			supabase.from('participantes').select('id, dni, nombre, apellido').order('apellido'),
-			supabase
-				.from('participaciones_sin_resolver')
-				.select('*')
-				.order('dni')
-				.order('mesa_numero')
-				.order('corrida_numero'),
-			supabase.from('participaciones').select('participante_id')
-		]);
+export const load: PageServerLoad = async ({ locals }) => {
+	const tenant = tenantActual(locals);
+
+	const [{ data: padron, error: fallo }, { data: pendientes }] = await Promise.all([
+		supabase
+			.from('participantes')
+			.select('id, dni, nombre, apellido')
+			.eq('tenant_id', tenant)
+			.order('apellido'),
+		supabase
+			.from('participaciones_sin_resolver')
+			.select('*')
+			.eq('tenant_id', tenant)
+			.order('dni')
+			.order('mesa_numero')
+			.order('corrida_numero')
+	]);
+
+	// Los roles ocupados se cuentan contra este padrón: sin acotarlo se traía una
+	// fila por cada participación del sistema para usar sólo las propias.
+	const { data: registros } =
+		(padron ?? []).length > 0
+			? await supabase
+					.from('participaciones')
+					.select('participante_id')
+					.in('participante_id', (padron ?? []).map((p) => p.id))
+			: { data: [] };
 
 	if (fallo) error(500, fallo.message);
 
@@ -205,7 +220,8 @@ export const actions: Actions = {
 	 * números se cuentan antes de tocar nada y se informan después: si no, el
 	 * administrador ve aparecer y desaparecer registros sin saber por qué.
 	 */
-	editar: async ({ request }) => {
+	editar: async ({ request, locals }) => {
+		const tenant = tenantActual(locals);
 		const formulario = await request.formData();
 		const id = String(formulario.get('id') ?? '');
 		const dni = normalizarDni(String(formulario.get('dni') ?? ''));
@@ -225,6 +241,7 @@ export const actions: Actions = {
 			.from('participantes')
 			.select('dni, nombre, apellido')
 			.eq('id', id)
+			.eq('tenant_id', tenant)
 			.maybeSingle();
 
 		if (!antes) return rechazar(404, 'Esa persona ya no está en el padrón.', '');
@@ -259,7 +276,8 @@ export const actions: Actions = {
 		const { error: fallo } = await supabase
 			.from('participantes')
 			.update(cambiaElDni ? { dni, nombre, apellido } : { nombre, apellido })
-			.eq('id', id);
+			.eq('id', id)
+			.eq('tenant_id', tenant);
 
 		if (fallo) {
 			return fallo.code === '23505'
@@ -303,7 +321,8 @@ export const actions: Actions = {
 	 * participaciones y evaluaciones quedan, con el DNI, pero sin nombre. Si se lo
 	 * vuelve a incorporar, se resuelven solas.
 	 */
-	quitar: async ({ request }) => {
+	quitar: async ({ request, locals }) => {
+		const tenant = tenantActual(locals);
 		const formulario = await request.formData();
 		const id = String(formulario.get('id') ?? '');
 
@@ -316,6 +335,7 @@ export const actions: Actions = {
 			.from('participantes')
 			.select('nombre, apellido')
 			.eq('id', id)
+			.eq('tenant_id', tenant)
 			.maybeSingle();
 
 		if (!persona) return rechazar(404, 'Esa persona ya no está en el padrón.');
@@ -325,7 +345,11 @@ export const actions: Actions = {
 			.select('id', { count: 'exact', head: true })
 			.eq('participante_id', id);
 
-		const { error: fallo } = await supabase.from('participantes').delete().eq('id', id);
+		const { error: fallo } = await supabase
+			.from('participantes')
+			.delete()
+			.eq('id', id)
+			.eq('tenant_id', tenant);
 
 		if (fallo) return rechazar(400, 'No se pudo quitar a la persona. Intentá de nuevo.');
 

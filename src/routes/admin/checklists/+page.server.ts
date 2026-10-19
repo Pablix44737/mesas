@@ -3,11 +3,14 @@ import { supabase } from '$lib/server/supabase';
 import { tenantActual } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ locals }) => {
+	const tenant = tenantActual(locals);
+
 	const [{ data: plantillas, error: fallo }, { data: roles }] = await Promise.all([
 		supabase
 			.from('checklist_plantillas')
 			.select('id, nombre, rol_codigo, ponderado, estado, creada_en, rol:roles(nombre)')
+			.eq('tenant_id', tenant)
 			.order('creada_en', { ascending: false }),
 		// Solo los roles observadores llevan checklist.
 		supabase.from('roles').select('codigo, nombre').eq('observador', true).order('orden')
@@ -15,7 +18,12 @@ export const load: PageServerLoad = async () => {
 
 	if (fallo) error(500, fallo.message);
 
-	const { data: items } = await supabase.from('checklist_items').select('plantilla_id, peso');
+	// Acotado a los checklists de esta institución: sin eso se traía cada criterio
+	// del sistema para después usar sólo los propios.
+	const { data: items } = await supabase
+		.from('checklist_items')
+		.select('plantilla_id, peso')
+		.in('plantilla_id', (plantillas ?? []).map((p) => p.id));
 
 	const conteo = new Map<string, { items: number; maximo: number }>();
 	for (const item of items ?? []) {

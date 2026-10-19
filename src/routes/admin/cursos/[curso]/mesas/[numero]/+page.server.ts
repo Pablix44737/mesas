@@ -1,13 +1,41 @@
 import { error, fail } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
+import { tenantActual } from '$lib/server/tenant';
 import { mostrarDni } from '$lib/dni';
 import { mesaDelCurso } from '$lib/server/mesas';
 import type { Actions, PageServerLoad } from './$types';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export const load: PageServerLoad = async ({ params }) => {
-	const { curso, mesa: encontrada } = await mesaDelCurso(params.curso, params.numero);
+/**
+ * Si ese ciclo —o esa participación— es de esta mesa.
+ *
+ * Los ids de las acciones destructivas vienen del formulario, así que comprobar
+ * la mesa es lo que impide que, cambiándolos, se borre algo de otra institución.
+ * Un ciclo cuelga de la mesa; una participación, del ciclo.
+ */
+async function esDeLaMesa(tabla: 'corridas' | 'participaciones', id: string, mesaId: string) {
+	if (tabla === 'corridas') {
+		const { data } = await supabase
+			.from('corridas')
+			.select('id')
+			.eq('id', id)
+			.eq('mesa_id', mesaId)
+			.maybeSingle();
+		return data !== null;
+	}
+
+	const { data } = await supabase
+		.from('participaciones')
+		.select('id, corrida:corridas!inner(mesa_id)')
+		.eq('id', id)
+		.eq('corridas.mesa_id', mesaId)
+		.maybeSingle();
+	return data !== null;
+}
+
+export const load: PageServerLoad = async ({ params, locals }) => {
+	const { curso, mesa: encontrada } = await mesaDelCurso(params.curso, params.numero, tenantActual(locals));
 
 	const { data: mesa, error: fallo } = await supabase
 		.from('mesas')
@@ -114,13 +142,22 @@ export const actions: Actions = {
 	 * transacción, así el borrado y la reapertura de la anterior no pueden quedar a
 	 * medias y no chocan con un líder que esté habilitando la siguiente.
 	 */
-	eliminarCorrida: async ({ request }) => {
+	eliminarCorrida: async ({ request, params, locals }) => {
+		const { mesa } = await mesaDelCurso(params.curso, params.numero, tenantActual(locals));
+
 		const formulario = await request.formData();
 		const id = String(formulario.get('corridaId') ?? '');
 
 		const rechazar = (estado: number, mensaje: string) => fail(estado, { mensaje, exito: null });
 
 		if (!UUID.test(id)) return rechazar(400, 'Ciclo inválido.');
+
+		// Que el ciclo sea de la mesa de la URL, que ya está acotada a la institución
+		// de la sesión: el id viene del formulario y sin esto alcanzaría con mandar
+		// el de un ciclo de otra institución.
+		if (!(await esDeLaMesa('corridas', id, mesa.id))) {
+			return rechazar(404, 'Ese ciclo no es de esta mesa.');
+		}
 
 		const { data, error: fallo } = await supabase.rpc('borrar_corrida', { p_corrida_id: id });
 
@@ -170,13 +207,20 @@ export const actions: Actions = {
 	 * falta liberar: mientras el registro exista, el sistema lo lleva siempre al
 	 * que ya tiene en lugar de dejarlo elegir de nuevo.
 	 */
-	eliminarParticipacion: async ({ request }) => {
+	eliminarParticipacion: async ({ request, params, locals }) => {
+		const { mesa } = await mesaDelCurso(params.curso, params.numero, tenantActual(locals));
+
 		const formulario = await request.formData();
 		const id = String(formulario.get('participacionId') ?? '');
 
 		const rechazar = (estado: number, mensaje: string) => fail(estado, { mensaje, exito: null });
 
 		if (!UUID.test(id)) return rechazar(400, 'Registro inválido.');
+
+		// Mismo motivo que arriba: el id lo manda el formulario.
+		if (!(await esDeLaMesa('participaciones', id, mesa.id))) {
+			return rechazar(404, 'Ese registro no es de esta mesa.');
+		}
 
 		const { data, error: fallo } = await supabase.rpc('borrar_participacion', {
 			p_participacion_id: id

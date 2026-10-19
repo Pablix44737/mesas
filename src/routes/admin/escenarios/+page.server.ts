@@ -3,13 +3,16 @@ import { supabase } from '$lib/server/supabase';
 import { tenantActual } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ locals }) => {
+	const tenant = tenantActual(locals);
+
 	const [{ data: escenarios, error: falloEscenarios }, { data: operacion }] = await Promise.all([
 		supabase
 			.from('escenarios')
 			.select(
 				'id, nombre, disponible, planificacion_archivo, checklist_tecnica:checklist_plantillas(id, nombre)'
 			)
+			.eq('tenant_id', tenant)
 			.order('nombre'),
 		// Los checklists que no cuelgan de un escenario sino de su rol, uno por rol
 		// de checklist común. Son dos: el del facilitador y el del proceso, cada uno
@@ -19,6 +22,7 @@ export const load: PageServerLoad = async () => {
 			.select('id, nombre, rol:roles!inner(nombre, checklist)')
 			.eq('estado', 'disponible')
 			.eq('roles.checklist', 'comun')
+			.eq('tenant_id', tenant)
 	]);
 
 	if (falloEscenarios) error(500, falloEscenarios.message);

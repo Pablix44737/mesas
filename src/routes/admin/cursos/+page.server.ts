@@ -22,22 +22,38 @@ function codigoDesde(nombre: string) {
 	return base.length >= 2 ? base : 'curso';
 }
 
-export const load: PageServerLoad = async () => {
-	const [
-		{ data: cursos, error: fallo },
-		{ data: mesas },
-		{ data: corridas },
-		{ data: enviadas },
-		{ data: destinatarios }
-	] = await Promise.all([
-		supabase.from('cursos').select('*').order('archivado').order('creado_en', { ascending: false }),
-		supabase.from('mesas').select('id, curso_id'),
-		supabase.from('corridas').select('mesa_id'),
-		supabase.from('evaluaciones_enviadas').select('mesa_id'),
+export const load: PageServerLoad = async ({ locals }) => {
+	const tenant = tenantActual(locals);
+
+	// Los cursos primero: las mesas no llevan institución —la heredan del curso—,
+	// así que acotarlas es acotarlas a estos cursos.
+	const { data: cursos, error: fallo } = await supabase
+		.from('cursos')
+		.select('*')
+		.eq('tenant_id', tenant)
+		.order('archivado')
+		.order('creado_en', { ascending: false });
+
+	if (fallo) error(500, fallo.message);
+
+	const idsDeCursos = (cursos ?? []).map((c) => c.id);
+
+	const [{ data: mesas }, { data: destinatarios }] = await Promise.all([
+		idsDeCursos.length > 0
+			? supabase.from('mesas').select('id, curso_id').in('curso_id', idsDeCursos)
+			: Promise.resolve({ data: [] }),
 		supabase.from('destinatarios').select('*').order('orden')
 	]);
 
-	if (fallo) error(500, fallo.message);
+	const idsDeMesas = (mesas ?? []).map((m) => m.id);
+
+	const [{ data: corridas }, { data: enviadas }] =
+		idsDeMesas.length > 0
+			? await Promise.all([
+					supabase.from('corridas').select('mesa_id').in('mesa_id', idsDeMesas),
+					supabase.from('evaluaciones_enviadas').select('mesa_id').in('mesa_id', idsDeMesas)
+				])
+			: [{ data: [] }, { data: [] }];
 
 	// Cuánto trabajo tiene encima cada curso: es lo que distingue una tarjeta de otra.
 	const cursoDeMesa = new Map((mesas ?? []).map((m) => [m.id, m.curso_id]));
@@ -114,7 +130,7 @@ export const actions: Actions = {
 	 * viejas no compitan por la atención con la que está en marcha. Sus mesas y
 	 * evaluaciones siguen consultándose igual.
 	 */
-	archivar: async ({ request }) => {
+	archivar: async ({ request, locals }) => {
 		const formulario = await request.formData();
 		const id = String(formulario.get('id') ?? '');
 		const archivado = formulario.get('archivado') === 'true';
@@ -124,10 +140,13 @@ export const actions: Actions = {
 
 		if (!UUID.test(id)) return rechazar(400, 'Curso inválido.');
 
+		// Acotado a la institución de la sesión: el id viene del formulario, así que
+		// sin esto se podría archivar el curso de otra mandando el suyo.
 		const { data: curso, error: fallo } = await supabase
 			.from('cursos')
 			.update({ archivado })
 			.eq('id', id)
+			.eq('tenant_id', tenantActual(locals))
 			.select('nombre')
 			.maybeSingle();
 

@@ -259,6 +259,19 @@ transacción revertida: el mismo DNI en los dos padrones resuelve contra el suyo
 que se olvidó del tenant funcionara igual, cayendo siempre en la misma institución
 —justo el error que no queremos que pase inadvertido—.
 
+**Lo que filtra no son treinta consultas sueltas, son seis resolvers y las listas.**
+Las pantallas de detalle de la administración resuelven primero —`traerCurso`,
+`traerEscenario`, `traerPlantilla`, `mesaDelCurso`— y todo lo que sigue cuelga de
+eso, así que acotar el resolver acota la pantalla entera. Lo que hubo que tocar uno
+por uno son las listas, que piden «todo X», y **las acciones que reciben un id por
+formulario**: ahí el id no pasó por ningún resolver, así que archivar un curso,
+borrar una mesa, un ciclo o una participación comprueban antes de quién es. Un
+`.eq('id', …)` sin más habría dejado borrar lo de otra institución mandando su id.
+
+Que no exista y que sea de otra institución devuelven lo mismo —404— a propósito:
+distinguirlos convertiría cualquier pantalla en una forma de averiguar qué hay del
+otro lado.
+
 **La institución es parte de la credencial, no un dato que se consulta.** La cookie
 de sesión lleva, firmada, a qué institución pertenece quien administra, y
 `tenantActual(locals)` la lee de ahí sin tocar la base: eso corre en cada alta y el
@@ -764,12 +777,13 @@ supabase/
 - **Dar de alta una institución y fijarle la clave todavía es SQL.** No hay pantalla:
   `insert into tenants` y `fijar_clave_del_tenant(id, clave)`. Es una operación de
   una vez por universidad, pero antes de que entre la segunda conviene tenerla.
-- **Las consultas de lista todavía no filtran por institución.** Unas veinte piden
-  «todo X» sin acotar: `/mesas` lista todas las mesas, todos los escenarios y todos
-  los cursos; `/participar`, todos los cursos; `/admin/padron`, todo el padrón. Las
-  otras dos terceras partes de la aplicación resuelven desde la URL y heredan la
-  institución de `mesaDelCurso()`, así que son una lista finita y revisable, no
-  treinta puntos sueltos.
+- **`/mesas` y `/participar` todavía listan todo de todas las instituciones.** Son
+  las dos pantallas sin sesión, así que no hay «tu institución» contra la cual
+  filtrar. Y `/mesas` deja habilitar ciclos sin credencial. Es la decisión de diseño
+  que falta —subdominio por institución, institución en la URL, o una preferencia
+  guardada— y conviene tomarla antes de que entre la segunda universidad. La
+  administración sí filtra, y las pantallas del participante y del líder que cuelgan
+  de un curso resuelven por su código, que es único en todo el sistema.
 - **Nada limita los intentos de clave.** Un ataque por fuerza bruta contra
   `/ingresar` no encuentra freno más que la latencia de la red.
 - **Cambiar de rol lo tiene que destrabar el administrador.** Quien se equivoca al

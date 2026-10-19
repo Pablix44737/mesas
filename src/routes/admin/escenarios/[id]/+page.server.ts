@@ -1,5 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
+import { tenantActual } from '$lib/server/tenant';
 import {
 	TAMANO_MAXIMO,
 	extensionDe,
@@ -15,13 +16,14 @@ const BUCKET = 'planificaciones';
 /** Todas las acciones devuelven la misma forma, así la página lee `mensaje` y `exito` sin más. */
 const rechazar = (estado: number, mensaje: string) => fail(estado, { mensaje, exito: null });
 
-async function traerEscenario(id: string): Promise<Escenario> {
+async function traerEscenario(id: string, tenantId: string): Promise<Escenario> {
 	if (!UUID.test(id)) error(404, 'El escenario no existe');
 
 	const { data, error: fallo } = await supabase
 		.from('escenarios')
 		.select('*')
 		.eq('id', id)
+		.eq('tenant_id', tenantId)
 		.maybeSingle<Escenario>();
 
 	if (fallo) error(500, fallo.message);
@@ -30,14 +32,17 @@ async function traerEscenario(id: string): Promise<Escenario> {
 	return data;
 }
 
-export const load: PageServerLoad = async ({ params }) => {
-	const escenario = await traerEscenario(params.id);
+export const load: PageServerLoad = async ({ params, locals }) => {
+	const escenario = await traerEscenario(params.id, tenantActual(locals));
 
+	// Los de esta institución: un escenario no puede asociar el checklist de otra,
+	// y el trigger `escenarios_tenant_del_checklist` lo rechazaría igual.
 	const { data: plantillas } = await supabase
 		.from('checklist_plantillas')
 		.select('id, nombre, ponderado')
 		.eq('rol_codigo', 'observador_tecnica')
 		.eq('estado', 'disponible')
+		.eq('tenant_id', escenario.tenant_id)
 		.order('nombre');
 
 	// Cantidad de ítems de cada plantilla, para que el administrador elija con criterio.
@@ -79,8 +84,8 @@ export const actions: Actions = {
 	 * escenario igual se fue: queda un archivo sin nada que lo referencie, que es
 	 * mejor que dejar a medias el borrado de la fila.
 	 */
-	eliminar: async ({ params }) => {
-		const escenario = await traerEscenario(params.id);
+	eliminar: async ({ params, locals }) => {
+		const escenario = await traerEscenario(params.id, tenantActual(locals));
 
 		const { data, error: fallo } = await supabase.rpc('borrar_escenario', {
 			p_escenario_id: escenario.id
@@ -113,8 +118,8 @@ export const actions: Actions = {
 	 * haya que tocarlas. `escenarios.nombre` es único: dos escenarios con el mismo
 	 * título serían indistinguibles en el desplegable de crear una mesa.
 	 */
-	renombrar: async ({ request, params }) => {
-		const escenario = await traerEscenario(params.id);
+	renombrar: async ({ request, params, locals }) => {
+		const escenario = await traerEscenario(params.id, tenantActual(locals));
 
 		const formulario = await request.formData();
 		const nombre = String(formulario.get('nombre') ?? '').trim();
@@ -141,8 +146,8 @@ export const actions: Actions = {
 	},
 
 	/** Asocia (o desasocia) el checklist con que se evalúa la técnica del escenario. */
-	asociarChecklist: async ({ request, params }) => {
-		await traerEscenario(params.id);
+	asociarChecklist: async ({ request, params, locals }) => {
+		await traerEscenario(params.id, tenantActual(locals));
 
 		const formulario = await request.formData();
 		const elegido = String(formulario.get('plantillaId') ?? '');
@@ -158,6 +163,12 @@ export const actions: Actions = {
 			.eq('id', params.id);
 
 		if (fallo) {
+			// El id del checklist viene del formulario. Que sea de otra institución lo
+			// rechaza el trigger `escenarios_tenant_del_checklist`; acá sólo se
+			// traduce, para no responder «intentá de nuevo» a algo que no va a andar.
+			if (fallo.message.includes('otra institucion')) {
+				return rechazar(404, 'Ese checklist no existe.');
+			}
 			return rechazar(400, 'No se pudo asociar el checklist. Intentá de nuevo.');
 		}
 
@@ -170,8 +181,8 @@ export const actions: Actions = {
 	},
 
 	/** Adjunta la planificación que se le presentará al facilitador. */
-	adjuntarPlanificacion: async ({ request, params }) => {
-		const escenario = await traerEscenario(params.id);
+	adjuntarPlanificacion: async ({ request, params, locals }) => {
+		const escenario = await traerEscenario(params.id, tenantActual(locals));
 
 		const formulario = await request.formData();
 		const archivo = formulario.get('planificacion');
@@ -222,8 +233,8 @@ export const actions: Actions = {
 		return { mensaje: null, exito: 'Planificación adjuntada al escenario.' };
 	},
 
-	quitarPlanificacion: async ({ params }) => {
-		const escenario = await traerEscenario(params.id);
+	quitarPlanificacion: async ({ params, locals }) => {
+		const escenario = await traerEscenario(params.id, tenantActual(locals));
 
 		if (!escenario.planificacion_ruta) {
 			return rechazar(409, 'Este escenario no tiene planificación adjunta.');

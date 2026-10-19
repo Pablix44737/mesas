@@ -1,14 +1,15 @@
 import { error } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
+import { tenantActual } from '$lib/server/tenant';
 import { evaluacionesDeLaCorrida } from '$lib/server/evaluaciones';
 import { mesaDelCurso } from '$lib/server/mesas';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, locals }) => {
 	const numeroCorrida = Number(params.corrida);
 	if (!Number.isInteger(numeroCorrida) || numeroCorrida <= 0) error(404, 'Ciclo inexistente');
 
-	const { curso, mesa: encontrada } = await mesaDelCurso(params.curso, params.numero);
+	const { curso, mesa: encontrada } = await mesaDelCurso(params.curso, params.numero, tenantActual(locals));
 
 	const { data: mesa, error: fallo } = await supabase
 		.from('mesas')

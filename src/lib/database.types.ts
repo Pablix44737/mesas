@@ -564,6 +564,7 @@ export type Database = {
 					creada_en: string | null;
 					curso_codigo: string | null;
 					curso_nombre: string | null;
+					tenant_id: string | null;
 					dni: string | null;
 					mesa_id: string | null;
 					mesa_numero: number | null;
