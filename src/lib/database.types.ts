@@ -430,6 +430,7 @@ export type Database = {
 					creado_en: string;
 					id: string;
 					nombre: string;
+					clave_hash: string | null;
 				};
 				Insert: {
 					codigo: string;
@@ -615,6 +616,14 @@ export type Database = {
 				Returns: Json;
 			};
 			quitar_el_docente_de_la_mesa: { Args: { p_mesa_id: string }; Returns: Json };
+			verificar_clave_del_tenant: {
+				Args: { p_tenant_id: string; p_clave: string };
+				Returns: boolean | null;
+			};
+			fijar_clave_del_tenant: {
+				Args: { p_tenant_id: string; p_clave: string };
+				Returns: undefined;
+			};
 			cambiar_el_destinatario: {
 				Args: { p_curso_id: string; p_destinatario: string };
 				Returns: Json;

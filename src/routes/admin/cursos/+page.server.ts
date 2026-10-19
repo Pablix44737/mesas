@@ -72,7 +72,7 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions: Actions = {
-	crear: async ({ request }) => {
+	crear: async ({ request, locals }) => {
 		const formulario = await request.formData();
 		const nombre = String(formulario.get('nombre') ?? '').trim();
 		const destinadoA = String(formulario.get('destinadoA') ?? '');
@@ -92,7 +92,7 @@ export const actions: Actions = {
 
 		const { error: fallo } = await supabase
 			.from('cursos')
-			.insert({ nombre, codigo, destinado_a: destinadoA, tenant_id: await tenantActual() });
+			.insert({ nombre, codigo, destinado_a: destinadoA, tenant_id: tenantActual(locals) });
 
 		if (fallo) {
 			if (fallo.code === '23505') return rechazar(409, `Ya hay un curso que se llama «${nombre}».`);

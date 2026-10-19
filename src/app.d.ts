@@ -2,8 +2,12 @@
 declare global {
 	namespace App {
 		interface Locals {
-			/** Si el pedido trae una sesión de administración válida. */
-			admin: boolean;
+			/**
+			 * La institución de la sesión de administración, o null si el pedido no
+			 * trae una válida. Es a la vez la credencial —hay sesión— y el alcance
+			 * —de quién son los datos que puede ver y crear—.
+			 */
+			tenantId: string | null;
 		}
 		// interface Error {}
 		// interface PageData {}

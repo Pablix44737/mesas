@@ -35,7 +35,7 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions: Actions = {
-	crear: async ({ request }) => {
+	crear: async ({ request, locals }) => {
 		const formulario = await request.formData();
 		const nombre = String(formulario.get('nombre') ?? '').trim();
 
@@ -45,7 +45,7 @@ export const actions: Actions = {
 
 		const { data: escenario, error: fallo } = await supabase
 			.from('escenarios')
-			.insert({ nombre, tenant_id: await tenantActual() })
+			.insert({ nombre, tenant_id: tenantActual(locals) })
 			.select('id')
 			.single();
 

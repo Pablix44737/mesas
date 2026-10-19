@@ -71,7 +71,7 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions: Actions = {
-	incorporar: async ({ request }) => {
+	incorporar: async ({ request, locals }) => {
 		const formulario = await request.formData();
 		const dni = normalizarDni(String(formulario.get('dni') ?? ''));
 		const nombre = String(formulario.get('nombre') ?? '').trim();
@@ -87,7 +87,7 @@ export const actions: Actions = {
 
 		const { error: fallo } = await supabase
 			.from('participantes')
-			.insert({ dni, nombre, apellido, tenant_id: await tenantActual() });
+			.insert({ dni, nombre, apellido, tenant_id: tenantActual(locals) });
 
 		if (fallo) {
 			return fallo.code === '23505'
@@ -118,7 +118,7 @@ export const actions: Actions = {
 	 * navegador. Quien ya esté en el padrón se saltea, aunque se haya sumado entre
 	 * la vista previa y la confirmación.
 	 */
-	importar: async ({ request }) => {
+	importar: async ({ request, locals }) => {
 		const formulario = await request.formData();
 		const rechazar = (estado: number, mensaje: string) =>
 			fail(estado, { ...vacio, mensaje, exito: null });
@@ -136,7 +136,7 @@ export const actions: Actions = {
 			return rechazar(400, `El listado tiene más de ${MAXIMO_DE_FILAS} personas.`);
 		}
 
-		const tenant = await tenantActual();
+		const tenant = tenantActual(locals);
 
 		const personas = new Map<
 			string,

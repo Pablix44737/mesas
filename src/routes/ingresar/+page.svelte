@@ -3,9 +3,13 @@
 	import Icono from '$lib/Icono.svelte';
 	import Marca from '$lib/Marca.svelte';
 
-	let { form } = $props();
+	let { data, form } = $props();
 
 	let entrando = $state(false);
+
+	// Con una sola institución no se pregunta: no hay nada que elegir, y el
+	// servidor la resuelve igual si el campo no viene.
+	const hayQueElegir = $derived(data.instituciones.length > 1);
 </script>
 
 <svelte:head>
@@ -38,6 +42,20 @@
 					};
 				}}
 			>
+				{#if hayQueElegir}
+					<div class="campo">
+						<label for="tenantId">Tu institución</label>
+						<select id="tenantId" name="tenantId" required>
+							<option value="" disabled selected={!form?.tenantId}>Elegí tu institución</option>
+							{#each data.instituciones as institucion (institucion.id)}
+								<option value={institucion.id} selected={form?.tenantId === institucion.id}>
+									{institucion.nombre}
+								</option>
+							{/each}
+						</select>
+					</div>
+				{/if}
+
 				<div class="campo">
 					<label for="clave">Clave de administración</label>
 					<div class="campo-con-icono">

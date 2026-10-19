@@ -36,7 +36,7 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions: Actions = {
-	crear: async ({ request }) => {
+	crear: async ({ request, locals }) => {
 		const formulario = await request.formData();
 		const nombre = String(formulario.get('nombre') ?? '').trim();
 		const rolCodigo = String(formulario.get('rolCodigo') ?? '');
@@ -55,7 +55,7 @@ export const actions: Actions = {
 
 		const { data: plantilla, error: fallo } = await supabase
 			.from('checklist_plantillas')
-			.insert({ nombre, rol_codigo: rolCodigo, ponderado, tenant_id: await tenantActual() })
+			.insert({ nombre, rol_codigo: rolCodigo, ponderado, tenant_id: tenantActual(locals) })
 			.select('id')
 			.single();
 

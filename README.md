@@ -51,11 +51,25 @@ runtime, así que el build no las necesita.
    | -------- | ----- |
    | `SUPABASE_URL` | `https://ihqirdjsrxqovxjwtoto.supabase.co` |
    | `SUPABASE_SERVICE_ROLE_KEY` | la clave `service_role` del dashboard |
-   | `CLAVE_ADMIN` | opcional: la clave de administración (por defecto `centrosimu123`) |
+   | `CLAVE_ADMIN` | de transición: la clave con que cada institución entra una vez (por defecto `centrosimu123`) |
 
    La `service_role` es secreta y sólo se usa del lado del servidor. Si se cargan
    después del primer deploy, hay que volver a desplegar para que las funciones las
-   tomen. Cambiar `CLAVE_ADMIN` invalida sola las sesiones abiertas con la anterior.
+   tomen.
+
+   **La clave de administración es de cada institución**, guardada hasheada en
+   `tenants.clave_hash`. `CLAVE_ADMIN` quedó como clave de transición: vale mientras
+   una institución todavía no fijó la suya, y al usarla queda adoptada como suya —
+   de ahí en más esa variable no tiene efecto sobre ella. Está para que el sistema
+   que ya estaba en marcha no quedara afuera el día que las claves se separaron.
+
+   La firma de la cookie de sesión deriva de `SUPABASE_SERVICE_ROLE_KEY` y no de la
+   clave de administración: con una clave por institución, derivarla de ella
+   obligaría a saber de qué institución es la cookie para poder validarla, que es
+   justamente lo que la firma tiene que probar. Tampoco hay un secreto de firma por
+   defecto en el código: uno conocido permitiría falsificar una sesión de
+   administración de cualquier institución sin saber ninguna clave. A cambio,
+   cambiar una clave ya no corta las sesiones abiertas, que caducan en 12 horas.
 
 A partir de ahí, cada `git push` publica una versión nueva.
 
@@ -243,10 +257,14 @@ transacción revertida: el mismo DNI en los dos padrones resuelve contra el suyo
 
 **La columna no tiene valor por defecto, a propósito.** Un default haría que un alta
 que se olvidó del tenant funcionara igual, cayendo siempre en la misma institución
-—justo el error que no queremos que pase inadvertido—. Por eso `tenantActual()`
-falla si aparece una segunda institución antes de que la sesión diga a cuál
-pertenece quien administra: es preferible que el alta se plante y no que elija una
-al azar.
+—justo el error que no queremos que pase inadvertido—.
+
+**La institución es parte de la credencial, no un dato que se consulta.** La cookie
+de sesión lleva, firmada, a qué institución pertenece quien administra, y
+`tenantActual(locals)` la lee de ahí sin tocar la base: eso corre en cada alta y el
+guardián ya corre en cada pedido. La firma cubre la institución y el vencimiento, así
+que retocar cualquiera de los dos invalida la cookie —comprobado contra el servidor:
+cambiarle la institución a una sesión válida devuelve el redirect a `/ingresar`—.
 
 **Paleta de la Escuela de Enfermería (UNaM).** Azul `#126199` y verde `#99cc33`,
 tomados del sitio de la institución. El verde de marca sobre blanco da 1.9:1, muy
@@ -740,12 +758,12 @@ supabase/
   habilitar corridas. Es deliberado —el líder no tiene por qué recordar una clave
   en medio de la práctica— pero conviene revisarlo si el sistema se usa fuera del
   aula.
-- **La clave de administración es una sola y compartida.** No hay usuarios ni
-  registro de quién hizo qué en la administración. Alcanza para un evento; no para
-  auditar. **Y es lo que bloquea la multitenencia**: el esquema ya separa las
-  instituciones, pero mientras la sesión no diga a cuál pertenece quien administra,
-  quien tenga la clave administraría todas. `tenantActual()` se niega a dar de alta
-  nada si aparece una segunda institución, justamente para que eso no pase inadvertido.
+- **La clave de administración es una por institución, pero compartida dentro de
+  ella.** No hay usuarios ni registro de quién hizo qué. Alcanza para un evento; no
+  para auditar.
+- **Dar de alta una institución y fijarle la clave todavía es SQL.** No hay pantalla:
+  `insert into tenants` y `fijar_clave_del_tenant(id, clave)`. Es una operación de
+  una vez por universidad, pero antes de que entre la segunda conviene tenerla.
 - **Las consultas de lista todavía no filtran por institución.** Unas veinte piden
   «todo X» sin acotar: `/mesas` lista todas las mesas, todos los escenarios y todos
   los cursos; `/participar`, todos los cursos; `/admin/padron`, todo el padrón. Las
