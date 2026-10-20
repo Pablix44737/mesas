@@ -1,10 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
-import {
-	abrirSesionDeAdmin,
-	claveDeTransicionCorrecta,
-	claveDeTransicion
-} from '$lib/server/sesion';
+import { abrirSesionDeAdmin } from '$lib/server/sesion';
 import type { Actions, PageServerLoad } from './$types';
 
 /**
@@ -39,42 +35,24 @@ export const actions: Actions = {
 			if (unica?.length === 1) tenantId = unica[0].id;
 		}
 
-		const rechazar = (estado: number, mensaje: string) =>
-			fail(estado, { tenantId, mensaje });
+		const rechazar = (estado: number, mensaje: string) => fail(estado, { tenantId, mensaje });
 
 		if (!tenantId) return rechazar(400, 'Elegí tu institución.');
 		if (!clave) return rechazar(400, 'Escribí la clave para continuar.');
 
+		/**
+		 * La comparación ocurre en la base: el hash no sale de ahí ni hacia este
+		 * servidor. Toda institución tiene clave desde que se crea, así que no hay
+		 * más que dos resultados posibles —y que la institución no exista, que es
+		 * una excepción y no un «la clave no es correcta»—.
+		 */
 		const { data: valida, error: fallo } = await supabase.rpc('verificar_clave_del_tenant', {
 			p_tenant_id: tenantId,
 			p_clave: clave
 		});
 
 		if (fallo) return rechazar(400, 'Esa institución no existe.');
-
-		/**
-		 * `null` significa que esta institución todavía no fijó su clave. Entonces
-		 * vale por única vez la de transición del entorno, y al usarla queda
-		 * adoptada como la suya: es lo que evita que el sistema que ya estaba en
-		 * marcha quede afuera el día que las claves pasaron a ser por institución.
-		 */
-		if (valida === null) {
-			if (!claveDeTransicionCorrecta(clave)) return rechazar(401, 'La clave no es correcta.');
-
-			const { error: falloAlFijar } = await supabase.rpc('fijar_clave_del_tenant', {
-				p_tenant_id: tenantId,
-				p_clave: claveDeTransicion()
-			});
-
-			if (falloAlFijar) {
-				return rechazar(
-					500,
-					'La clave es correcta pero no se pudo guardar para esta institución. Intentá de nuevo.'
-				);
-			}
-		} else if (!valida) {
-			return rechazar(401, 'La clave no es correcta.');
-		}
+		if (!valida) return rechazar(401, 'La clave no es correcta.');
 
 		abrirSesionDeAdmin(cookies, tenantId);
 		redirect(303, destino(url.searchParams.get('volverA')));

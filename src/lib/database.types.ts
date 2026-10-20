@@ -557,6 +557,19 @@ export type Database = {
 				};
 				Relationships: [];
 			};
+			instituciones_resumen: {
+				Row: {
+					id: string | null;
+					nombre: string | null;
+					codigo: string | null;
+					creado_en: string | null;
+					cursos: number | null;
+					mesas: number | null;
+					escenarios: number | null;
+					padron: number | null;
+				};
+				Relationships: [];
+			};
 			participaciones_sin_resolver: {
 				Row: {
 					corrida_id: string | null;
@@ -619,11 +632,15 @@ export type Database = {
 			quitar_el_docente_de_la_mesa: { Args: { p_mesa_id: string }; Returns: Json };
 			verificar_clave_del_tenant: {
 				Args: { p_tenant_id: string; p_clave: string };
-				Returns: boolean | null;
+				Returns: boolean;
 			};
 			fijar_clave_del_tenant: {
 				Args: { p_tenant_id: string; p_clave: string };
 				Returns: undefined;
+			};
+			crear_institucion: {
+				Args: { p_nombre: string; p_codigo: string; p_clave: string };
+				Returns: Json;
 			};
 			cambiar_el_destinatario: {
 				Args: { p_curso_id: string; p_destinatario: string };

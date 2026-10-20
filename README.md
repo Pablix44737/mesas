@@ -51,25 +51,32 @@ runtime, así que el build no las necesita.
    | -------- | ----- |
    | `SUPABASE_URL` | `https://ihqirdjsrxqovxjwtoto.supabase.co` |
    | `SUPABASE_SERVICE_ROLE_KEY` | la clave `service_role` del dashboard |
-   | `CLAVE_ADMIN` | de transición: la clave con que cada institución entra una vez (por defecto `centrosimu123`) |
+   | `CLAVE_PLATAFORMA` | la clave de `/plataforma`, donde se dan de alta las instituciones |
 
    La `service_role` es secreta y sólo se usa del lado del servidor. Si se cargan
    después del primer deploy, hay que volver a desplegar para que las funciones las
    tomen.
 
    **La clave de administración es de cada institución**, guardada hasheada en
-   `tenants.clave_hash`. `CLAVE_ADMIN` quedó como clave de transición: vale mientras
-   una institución todavía no fijó la suya, y al usarla queda adoptada como suya —
-   de ahí en más esa variable no tiene efecto sobre ella. Está para que el sistema
-   que ya estaba en marcha no quedara afuera el día que las claves se separaron.
+   `tenants.clave_hash`, y se fija al darla de alta: no hay ninguna variable de
+   entorno que abra la administración de nadie.
 
-   La firma de la cookie de sesión deriva de `SUPABASE_SERVICE_ROLE_KEY` y no de la
-   clave de administración: con una clave por institución, derivarla de ella
+   `CLAVE_PLATAFORMA` es otra cosa: es la de la única zona que está por encima de
+   una institución —`/plataforma`, que las da de alta y les restablece la clave—.
+   **No tiene valor por defecto a propósito**: sin la variable configurada esa zona
+   no existe y responde 404, en vez de existir con una clave que está en el código.
+   No hay usuarios ni superadmins en la base; quien tiene esta clave es quien
+   despliega el sistema, que es exactamente quien podría hacer lo mismo por SQL.
+
+   La firma de la cookie de administración deriva de `SUPABASE_SERVICE_ROLE_KEY` y no
+   de la clave de administración: con una clave por institución, derivarla de ella
    obligaría a saber de qué institución es la cookie para poder validarla, que es
    justamente lo que la firma tiene que probar. Tampoco hay un secreto de firma por
    defecto en el código: uno conocido permitiría falsificar una sesión de
    administración de cualquier institución sin saber ninguna clave. A cambio,
    cambiar una clave ya no corta las sesiones abiertas, que caducan en 12 horas.
+   La de plataforma sí incluye la clave en su firma —hay una sola para toda la
+   zona—, así que cambiarla corta en el acto las sesiones abiertas.
 
 A partir de ahí, cada `git push` publica una versión nueva.
 
@@ -278,6 +285,23 @@ de sesión lleva, firmada, a qué institución pertenece quien administra, y
 guardián ya corre en cada pedido. La firma cubre la institución y el vencimiento, así
 que retocar cualquiera de los dos invalida la cookie —comprobado contra el servidor:
 cambiarle la institución a una sesión válida devuelve el redirect a `/ingresar`—.
+
+**El superadmin es el entorno, no una fila.** Dar de alta una institución exige una
+autoridad por encima de todas, y esa autoridad ya existía: quien despliega el
+sistema. En vez de inventarle una tabla de usuarios —la primera del proyecto, para
+una operación que pasa una vez por universidad— hay una zona `/plataforma` con su
+propia clave en `CLAVE_PLATAFORMA`, su propia cookie y ninguna institución adentro.
+Sin la variable configurada la zona responde 404, para no anunciar que hay una puerta
+esperando una clave. Si algún día el alta la tiene que dar alguien que no despliega,
+se agrega la tabla y cambia solo cómo se autentica: la zona ya está.
+
+**Y la institución dejó de poder nacer sin clave.** `tenants.clave_hash` era nulo
+mientras una institución no fijaba la suya, y en ese caso el ingreso aceptaba la
+`CLAVE_ADMIN` del entorno —que tenía un valor por defecto en el código—. Eso existía
+para que el sistema en marcha no quedara afuera el día que las claves se separaron, y
+con una sola institución era justamente el objetivo; con dos habría sido una puerta
+abierta a la nueva. El alta crea la fila y el hash en la misma transacción, la columna
+es `not null`, y la rama de transición se fue junto con la variable.
 
 **Paleta de la Escuela de Enfermería (UNaM).** Azul `#126199` y verde `#99cc33`,
 tomados del sitio de la institución. El verde de marca sobre blanco da 1.9:1, muy
@@ -774,9 +798,9 @@ supabase/
 - **La clave de administración es una por institución, pero compartida dentro de
   ella.** No hay usuarios ni registro de quién hizo qué. Alcanza para un evento; no
   para auditar.
-- **Dar de alta una institución y fijarle la clave todavía es SQL.** No hay pantalla:
-  `insert into tenants` y `fijar_clave_del_tenant(id, clave)`. Es una operación de
-  una vez por universidad, pero antes de que entre la segunda conviene tenerla.
+- **Nada limita los intentos de clave en `/plataforma` tampoco.** Es la misma
+  carencia que en `/ingresar`, con más en juego: desde ahí se dan de alta
+  instituciones y se restablecen claves.
 - **`/mesas` y `/participar` todavía listan todo de todas las instituciones.** Son
   las dos pantallas sin sesión, así que no hay «tu institución» contra la cual
   filtrar. Y `/mesas` deja habilitar ciclos sin credencial. Es la decisión de diseño

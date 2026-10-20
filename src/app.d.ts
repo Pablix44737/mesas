@@ -8,6 +8,12 @@ declare global {
 			 * —de quién son los datos que puede ver y crear—.
 			 */
 			tenantId: string | null;
+			/**
+			 * Si el pedido trae una sesión de plataforma válida: la zona que da de
+			 * alta instituciones y les restablece la clave. No es una institución ni
+			 * un usuario, así que no tiene más que decir que sí o no.
+			 */
+			plataforma: boolean;
 		}
 		// interface Error {}
 		// interface PageData {}
