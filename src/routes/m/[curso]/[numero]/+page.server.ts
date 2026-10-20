@@ -29,7 +29,7 @@ async function traerMesaYCorrida(codigoDelCurso: string, numeroCrudo: string) {
 	return { curso, mesa, corrida };
 }
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, url }) => {
 	const { curso, mesa, corrida } = await traerMesaYCorrida(params.curso, params.numero);
 
 	// Sin corrida abierta puede ser que todavía no empezó o que el líder ya la
@@ -46,6 +46,10 @@ export const load: PageServerLoad = async ({ params }) => {
 		mesa,
 		corrida,
 		cerrada: !corrida && (corridas ?? 0) > 0,
+		// Llega así quien estaba en una participación que ya no existe: el líder lo
+		// sacó del ciclo. Viene en la dirección y no en la sesión porque acá no hay
+		// ninguna; lo único que hace es explicar por qué volvió a esta pantalla.
+		volvesAElegir: url.searchParams.get('volvesAElegir') === '1',
 		roles: await rolesQueSeEligen(curso.destinado_a)
 	};
 };

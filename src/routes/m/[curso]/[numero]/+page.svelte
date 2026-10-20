@@ -118,6 +118,16 @@
 	</header>
 
 	<main class="entrar-cuerpo entrar-angosto">
+		{#if data.volvesAElegir}
+			<div class="entrar-aviso" role="status">
+				<Icono nombre="info" />
+				<span>
+					<strong>Ya no estás en este ciclo.</strong>
+					Volvé a entrar y elegí el rol que te toca.
+				</span>
+			</div>
+		{/if}
+
 		{#if !data.corrida}
 			<section class="mesa-tarjeta evaluado-vacio">
 				{#if data.cerrada}

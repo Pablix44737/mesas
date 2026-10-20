@@ -5,6 +5,8 @@ import { dniValido, mostrarDni, normalizarDni } from '$lib/dni';
 import { checklistComunDe, rolesQueSeEligen } from '$lib/server/roles';
 import type { Actions, PageServerLoad } from './$types';
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 type Resumen = { id: string; nombre: string; ponderado: boolean; items: number; maximo: number };
 
 async function traerMesa(codigoDelCurso: string, numeroCrudo: string) {
@@ -315,6 +317,70 @@ export const actions: Actions = {
 		}
 
 		return { mensaje: null, exito: 'La mesa quedó cerrada.' };
+	},
+
+	/**
+	 * Sacar a alguien del ciclo en curso.
+	 *
+	 * Es la corrección que hasta ahora obligaba a buscar al administrador: quien
+	 * se equivocó de rol vuelve a entrar con el que le toca, y a quien no debería
+	 * estar en esta mesa el líder lo saca. Con una mesa de cinco era un trámite;
+	 * con veinte mesas a la vez era una cola.
+	 *
+	 * Sólo del ciclo en curso. Sacarlo de la mesa entera se llevaría su recorrido
+	 * y las evaluaciones de los ciclos anteriores, que están bien hechas.
+	 *
+	 * Lo que haya enviado en este ciclo se va con él: `checklist_instancias`
+	 * cuelga de la participación en cascada. Es lo que se quiere —entró mal, no le
+	 * correspondía evaluar eso— y la confirmación lo dice antes.
+	 *
+	 * El id viene del formulario, así que se comprueba que sea de la corrida
+	 * habilitada de ESTA mesa: sin eso alcanzaría con mandar el de otra.
+	 */
+	sacarDelCiclo: async ({ request, params }) => {
+		const { mesa } = await traerMesa(params.curso, params.numero);
+
+		const formulario = await request.formData();
+		const id = String(formulario.get('participacionId') ?? '');
+
+		const rechazar = (estado: number, mensaje: string) => fail(estado, { mensaje, exito: null });
+
+		if (!UUID.test(id)) return rechazar(400, 'Ese registro no es válido.');
+
+		const { data: corrida } = await supabase
+			.from('corridas')
+			.select('id, numero')
+			.eq('mesa_id', mesa.id)
+			.eq('habilitada', true)
+			.maybeSingle();
+
+		if (!corrida) return rechazar(409, 'La mesa no tiene ningún ciclo en curso.');
+
+		// Quién es se lee antes de borrarlo: después ya no hay a quién nombrar.
+		const { data: participacion } = await supabase
+			.from('participaciones')
+			.select('id, dni, participante:participantes(nombre, apellido)')
+			.eq('id', id)
+			.eq('corrida_id', corrida.id)
+			.maybeSingle();
+
+		if (!participacion) return rechazar(404, 'Esa persona ya no está en el ciclo.');
+
+		const { error: fallo } = await supabase
+			.from('participaciones')
+			.delete()
+			.eq('id', participacion.id);
+
+		if (fallo) return rechazar(500, 'No se pudo sacarla del ciclo. Intentá de nuevo.');
+
+		const quien = participacion.participante
+			? `${participacion.participante.nombre} ${participacion.participante.apellido}`
+			: `El documento ${mostrarDni(participacion.dni)}`;
+
+		return {
+			mensaje: null,
+			exito: `${quien} salió del ciclo ${corrida.numero}. Ya puede entrar de nuevo y elegir su rol.`
+		};
 	},
 
 	/**

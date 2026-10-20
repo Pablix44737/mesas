@@ -14,6 +14,15 @@
 	/** La confirmación abierta: pasar al ciclo siguiente o cerrar la mesa. */
 	let confirmando = $state<'siguiente' | 'cierre' | null>(null);
 	let pestana = $state<'ciclo' | 'recorrido'>('ciclo');
+	/**
+	 * El modo corregir. Mientras está apagado la lista del ciclo queda como
+	 * siempre: lo normal es mirarla, no tocarla. Se enciende cuando alguien se
+	 * equivocó de rol o entró a la mesa que no era.
+	 */
+	let corrigiendo = $state(false);
+	/** A quién se está por sacar del ciclo, mientras se confirma. */
+	let sacando = $state<Participante | null>(null);
+	let saliendo = $state(false);
 	let materialAbierto = $state(false);
 	let confirmandoSinDocente = $state(false);
 	/** El mensaje que el líder ya cerró, para no volver a mostrarlo. */
@@ -81,6 +90,10 @@
 		if (!habilitando && !cerrando) confirmando = null;
 	}
 
+	function cancelarSalida() {
+		if (!saliendo) sacando = null;
+	}
+
 	function abrirEdicionDocente() {
 		editandoAMano = true;
 		confirmandoSinDocente = false;
@@ -104,7 +117,13 @@
 	<title>Mesa {data.mesa.numero} — SIMUNaM</title>
 </svelte:head>
 
-<svelte:window onkeydown={(e) => e.key === 'Escape' && confirmando && cancelarConfirmacion()} />
+<svelte:window
+	onkeydown={(e) => {
+		if (e.key !== 'Escape') return;
+		if (sacando) cancelarSalida();
+		else if (confirmando) cancelarConfirmacion();
+	}}
+/>
 
 {#snippet botonHabilitar(texto: string)}
 	<button class="boton enviar" type="submit" disabled={habilitando}>
@@ -426,7 +445,19 @@
 							{/if}
 						</div>
 					{:else}
-						<ul class="roles-del-ciclo">
+						<!-- Apagado no cambia nada de la lista; encendido, cada fila ocupada
+						     muestra con qué sacar a esa persona del ciclo. -->
+						<div class="ciclo-corregir">
+							<button
+								class="enlace-accion"
+								type="button"
+								aria-pressed={corrigiendo}
+								onclick={() => (corrigiendo = !corrigiendo)}
+							>
+								{corrigiendo ? 'Listo' : 'Corregir'}
+							</button>
+						</div>
+						<ul class="roles-del-ciclo" class:corrigiendo>
 							{#each filasDelCiclo as fila, i (fila.persona?.id ?? `libre-${i}`)}
 								{@const persona = fila.persona}
 								<li>
@@ -451,7 +482,15 @@
 											<span class="sin-ocupar">Sin ocupar</span>
 										{/if}
 									</div>
-									{#if persona?.envio}
+									{#if corrigiendo && persona}
+										<button
+											class="enlace-accion peligroso"
+											type="button"
+											onclick={() => (sacando = persona)}
+										>
+											Sacar del ciclo
+										</button>
+									{:else if persona?.envio}
 										<a class="envio" href="{raiz}/corridas/{enCurso.numero}#p-{persona.id}">
 											<Icono nombre="tilde" tamano={16} grosor={2.5} />
 											Envió
@@ -652,6 +691,60 @@
 		{/if}
 	{/if}
 {/snippet}
+
+{#if sacando && enCurso}
+	{@const quien = sacando}
+	<div
+		class="mesa-velo"
+		role="presentation"
+		onclick={(e) => e.target === e.currentTarget && cancelarSalida()}
+	>
+		<div
+			class="mesa-dialogo"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="sacar-titulo"
+			tabindex="-1"
+			use:enfocar
+		>
+			<span class="asa" aria-hidden="true"></span>
+			<h2 id="sacar-titulo">¿Sacar del ciclo a {@render nombreDe(quien)}?</h2>
+			<p class="dialogo-texto">
+				Deja de ocupar {quien.rolNombre} y puede volver a entrar con el rol que le toca.
+			</p>
+
+			{#if quien.envio}
+				<p class="dialogo-aviso">
+					<Icono nombre="alerta" tamano={18} />
+					Se borra el checklist que envió.
+				</p>
+			{/if}
+
+			<div class="dialogo-botones">
+				<button class="boton secundario" type="button" onclick={cancelarSalida} disabled={saliendo}>
+					No, que siga
+				</button>
+				<form
+					method="POST"
+					action="?/sacarDelCiclo"
+					use:enhance={() => {
+						saliendo = true;
+						return async ({ update }) => {
+							await update({ reset: false });
+							saliendo = false;
+							sacando = null;
+						};
+					}}
+				>
+					<input type="hidden" name="participacionId" value={quien.id} />
+					<button class="boton peligro" type="submit" disabled={saliendo}>
+						{saliendo ? 'Sacando…' : 'Sacar del ciclo'}
+					</button>
+				</form>
+			</div>
+		</div>
+	</div>
+{/if}
 
 {#if confirmando && enCurso}
 	<!-- Hoja que sube desde abajo en el teléfono; diálogo centrado en pantallas anchas. -->

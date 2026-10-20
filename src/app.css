@@ -5436,6 +5436,27 @@ form:has(> .barra-accion) + .pie {
 	border-top: 1px solid var(--borde);
 }
 
+/* Corregir: el interruptor queda alineado con la columna derecha de la lista,
+   donde después aparece la acción de cada fila. */
+.ciclo-corregir {
+	display: flex;
+	justify-content: flex-end;
+	padding: 0 var(--e-4);
+}
+
+.ciclo-corregir .enlace-accion {
+	align-self: center;
+	margin: 0 -8px 0 0;
+}
+
+/* El nombre nunca cede lugar: la acción se acomoda al lado, no encima. */
+.roles-del-ciclo > li > .enlace-accion {
+	flex: 0 0 auto;
+	align-self: center;
+	margin: 0;
+	white-space: nowrap;
+}
+
 .rol-persona {
 	display: flex;
 	flex: 1 1 auto;

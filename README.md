@@ -504,6 +504,26 @@ puesto son las participaciones de esa corrida y los checklists abiertos sin envi
 La numeración no queda con huecos: `habilitar_siguiente_corrida()` calcula
 `max(numero) + 1`, así que después de borrar la 2 la siguiente vuelve a ser la 2.
 
+**El líder puede sacar a alguien del ciclo, y por eso ya no hace falta el
+administrador.** Equivocarse de rol al entrar es el error más frecuente, y hasta
+ahora la única salida era que alguien con la clave de administración diera de baja
+ese registro: con una mesa es un trámite, con veinte a la vez es una cola. El líder
+ahora lo corrige desde su propia pantalla, y de paso saca a quien no corresponde que
+esté en esa mesa.
+
+Es sólo del ciclo en curso: sacarlo de la mesa entera se llevaría su recorrido y las
+evaluaciones de los ciclos anteriores, que están bien hechas. Lo que haya enviado en
+*este* ciclo sí se va con él —`checklist_instancias` cuelga de la participación en
+cascada—, y la confirmación lo dice en una línea antes de hacerlo: entró mal, así que
+no le correspondía evaluar eso. El id de la participación viene de un formulario, así
+que se comprueba contra la corrida habilitada de esa mesa; sin eso alcanzaría con
+mandar el de otra. Y como quien fue sacado está mirando su pantalla en ese momento,
+esa pantalla deja de ser un 404 y lo devuelve a la entrada de la mesa, que es donde
+tiene que volver a elegir.
+
+La acción vive detrás de un «Corregir» que hay que encender: lo normal es mirar la
+lista, no tocarla.
+
 **Una mesa pertenece a un curso; los instrumentos, a la institución.** Al querer usar
 el sistema para una cohorte nueva, las mesas de las dos ediciones se mezclarían en la
 misma lista. `cursos` las agrupa, con `mesas.curso_id` obligatorio y
@@ -810,10 +830,9 @@ supabase/
   de un curso resuelven por su código, que es único en todo el sistema.
 - **Nada limita los intentos de clave.** Un ataque por fuerza bruta contra
   `/ingresar` no encuentra freno más que la latencia de la red.
-- **Cambiar de rol lo tiene que destrabar el administrador.** Quien se equivoca al
-  elegir vuelve siempre a su registro original; para corregirlo, el administrador da
-  de baja ese registro y la persona escanea de nuevo. Alcanza para el aula, pero
-  depende de que haya alguien en la administración en ese momento.
+- **Nada impide que dos personas ocupen el mismo rol en un ciclo.** En los
+  observadores es deliberado; en el facilitador y el operador no debería pasar, y
+  pasa. Hoy el líder lo corrige sacando a quien sobra, pero el sistema no lo evita.
 - **Los criterios siguen siendo editables después de terminado el checklist.** Es
   a propósito: la feature «Resultado de una evaluación» pide que un cambio de peso
   se refleje en las evaluaciones ya enviadas. Pero agregar o quitar criterios de un
