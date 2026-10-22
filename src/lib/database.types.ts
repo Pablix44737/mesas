@@ -557,6 +557,46 @@ export type Database = {
 				};
 				Relationships: [];
 			};
+			ciclos_de_la_institucion: {
+				Row: {
+					tenant_id: string | null;
+					curso_id: string | null;
+					curso: string | null;
+					destinado_a: string | null;
+					archivado: boolean | null;
+					mesa_id: string | null;
+					mesa: number | null;
+					escenario_id: string | null;
+					escenario: string | null;
+					ciclo_id: string | null;
+					ciclo: number | null;
+					habilitada: boolean | null;
+					creada_en: string | null;
+					personas: number | null;
+					evaluaciones: number | null;
+				};
+				Relationships: [];
+			};
+			criterios_evaluados: {
+				Row: {
+					tenant_id: string | null;
+					escenario_id: string | null;
+					escenario: string | null;
+					plantilla_id: string | null;
+					checklist: string | null;
+					rol_codigo: string | null;
+					rol: string | null;
+					item_id: string | null;
+					item_orden: number | null;
+					criterio: string | null;
+					peso: number | null;
+					respondido: number | null;
+					fallos: number | null;
+					ciclos: number | null;
+					ultima_vez: string | null;
+				};
+				Relationships: [];
+			};
 			instituciones_resumen: {
 				Row: {
 					id: string | null;

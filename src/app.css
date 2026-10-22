@@ -1753,6 +1753,113 @@ fieldset.roles.invalido legend {
 	white-space: nowrap;
 }
 
+/* --- estadísticas ---
+   Números sobre una superficie clara y una sola barra por fila. Sin librería de
+   gráficos: lo que se compara es una proporción por fila, y eso una barra lo
+   dice mejor que una torta y pesa cero. */
+
+.filtro-estadisticas {
+	display: flex;
+	align-items: flex-end;
+	gap: var(--e-3);
+}
+
+.filtro-estadisticas .campo {
+	flex: 1 1 auto;
+	margin: 0;
+	max-width: 32rem;
+}
+
+.cifras {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: var(--e-3);
+	margin-bottom: var(--e-4);
+}
+
+@media (min-width: 720px) {
+	.cifras {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+}
+
+.cifra {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: var(--e-4) var(--e-5);
+	background: var(--superficie);
+	border: 1px solid var(--borde);
+	border-radius: var(--r-lg);
+}
+
+.cifra .numero {
+	font-family: var(--fuente-titulo);
+	font-size: 28px;
+	font-weight: 700;
+	line-height: 32px;
+	color: var(--tinta);
+	font-variant-numeric: tabular-nums;
+}
+
+.tabla .numerica {
+	text-align: right;
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+
+/* El criterio es la fila: se lee entero, en dos renglones si hace falta. */
+.criticos .principal {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 16rem;
+	max-width: 34rem;
+}
+
+.criterio-texto {
+	font-weight: 600;
+	line-height: 20px;
+	white-space: normal;
+}
+
+.de-cuantas {
+	color: var(--tinta-suave);
+	font-size: 14px;
+}
+
+.barra-celda {
+	display: flex;
+	align-items: center;
+	gap: var(--e-3);
+	min-width: 13rem;
+}
+
+.barra-fallo {
+	flex: 1 1 auto;
+	height: 8px;
+	border-radius: var(--r-full);
+	background: var(--superficie-media);
+	overflow: hidden;
+}
+
+.barra-fallo > span {
+	display: block;
+	height: 100%;
+	border-radius: var(--r-full);
+	/* Rojo porque mide fallos: el verde de la marca significa lo contrario en
+	   todas las demás pantallas y acá engañaría. */
+	background: var(--error);
+}
+
+.barra-cifra {
+	flex: 0 0 auto;
+	min-width: 2.75rem;
+	text-align: right;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
 /* --- administración: el marco ---
    Una barra superior blanca con la marca, las cuatro secciones y la salida. En el
    teléfono las secciones bajan a una barra fija abajo, al alcance del pulgar. */
