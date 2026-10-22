@@ -80,7 +80,7 @@ export const actions: Actions = {
 		const rechazar = (estado: number, mensaje: string, campo: string) =>
 			fail(estado, { ...valores, mensaje, campo, exito: null });
 
-		if (!dniValido(dni)) return rechazar(400, 'Ingresá el DNI, sin puntos.', 'dni');
+		if (!dniValido(dni)) return rechazar(400, 'Ingresá un DNI de 6 a 9 números.', 'dni');
 		if (nombre.length < 2) return rechazar(400, 'Ingresá el nombre.', 'nombre');
 		if (apellido.length < 2) return rechazar(400, 'Ingresá el apellido.', 'apellido');
 
@@ -208,7 +208,7 @@ export const actions: Actions = {
 			fail(estado, { ...valores, mensaje, campo, exito: null });
 
 		if (!UUID.test(id)) return fail(400, { ...vacio, mensaje: 'Persona inválida.', exito: null });
-		if (!dniValido(dni)) return rechazar(400, 'Ingresá el DNI, sin puntos.', 'dni');
+		if (!dniValido(dni)) return rechazar(400, 'Ingresá un DNI de 6 a 9 números.', 'dni');
 		if (nombre.length < 2) return rechazar(400, 'Ingresá el nombre.', 'nombre');
 		if (apellido.length < 2) return rechazar(400, 'Ingresá el apellido.', 'apellido');
 

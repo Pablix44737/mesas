@@ -105,6 +105,7 @@ export const iconos: Record<string, string[]> = {
 		'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'
 	],
 	reabrir: ['M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8', 'M3 3v5h5'],
+	salir: ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4', 'M16 17l5-5-5-5', 'M21 12H9'],
 	escanear: [
 		'M3 7V5a2 2 0 0 1 2-2h2',
 		'M17 3h2a2 2 0 0 1 2 2v2',

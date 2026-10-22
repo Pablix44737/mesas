@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { enhance } from '$app/forms';
+	import type { SubmitFunction } from '@sveltejs/kit';
 	import Icono from '$lib/Icono.svelte';
-	import { mostrarDni } from '$lib/dni';
+	import { dniValido, mostrarDni, normalizarDni } from '$lib/dni';
 	import {
 		EXTENSIONES_DEL_LISTADO,
 		leerListado,
@@ -12,57 +13,73 @@
 
 	let { data, form } = $props();
 
-	let incorporando = $state(false);
-	let guardando = $state(false);
-	/** Id de la persona que se está por quitar, mientras se confirma. */
-	let quitando = $state<string | null>(null);
-	/**
-	 * Fila abierta para editar, elegida a mano. Mientras valga `undefined` manda lo
-	 * que devolvió el servidor: así una edición rechazada se reabre con lo tipeado
-	 * aunque no haya JavaScript, y cancelar sigue cerrándola.
-	 */
-	let abiertaAMano = $state<string | null | undefined>(undefined);
-	/** El DNI a medida que se tipea, para avisar antes de guardar qué implica cambiarlo. */
-	let dniTipeado = $state<string | null>(null);
+	type Persona = (typeof data.padron)[number];
+	type Accion = 'incorporar' | 'editar' | 'quitar' | 'importar';
 
-	const editando = $derived(abiertaAMano === undefined ? (form?.editando ?? null) : abiertaAMano);
-	const dniEnEdicion = $derived(dniTipeado ?? (form?.editando ? (form.dni ?? '') : ''));
+	/** Lo que está abierto encima de la lista: un formulario, la importación o la confirmación de quitar. */
+	let panel = $state<Accion | null>(null);
+	let editandoId = $state<string | null>(null);
+	let quitandoId = $state<string | null>(null);
+	/** El DNI sin resolver desde el que se abrió el alta, para mostrar dónde lo usaron. */
+	let desdeDni = $state<string | null>(null);
+	let campos = $state({ dni: '', nombre: '', apellido: '' });
+	/** Lo que no pasó la revisión antes de mandar. */
+	let errores = $state<Record<string, string>>({});
+	/** Los campos tocados después del último envío: su error del servidor ya no aplica. */
+	let corregidos = $state<Record<string, boolean>>({});
+	let trabajando = $state(false);
+	/** Qué formulario mandó la última respuesta del servidor, para mostrarla en su lugar. */
+	let accion = $state<Accion | null>(null);
+	let avisoCerrado = $state(false);
 
-	/** Los valores del alta no son los de una edición, aunque compartan nombre de campo. */
-	const altaConLoTipeado = $derived(form?.editando ? null : form);
+	const editada = $derived(data.padron.find((persona) => persona.id === editandoId) ?? null);
+	const aQuitar = $derived(data.padron.find((persona) => persona.id === quitandoId) ?? null);
+	const origen = $derived(
+		panel === 'incorporar' && desdeDni ? data.pendientes.find((p) => p.dni === desdeDni) : undefined
+	);
 
-	function abrirEdicion(persona: { id: string; dni: string }) {
-		quitando = null;
-		abiertaAMano = persona.id;
-		dniTipeado = persona.dni;
-	}
+	const respuestaDe = (de: Accion) => (form?.mensaje && accion === de ? form : null);
+	const errorDe = (campo: string) => {
+		if (errores[campo]) return errores[campo];
+		const respuesta = panel === 'incorporar' || panel === 'editar' ? respuestaDe(panel) : null;
+		return respuesta?.campo === campo && !corregidos[campo] ? respuesta.mensaje : null;
+	};
+	const errorDelPanel = $derived(panel ? (respuestaDe(panel)?.campo ? null : respuestaDe(panel)?.mensaje) : null);
+	const aviso = $derived(
+		avisoCerrado || panel
+			? null
+			: form?.exito
+				? { exito: true, texto: form.exito }
+				: form?.mensaje && !form.campo
+					? { exito: false, texto: form.mensaje }
+					: null
+	);
 
-	function cerrarEdicion() {
-		abiertaAMano = null;
-		dniTipeado = null;
-	}
+	const cifra = (n: number) => n.toLocaleString('es-AR');
+	const roles = (n: number) => (n === 1 ? '1 rol' : `${cifra(n)} roles`);
 
-	/** Los registros que están esperando este DNI: al guardarlo, quedan resueltos. */
-	const pendienteDe = (dni: string) => data.pendientes.find((p) => p.dni === dni);
+	/* --- buscar --- */
 
 	let busqueda = $state('');
+	/** La lista se muestra de a tandas: con 2000 personas, todas juntas no ayudan. */
+	let limite = $state(100);
 
 	/** Sin mayúsculas ni tildes: en el padrón hay Núñez, Peña, Ramírez. */
 	const aplanar = (texto: string) =>
 		texto
 			.toLowerCase()
 			.normalize('NFD')
-			.replace(/[\u0300-\u036f]/g, '');
+			.replace(/[̀-ͯ]/g, '');
 
+	const termino = $derived(busqueda.trim());
 	const encontradas = $derived.by(() => {
-		const termino = aplanar(busqueda.trim());
-		if (!termino) return data.padron;
+		const buscado = aplanar(termino);
+		if (!buscado) return data.padron;
 
 		// Cada palabra tiene que aparecer en alguna parte, en cualquier orden: así
-		// «miriam acuña» encuentra a «Acuña, Miriam Elizabeth», que en ningún orden
-		// es un tramo seguido de texto. Los dígitos van contra el DNI, tolerando los
-		// puntos como en el resto del sistema.
-		const palabras = termino.split(/\s+/);
+		// «miriam acuña» encuentra a «Acuña, Miriam Elizabeth». Los dígitos van
+		// contra el DNI, tolerando los puntos.
+		const palabras = buscado.split(/[\s,]+/).filter(Boolean);
 		return data.padron.filter((persona) => {
 			const comoSeLlama = aplanar(`${persona.apellido} ${persona.nombre}`);
 			return palabras.every((palabra) => {
@@ -71,13 +88,116 @@
 			});
 		});
 	});
+	const visibles = $derived(encontradas.slice(0, limite));
+	const dniBuscado = $derived(/^[\d.\s]+$/.test(termino) ? normalizarDni(termino) : '');
 
-	const buscando = $derived(busqueda.trim() !== '');
+	/* --- abrir y cerrar --- */
 
-	/** La tarjeta de incorporar trabaja de a una persona o con un listado entero. */
-	let conListado = $state(false);
+	async function abrir(cual: Accion) {
+		panel = cual;
+		// El mensaje de la acción anterior ya se leyó: no vuelve al cerrar el panel.
+		avisoCerrado = true;
+		errores = {};
+		corregidos = {};
+		trabajando = false;
+		await tick();
+		document.querySelector<HTMLElement>('[data-enfocar]')?.focus();
+	}
+
+	function incorporar(dni = '', desde: string | null = null) {
+		campos = { dni, nombre: '', apellido: '' };
+		desdeDni = desde;
+		abrir('incorporar');
+	}
+
+	function editar(persona: Persona) {
+		editandoId = persona.id;
+		campos = { dni: persona.dni, nombre: persona.nombre, apellido: persona.apellido };
+		abrir('editar');
+	}
+
+	function quitar(persona: Persona) {
+		quitandoId = persona.id;
+		abrir('quitar');
+	}
+
+	function importar() {
+		descartarListado();
+		abrir('importar');
+	}
+
+	function cerrar() {
+		if (trabajando) return;
+		panel = null;
+	}
+
+	function escribir(campo: 'dni' | 'nombre' | 'apellido') {
+		return (evento: Event & { currentTarget: HTMLInputElement }) => {
+			campos[campo] = evento.currentTarget.value;
+			delete errores[campo];
+			corregidos[campo] = true;
+		};
+	}
+
+	/* --- incorporar y editar --- */
+
+	const dniNuevo = $derived(normalizarDni(campos.dni));
+	const cambiaElDni = $derived(
+		panel === 'editar' && editada !== null && dniValido(dniNuevo) && dniNuevo !== editada.dni
+	);
+	const esperando = $derived(cambiaElDni ? data.pendientes.find((p) => p.dni === dniNuevo) : undefined);
+
+	/** Lo que se puede revisar sin preguntarle al servidor, todo junto. */
+	function revisar() {
+		const faltan: Record<string, string> = {};
+		if (!dniValido(dniNuevo)) faltan.dni = 'Ingresá un DNI de 6 a 9 números.';
+		else {
+			const otra = data.padron.find((p) => p.dni === dniNuevo && p.id !== editandoId);
+			if (otra) {
+				faltan.dni =
+					panel === 'editar'
+						? `El DNI ${mostrarDni(dniNuevo)} ya es de otra persona del padrón.`
+						: `El DNI ${mostrarDni(dniNuevo)} ya está en el padrón.`;
+			}
+		}
+		if (campos.nombre.trim().length < 2) faltan.nombre = 'Ingresá el nombre.';
+		if (campos.apellido.trim().length < 2) faltan.apellido = 'Ingresá el apellido.';
+		return faltan;
+	}
+
+	/** Todos los envíos: quedan abiertos si el servidor rechaza, se cierran si sale bien. */
+	const enviar =
+		(de: Accion, validar = false): SubmitFunction =>
+		({ cancel }) => {
+			if (validar) {
+				errores = revisar();
+				const primero = Object.keys(errores)[0];
+				if (primero) {
+					cancel();
+					document.getElementById(`campo-${primero}`)?.focus();
+					return;
+				}
+			}
+			accion = de;
+			trabajando = true;
+			avisoCerrado = false;
+			return async ({ result, update }) => {
+				await update({ reset: false });
+				trabajando = false;
+				corregidos = {};
+				if (result.type === 'success') {
+					panel = null;
+					busqueda = '';
+					descartarListado();
+					window.scrollTo({ top: 0 });
+				}
+			};
+		};
+
+	/* --- importar un listado --- */
+
 	let leyendo = $state(false);
-	let importando = $state(false);
+	let archivoLeido = $state('');
 	let fallaDelListado = $state<string | null>(null);
 	let listado = $state<{
 		archivo: string;
@@ -86,19 +206,19 @@
 	} | null>(null);
 	let todasLasNuevas = $state(false);
 	let todosLosErrores = $state(false);
+	let arrastrando = $state(false);
 
 	const enElPadron = $derived(new Set(data.padron.map((persona) => persona.dni)));
 	const nuevas = $derived(listado?.personas.filter((p) => !enElPadron.has(p.dni)) ?? []);
 	const yaCargadas = $derived((listado?.personas.length ?? 0) - nuevas.length);
 
-	async function elegirListado(evento: Event & { currentTarget: HTMLInputElement }) {
-		const campo = evento.currentTarget;
-		const archivo = campo.files?.[0];
+	async function leer(archivo: File | undefined) {
 		if (!archivo) return;
-
 		leyendo = true;
+		archivoLeido = archivo.name;
 		fallaDelListado = null;
 		listado = null;
+		accion = null;
 		try {
 			const lectura = await leerListado(archivo);
 			if ('falla' in lectura) {
@@ -112,592 +232,634 @@
 			fallaDelListado = 'No se pudo leer el archivo. Probá guardarlo de nuevo como .xlsx o .csv.';
 		} finally {
 			leyendo = false;
+		}
+	}
+
+	function elegirListado(evento: Event & { currentTarget: HTMLInputElement }) {
+		const campo = evento.currentTarget;
+		leer(campo.files?.[0]).then(() => {
 			// Así se puede volver a elegir el mismo archivo después de corregirlo.
 			campo.value = '';
-		}
+		});
+	}
+
+	function soltar(evento: DragEvent) {
+		evento.preventDefault();
+		arrastrando = false;
+		leer(evento.dataTransfer?.files?.[0]);
 	}
 
 	function descartarListado() {
 		listado = null;
 		fallaDelListado = null;
+		leyendo = false;
 	}
 
 	/** Lo mínimo para que alguien arme su planilla sin adivinar las columnas. */
 	const planillaDeEjemplo =
 		'data:text/csv;charset=utf-8,' +
-		encodeURIComponent('\uFEFFDNI;Apellido;Nombre\r\n30111222;Pérez;Juan\r\n');
+		encodeURIComponent('﻿DNI;Apellido;Nombre\r\n30111222;Pérez;Juan\r\n');
 
-	/** Precarga el formulario con un DNI pendiente para no tipearlo de nuevo. */
-	function completarCon(dni: string) {
-		// Con el listado abierto el formulario no está en la página: se espera a que vuelva.
-		conListado = false;
-		tick().then(() => {
-			const campo = document.getElementById('dni') as HTMLInputElement | null;
-			if (!campo) return;
-			campo.value = dni;
-			campo.dispatchEvent(new Event('input', { bubbles: true }));
-			document.getElementById('nombre')?.focus();
-		});
+	function teclas(evento: KeyboardEvent) {
+		if (evento.key === 'Escape' && panel) cerrar();
 	}
 </script>
-
-{#snippet importacion()}
-	{#if !listado}
-		<div class="campo">
-			<label for="listado">Elegí la planilla</label>
-			<p class="ayuda">Excel o CSV, con columnas DNI, Apellido y Nombre.</p>
-			<input
-				id="listado"
-				type="file"
-				accept={EXTENSIONES_DEL_LISTADO.join(',')}
-				disabled={leyendo}
-				onchange={elegirListado}
-			/>
-		</div>
-		{#if leyendo}
-			<p class="ayuda">Leyendo el archivo…</p>
-		{/if}
-		{#if fallaDelListado}
-			<div class="aviso error" role="alert">
-				<Icono nombre="error" />
-				<span>{fallaDelListado}</span>
-			</div>
-		{/if}
-		<a class="boton fantasma" href={planillaDeEjemplo} download="padron.csv">
-			<Icono nombre="descargar" tamano={16} />
-			Descargar una planilla de ejemplo
-		</a>
-	{:else}
-		<p class="archivo-elegido">
-			<Icono nombre="padron" tamano={18} />
-			<span>{listado.archivo}</span>
-		</p>
-		<div class="resumen-listado">
-			<span class="chip exito">{nuevas.length} para incorporar</span>
-			{#if yaCargadas > 0}
-				<span class="chip neutro">{yaCargadas} ya en el padrón</span>
-			{/if}
-			{#if listado.errores.length > 0}
-				<span class="chip alerta">{listado.errores.length} con errores</span>
-			{/if}
-		</div>
-
-		{#if listado.errores.length > 0}
-			{@const errores = todosLosErrores ? listado.errores : listado.errores.slice(0, 5)}
-			<div class="aviso alerta">
-				<Icono nombre="alerta" />
-				<div>
-					<strong>
-						{listado.errores.length === 1
-							? 'Esta fila no se va a incorporar:'
-							: 'Estas filas no se van a incorporar:'}
-					</strong>
-					<ul class="filas-con-error">
-						{#each errores as error (error.fila)}
-							<li>Fila {error.fila}: {error.motivo}</li>
-						{/each}
-					</ul>
-					{#if listado.errores.length > 5}
-						<button
-							class="boton fantasma"
-							type="button"
-							aria-expanded={todosLosErrores}
-							onclick={() => (todosLosErrores = !todosLosErrores)}
-						>
-							<Icono nombre={todosLosErrores ? 'arriba' : 'abajo'} tamano={16} />
-							{todosLosErrores ? 'Ver menos' : `Ver las ${listado.errores.length}`}
-						</button>
-					{/if}
-				</div>
-			</div>
-		{/if}
-
-		{#if nuevas.length > 0}
-			{@const visibles = todasLasNuevas ? nuevas : nuevas.slice(0, 8)}
-			<div class="tabla-envoltorio vista-previa">
-				<table class="tabla">
-					<thead>
-						<tr>
-							<th>DNI</th>
-							<th>Apellido y nombre</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each visibles as persona (persona.dni)}
-							<tr>
-								<td>{mostrarDni(persona.dni)}</td>
-								<td class="principal">{persona.apellido}, {persona.nombre}</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-			{#if nuevas.length > 8}
-				<button
-					class="boton fantasma"
-					type="button"
-					aria-expanded={todasLasNuevas}
-					onclick={() => (todasLasNuevas = !todasLasNuevas)}
-				>
-					<Icono nombre={todasLasNuevas ? 'arriba' : 'abajo'} tamano={16} />
-					{todasLasNuevas ? 'Ver menos' : `Ver las ${nuevas.length}`}
-				</button>
-			{/if}
-		{:else}
-			<div class="aviso info">
-				<Icono nombre="info" />
-				<span>
-					{listado.personas.length > 0
-						? 'Todas las personas del archivo ya están en el padrón.'
-						: 'No hay personas para incorporar.'}
-				</span>
-			</div>
-		{/if}
-
-		<form
-			class="confirmacion acciones-del-listado"
-			method="POST"
-			action="?/importar"
-			use:enhance={() => {
-				importando = true;
-				return async ({ result, update }) => {
-					await update();
-					importando = false;
-					if (result.type === 'success') {
-						descartarListado();
-						conListado = false;
-					}
-				};
-			}}
-		>
-			<input
-				type="hidden"
-				name="personas"
-				value={JSON.stringify(nuevas.map(({ dni, apellido, nombre }) => ({ dni, apellido, nombre })))}
-			/>
-			{#if nuevas.length > 0}
-				<button class="boton" type="submit" disabled={importando}>
-					<Icono nombre="tilde" tamano={16} />
-					{importando
-						? 'Incorporando…'
-						: nuevas.length === 1
-							? 'Incorporar 1 persona'
-							: `Incorporar ${nuevas.length} personas`}
-				</button>
-			{/if}
-			<button
-				class="boton secundario"
-				type="button"
-				onclick={descartarListado}
-				disabled={importando}
-			>
-				Elegir otro archivo
-			</button>
-		</form>
-	{/if}
-{/snippet}
 
 <svelte:head>
 	<title>Padrón — SIMUNaM</title>
 </svelte:head>
 
-<div class="pagina-cabecera">
-	<div class="titulo">
-		<h1>Padrón</h1>
-		<p class="bajada">Las personas cargadas para el evento</p>
-	</div>
-</div>
+<svelte:window onkeydown={teclas} />
 
-{#if form?.mensaje}
-	<div class="aviso error" role="alert">
-		<Icono nombre="error" />
-		<span>{form.mensaje}</span>
-	</div>
-{/if}
-{#if form?.exito}
-	<div class="aviso exito" role="status">
-		<Icono nombre="tilde-circulo" />
-		<span>{form.exito}</span>
-	</div>
-{/if}
-
-{#if data.pendientes.length > 0}
-	<div class="tarjeta">
-		<div class="tarjeta-cabecera">
-			<h2>DNI sin resolver</h2>
-			<span class="chip alerta">{data.pendientes.length}</span>
-		</div>
-		<p class="ayuda">
-			Ocuparon un rol en alguna mesa pero no están en el padrón. O les falta el alta, o el
-			documento se tipeó mal: tocá dónde ocupó el rol para verlo en su mesa y darlo de baja.
-		</p>
-		<ul class="lista">
-			{#each data.pendientes as pendiente (pendiente.dni)}
-				<li class="pendiente-padron">
-					<span class="quien">DNI {mostrarDni(pendiente.dni)}</span>
-					<span class="registros">
-						{#each pendiente.registros as registro (registro.ruta)}
-							<a class="registro" href={registro.ruta}>
-								<span class="donde">{registro.texto}</span>
-								<span class="detalle">{registro.curso}</span>
-							</a>
-						{/each}
-					</span>
-					<button
-						class="boton fantasma"
-						type="button"
-						style="margin-left: auto"
-						onclick={() => completarCon(pendiente.dni)}
-					>
-						<Icono nombre="mas" tamano={16} />
-						Incorporar
-					</button>
-				</li>
-			{/each}
-		</ul>
-	</div>
-{/if}
-
-<div class="tarjeta">
-	<div class="tarjeta-cabecera">
-		<h2>{conListado ? 'Importar un listado' : 'Incorporar a una persona'}</h2>
-		<button
-			class="boton secundario desplegar"
-			type="button"
-			onclick={() => {
-				conListado = !conListado;
-				descartarListado();
-			}}
-		>
-			<Icono nombre={conListado ? 'editar' : 'subir'} tamano={16} />
-			{conListado ? 'De a una' : 'Desde un archivo'}
-		</button>
-	</div>
-	{#if conListado}
-		{@render importacion()}
-	{:else}
-		<form
-			method="POST"
-			action="?/incorporar"
-			use:enhance={() => {
-				incorporando = true;
-				return async ({ update }) => {
-					await update();
-					incorporando = false;
-				};
-			}}
-		>
-			<div class="rejilla tres" style="margin-bottom: 0">
-				<div class="campo">
-					<label for="dni">DNI</label>
-					<div class="campo-con-icono">
-						<Icono nombre="dni" />
-						<input
-							id="dni"
-							name="dni"
-							type="tel"
-							inputmode="numeric"
-							autocomplete="off"
-							placeholder="30111222"
-							value={altaConLoTipeado?.dni ?? ''}
-							aria-invalid={altaConLoTipeado?.campo === 'dni'}
-							required
-						/>
-					</div>
-				</div>
-				<div class="campo">
-					<label for="nombre">Nombre</label>
-					<input
-						id="nombre"
-						name="nombre"
-						type="text"
-						autocomplete="off"
-						value={altaConLoTipeado?.nombre ?? ''}
-						aria-invalid={altaConLoTipeado?.campo === 'nombre'}
-						required
-					/>
-				</div>
-				<div class="campo">
-					<label for="apellido">Apellido</label>
-					<input
-						id="apellido"
-						name="apellido"
-						type="text"
-						autocomplete="off"
-						value={altaConLoTipeado?.apellido ?? ''}
-						aria-invalid={altaConLoTipeado?.campo === 'apellido'}
-						required
-					/>
-				</div>
-			</div>
-			<button class="boton" type="submit" disabled={incorporando}>
-				{incorporando ? 'Incorporando…' : 'Incorporar al padrón'}
-			</button>
-		</form>
+{#snippet errorDeCampo(campo: string)}
+	{#if errorDe(campo)}
+		<p class="campo-error" id="error-{campo}"><Icono nombre="error" tamano={16} />{errorDe(campo)}</p>
 	{/if}
+{/snippet}
+
+{#snippet botonCerrar()}
+	<button class="padron-cerrar" type="button" aria-label="Cerrar" onclick={cerrar}>
+		<Icono nombre="cerrar" tamano={20} />
+	</button>
+{/snippet}
+
+<div class="padron-encabezado">
+	<div class="padron-encabezado-dentro">
+		<div class="padron-titulo">
+			<div>
+				<h1>Padrón</h1>
+				<span class="padron-total">
+					{cifra(data.padron.length)}
+					{data.padron.length === 1 ? 'persona' : 'personas'}
+				</span>
+			</div>
+			<p>Las personas que pueden participar en las mesas, identificadas por su DNI.</p>
+		</div>
+		<div class="padron-acciones-encabezado">
+			<button class="boton secundario" type="button" onclick={importar}>
+				<Icono nombre="subir" tamano={20} />
+				<span class="solo-ancho">Importar un listado</span>
+				<span class="solo-angosto">Importar</span>
+			</button>
+			<button class="boton enviar" type="button" onclick={() => incorporar()}>
+				<Icono nombre="mas" tamano={20} grosor={2.25} />
+				Incorporar
+			</button>
+		</div>
+	</div>
 </div>
 
-<div class="tarjeta">
-	<div class="tarjeta-cabecera">
-		<h2>Personas en el padrón</h2>
-		<span class="detalle">
-			{#if buscando}{encontradas.length} de {data.padron.length}{:else}{data.padron.length}{/if}
-		</span>
-	</div>
-
-	{#if data.padron.length === 0}
-		<div class="vacio">El padrón está vacío.</div>
-	{:else}
-		<!-- Filtra lo que ya está en pantalla: no hay ida y vuelta al servidor, así
-		     responde mientras se tipea. La página se sigue armando entera del lado
-		     del servidor, así que sin JavaScript no falta nada, sólo el filtro. -->
-		<div class="campo buscador">
-			<label for="buscar">Buscar en el padrón</label>
-			<div class="campo-con-icono">
-				<Icono nombre="buscar" />
-				<input
-					id="buscar"
-					type="text"
-					autocomplete="off"
-					placeholder="Apellido, nombre o DNI"
-					bind:value={busqueda}
-				/>
-			</div>
+<div class="padron-cuerpo">
+	{#if aviso}
+		<div class="padron-aviso" class:error={!aviso.exito} role={aviso.exito ? 'status' : 'alert'}>
+			<Icono nombre={aviso.exito ? 'tilde-circulo' : 'error'} />
+			<p>{aviso.texto}</p>
+			<button type="button" aria-label="Cerrar el mensaje" onclick={() => (avisoCerrado = true)}>
+				<Icono nombre="cerrar" tamano={18} />
+			</button>
 		</div>
+	{/if}
 
-		{#if buscando && encontradas.length === 0}
-			<div class="vacio">
-				<p style="margin: 0 0 12px">
-					Nadie del padrón coincide con «{busqueda.trim()}».
-				</p>
-				{#if /^[\d.]+$/.test(busqueda.trim())}
-					<button
-						class="boton secundario"
-						type="button"
-						onclick={() => completarCon(busqueda.replace(/\D/g, ''))}
-					>
-						<Icono nombre="mas" tamano={16} />
-						Incorporar ese DNI
-					</button>
-				{/if}
-			</div>
-		{:else}
-			<div class="tabla-envoltorio">
-				<table class="tabla">
-					<thead>
-						<tr>
-							<th>DNI</th>
-							<th>Apellido y nombre</th>
-							<th>Roles ocupados</th>
-							<th class="acciones"></th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each encontradas as persona (persona.id)}
-							<tr>
-								<td>{mostrarDni(persona.dni)}</td>
-								<td class="principal">{persona.apellido}, {persona.nombre}</td>
-								<td class="detalle">
-									{#if persona.registros === 0}
-										—
-									{:else}
-										{persona.registros}
-									{/if}
-								</td>
-								<td class="acciones">
-									{#if editando === persona.id || quitando === persona.id}
+	<div class="padron-rejilla" class:con-pendientes={data.pendientes.length > 0}>
+		{#if data.pendientes.length > 0}
+			<aside class="padron-pendientes" aria-labelledby="pendientes-titulo">
+				<div class="padron-pendientes-cabecera">
+					<div>
+						<Icono nombre="alerta" />
+						<h2 id="pendientes-titulo">DNI sin resolver</h2>
+						<span>{data.pendientes.length}</span>
+					</div>
+					<p>
+						Ocuparon un rol en alguna mesa, pero no están en el padrón. Incorporalos o, si el DNI se
+						escribió mal, dalo de baja desde la mesa.
+					</p>
+				</div>
+				{#each data.pendientes as pendiente (pendiente.dni)}
+					<div class="padron-pendiente">
+						<div class="padron-pendiente-fila">
+							<div>
+								<strong>{mostrarDni(pendiente.dni)}</strong>
+								<span>Ocupó {roles(pendiente.registros.length)}</span>
+							</div>
+							<button
+								class="boton secundario"
+								type="button"
+								onclick={() => incorporar(pendiente.dni, pendiente.dni)}
+							>
+								Incorporar
+							</button>
+						</div>
+						<ul>
+							{#each pendiente.registros as registro (registro.ruta)}
+								<li>
+									<a href={registro.ruta}>
+										<span>
+											<strong>{registro.texto}</strong>
+											<span>{registro.curso}</span>
+										</span>
+										<Icono nombre="adelante" tamano={18} />
+									</a>
+								</li>
+							{/each}
+						</ul>
+					</div>
+				{/each}
+			</aside>
+		{/if}
+
+		<div class="padron-principal">
+			{#if data.padron.length === 0}
+				<section class="mesa-tarjeta padron-vacio">
+					<span class="evaluado-vacio-icono"><Icono nombre="padron" tamano={24} /></span>
+					<strong>El padrón está vacío.</strong>
+					<p>Importá el listado del curso desde una planilla, o incorporá a las personas de a una.</p>
+					<div>
+						<button class="boton secundario" type="button" onclick={importar}>
+							<Icono nombre="subir" tamano={20} />
+							Importar un listado
+						</button>
+						<button class="boton secundario neutro" type="button" onclick={() => incorporar()}>
+							<Icono nombre="mas" tamano={20} />
+							Incorporar a una persona
+						</button>
+					</div>
+				</section>
+			{:else}
+				<section class="padron-lista" aria-label="Personas del padrón">
+					<div class="padron-lista-cabecera">
+						<div class="padron-buscador">
+							<label class="padron-buscar">
+								<Icono nombre="buscar" />
+								<input
+									type="text"
+									placeholder="Apellido, nombre o DNI"
+									aria-label="Buscar en el padrón"
+									autocomplete="off"
+									bind:value={busqueda}
+									oninput={() => (limite = 100)}
+								/>
+								{#if busqueda}
+									<button
+										type="button"
+										aria-label="Borrar la búsqueda"
+										onclick={() => {
+											busqueda = '';
+											limite = 100;
+										}}
+									>
+										<Icono nombre="cerrar" tamano={18} />
+									</button>
+								{/if}
+							</label>
+							<span class="padron-cuenta" class:filtrando={termino}>
+								{termino
+									? `${cifra(encontradas.length)} de ${cifra(data.padron.length)}`
+									: `${cifra(data.padron.length)} ${data.padron.length === 1 ? 'persona' : 'personas'}`}
+							</span>
+						</div>
+						{#if visibles.length > 0}
+							<div class="padron-columnas" aria-hidden="true">
+								<span>DNI</span>
+								<span>Apellido y nombre</span>
+								<span>Roles en mesas</span>
+								<span>Acciones</span>
+							</div>
+						{/if}
+					</div>
+
+					{#if encontradas.length === 0}
+						<div class="padron-sin-coincidencias">
+							<span class="evaluado-vacio-icono gris"><Icono nombre="buscar" tamano={24} /></span>
+							<strong>Nadie del padrón coincide con «{termino}».</strong>
+							{#if dniValido(dniBuscado)}
+								<p>Si es alguien nuevo, incorporalo con ese DNI.</p>
+								<button class="boton secundario" type="button" onclick={() => incorporar(dniBuscado)}>
+									<Icono nombre="mas" tamano={20} />
+									Incorporar ese DNI
+								</button>
+							{:else}
+								<p>Probá con otra parte del nombre o con el DNI.</p>
+							{/if}
+						</div>
+					{:else}
+						<ul class="padron-filas">
+							{#each visibles as persona (persona.id)}
+								<li>
+									<button
+										class="padron-fila"
+										type="button"
+										aria-label="Editar a {persona.apellido}, {persona.nombre}"
+										onclick={() => editar(persona)}
+									>
+										<span class="padron-fila-dni">{mostrarDni(persona.dni)}</span>
+										<span class="padron-fila-nombre">{persona.apellido}, {persona.nombre}</span>
+										<span class="padron-fila-roles">
+											{persona.registros ? roles(persona.registros) : '—'}
+										</span>
+										<span class="padron-fila-meta">
+											DNI {mostrarDni(persona.dni)} · {persona.registros
+												? roles(persona.registros)
+												: 'sin roles'}
+										</span>
+										<Icono nombre="adelante" tamano={18} clase="padron-fila-flecha" />
+									</button>
+									<span class="padron-fila-acciones">
 										<button
 											class="icono-boton"
 											type="button"
-											title="Cancelar"
-											onclick={() => {
-												cerrarEdicion();
-												quitando = null;
-											}}
+											title="Editar"
+											aria-label="Editar a {persona.apellido}, {persona.nombre}"
+											onclick={() => editar(persona)}
 										>
-											<Icono nombre="cerrar" tamano={18} />
-											<span class="visualmente-oculto">Cancelar</span>
+											<Icono nombre="editar" tamano={18} />
 										</button>
-									{:else}
-										<span class="acciones-fila">
-											<button
-												class="icono-boton"
-												type="button"
-												title="Editar"
-												onclick={() => abrirEdicion(persona)}
-											>
-												<Icono nombre="editar" tamano={18} />
-												<span class="visualmente-oculto">Editar</span>
-											</button>
-											<button
-												class="icono-boton peligroso"
-												type="button"
-												title="Quitar del padrón"
-												onclick={() => {
-													cerrarEdicion();
-													quitando = persona.id;
-												}}
-											>
-												<Icono nombre="quitar" tamano={18} />
-												<span class="visualmente-oculto">Quitar del padrón</span>
-											</button>
-										</span>
-									{/if}
-								</td>
-							</tr>
-
-							{#if editando === persona.id}
-								{@const cambiaElDni = dniEnEdicion !== '' && dniEnEdicion !== persona.dni}
-								{@const esperando = pendienteDe(dniEnEdicion)}
-								<tr>
-									<td colspan="4" style="padding-top: 0">
-										<form
-											class="desplegable"
-											method="POST"
-											action="?/editar"
-											use:enhance={() => {
-												guardando = true;
-												return async ({ update }) => {
-													await update();
-													guardando = false;
-													// Si salió bien la fila se cierra; si no, queda abierta con
-													// lo que el servidor devolvió.
-													abiertaAMano = form?.editando ?? null;
-													dniTipeado = null;
-												};
-											}}
+										<button
+											class="icono-boton peligroso"
+											type="button"
+											title="Quitar del padrón"
+											aria-label="Quitar a {persona.apellido}, {persona.nombre} del padrón"
+											onclick={() => quitar(persona)}
 										>
-											<input type="hidden" name="id" value={persona.id} />
+											<Icono nombre="quitar" tamano={18} />
+										</button>
+									</span>
+								</li>
+							{/each}
+						</ul>
 
-											<div class="rejilla tres">
-												<div class="campo">
-													<label for="editar-dni">DNI</label>
-													<div class="campo-con-icono">
-														<Icono nombre="dni" />
-														<input
-															id="editar-dni"
-															name="dni"
-															type="tel"
-															inputmode="numeric"
-															autocomplete="off"
-															value={dniEnEdicion}
-															oninput={(e) => (dniTipeado = e.currentTarget.value)}
-															aria-invalid={form?.editando === persona.id && form?.campo === 'dni'}
-															required
-														/>
-													</div>
-												</div>
-												<div class="campo">
-													<label for="editar-nombre">Nombre</label>
-													<input
-														id="editar-nombre"
-														name="nombre"
-														type="text"
-														autocomplete="off"
-														value={form?.editando === persona.id
-															? (form.nombre ?? '')
-															: persona.nombre}
-														aria-invalid={form?.editando === persona.id &&
-															form?.campo === 'nombre'}
-														required
-													/>
-												</div>
-												<div class="campo">
-													<label for="editar-apellido">Apellido</label>
-													<input
-														id="editar-apellido"
-														name="apellido"
-														type="text"
-														autocomplete="off"
-														value={form?.editando === persona.id
-															? (form.apellido ?? '')
-															: persona.apellido}
-														aria-invalid={form?.editando === persona.id &&
-															form?.campo === 'apellido'}
-														required
-													/>
-												</div>
-											</div>
-
-											{#if cambiaElDni && (persona.registros > 0 || esperando)}
-												<div class="aviso alerta" style="margin: 0 0 16px">
-													<Icono nombre="alerta" />
-													<div>
-														{#if persona.registros > 0}
-															Lo que registró con el DNI actual va a quedar sin identificar.
-														{/if}
-														{#if esperando}
-															Se le van a asignar
-															{esperando.registros.length === 1
-																? 'el registro hecho'
-																: `los ${esperando.registros.length} registros hechos`}
-															con el DNI nuevo.
-														{/if}
-													</div>
-												</div>
-											{/if}
-
-											<div class="confirmacion">
-												<button class="boton" type="submit" disabled={guardando}>
-													<Icono nombre="tilde" tamano={16} />
-													{guardando ? 'Guardando…' : 'Guardar los cambios'}
-												</button>
-												<button
-													class="boton secundario"
-													type="button"
-													onclick={cerrarEdicion}
-													disabled={guardando}
-												>
-													Cancelar
-												</button>
-											</div>
-										</form>
-									</td>
-								</tr>
-							{/if}
-
-							{#if quitando === persona.id}
-								<tr>
-									<td colspan="4" style="padding-top: 0">
-										<div class="aviso alerta desplegable" style="margin: 0">
-											<Icono nombre="alerta" />
-											<div>
-												{#if persona.registros > 0}
-													<strong>
-														{persona.apellido}, {persona.nombre} ocupó
-														{persona.registros === 1 ? 'un rol' : `${persona.registros} roles`}
-														en las mesas.
-													</strong>
-													Sus evaluaciones no se borran, pero quedan sin identificar.
-												{:else}
-													<strong>
-														¿Quitar a {persona.apellido}, {persona.nombre} del padrón?
-													</strong>
-												{/if}
-												<form
-													method="POST"
-													action="?/quitar"
-													style="margin-top: 12px"
-													use:enhance={() => async ({ update }) => {
-														await update();
-														quitando = null;
-													}}
-												>
-													<input type="hidden" name="id" value={persona.id} />
-													<button class="boton peligro" type="submit">
-														<Icono nombre="quitar" />
-														Sí, quitar del padrón
-													</button>
-												</form>
-											</div>
-										</div>
-									</td>
-								</tr>
-							{/if}
-						{/each}
-					</tbody>
-				</table>
-			</div>
-		{/if}
-	{/if}
+						{#if encontradas.length > visibles.length}
+							<div class="padron-mas">
+								<span>
+									Se muestran {cifra(visibles.length)} de {cifra(encontradas.length)}. Escribí en el
+									buscador para acotar.
+								</span>
+								<button class="boton secundario neutro" type="button" onclick={() => (limite += 100)}>
+									Mostrar {cifra(Math.min(100, encontradas.length - visibles.length))} más
+								</button>
+							</div>
+						{/if}
+					{/if}
+				</section>
+			{/if}
+		</div>
+	</div>
 </div>
+
+{#if panel}
+	<div class="padron-velo" role="presentation" onclick={cerrar}></div>
+{/if}
+
+{#if panel === 'incorporar' || (panel === 'editar' && editada)}
+	<div class="padron-panel" role="dialog" aria-modal="true" aria-labelledby="panel-titulo">
+		<form
+			class="padron-panel-formulario"
+			method="POST"
+			action={panel === 'editar' ? '?/editar' : '?/incorporar'}
+			novalidate
+			use:enhance={enviar(panel === 'editar' ? 'editar' : 'incorporar', true)}
+		>
+			<span class="padron-asa" aria-hidden="true"></span>
+			<div class="padron-panel-cabecera">
+				<div>
+					<h2 id="panel-titulo">
+						{panel === 'editar' ? 'Editar a una persona' : 'Incorporar a una persona'}
+					</h2>
+					<p>
+						{#if panel === 'editar' && editada}
+							{editada.apellido}, {editada.nombre} · {editada.registros
+								? `${roles(editada.registros)} en las mesas`
+								: 'sin roles en las mesas'}
+						{:else if origen}
+							Completá el nombre y el apellido de quien usó este DNI.
+						{:else}
+							Queda identificada en las mesas por su DNI.
+						{/if}
+					</p>
+				</div>
+				{@render botonCerrar()}
+			</div>
+
+			<div class="padron-panel-cuerpo">
+				{#if panel === 'editar' && editada}
+					<input type="hidden" name="id" value={editada.id} />
+				{/if}
+
+				{#if origen}
+					<div class="padron-origen">
+						<span>
+							Ocupó {origen.registros.length === 1 ? 'este rol' : 'estos roles'} con el DNI
+							{mostrarDni(origen.dni)}
+						</span>
+						{#each origen.registros as registro (registro.ruta)}
+							<p><strong>{registro.texto}</strong><span>{registro.curso}</span></p>
+						{/each}
+					</div>
+				{/if}
+
+				{#if errorDelPanel}
+					<p class="dialogo-error" role="alert"><Icono nombre="error" tamano={18} />{errorDelPanel}</p>
+				{/if}
+
+				<div class="padron-campo">
+					<label for="campo-dni">DNI</label>
+					<input
+						id="campo-dni"
+						class="padron-dni"
+						name="dni"
+						type="text"
+						inputmode="numeric"
+						autocomplete="off"
+						value={campos.dni}
+						oninput={escribir('dni')}
+						aria-invalid={Boolean(errorDe('dni'))}
+						aria-describedby={errorDe('dni') ? 'error-dni' : 'ayuda-dni'}
+						data-enfocar={campos.dni === '' ? '' : undefined}
+					/>
+					{#if errorDe('dni')}
+						{@render errorDeCampo('dni')}
+					{:else}
+						<p class="ayuda" id="ayuda-dni">Podés escribirlo con puntos o sin ellos.</p>
+					{/if}
+				</div>
+
+				{#if cambiaElDni && editada && editada.registros > 0}
+					<p class="padron-advertencia">
+						<Icono nombre="alerta" />
+						<span>Lo que registró con el DNI actual va a quedar sin identificar.</span>
+					</p>
+				{/if}
+				{#if esperando}
+					<p class="padron-advertencia">
+						<Icono nombre="alerta" />
+						<span>
+							{esperando.registros.length === 1
+								? 'Se le va a asignar el registro hecho con el DNI nuevo.'
+								: `Se le van a asignar los ${esperando.registros.length} registros hechos con el DNI nuevo.`}
+						</span>
+					</p>
+				{/if}
+
+				<div class="padron-campo">
+					<label for="campo-nombre">Nombre</label>
+					<input
+						id="campo-nombre"
+						name="nombre"
+						type="text"
+						autocomplete="off"
+						value={campos.nombre}
+						oninput={escribir('nombre')}
+						aria-invalid={Boolean(errorDe('nombre'))}
+						aria-describedby={errorDe('nombre') ? 'error-nombre' : undefined}
+						data-enfocar={campos.dni !== '' && panel === 'incorporar' ? '' : undefined}
+					/>
+					{@render errorDeCampo('nombre')}
+				</div>
+
+				<div class="padron-campo">
+					<label for="campo-apellido">Apellido</label>
+					<input
+						id="campo-apellido"
+						name="apellido"
+						type="text"
+						autocomplete="off"
+						value={campos.apellido}
+						oninput={escribir('apellido')}
+						aria-invalid={Boolean(errorDe('apellido'))}
+						aria-describedby={errorDe('apellido') ? 'error-apellido' : undefined}
+					/>
+					{@render errorDeCampo('apellido')}
+				</div>
+
+				{#if panel === 'editar' && editada}
+					<div class="padron-quitar-desde-edicion">
+						<button type="button" onclick={() => editada && quitar(editada)}>
+							<Icono nombre="quitar" tamano={18} />
+							Quitar del padrón
+						</button>
+					</div>
+				{/if}
+			</div>
+
+			<div class="padron-panel-pie">
+				<button class="boton secundario neutro" type="button" onclick={cerrar} disabled={trabajando}>
+					Cancelar
+				</button>
+				<button class="boton enviar" type="submit" disabled={trabajando}>
+					{#if panel === 'editar'}
+						{trabajando ? 'Guardando…' : 'Guardar los cambios'}
+					{:else}
+						{trabajando ? 'Incorporando…' : 'Incorporar al padrón'}
+					{/if}
+				</button>
+			</div>
+		</form>
+	</div>
+{/if}
+
+{#if panel === 'importar'}
+	<div
+		class="padron-panel ancho"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="importar-titulo"
+	>
+		<span class="padron-asa" aria-hidden="true"></span>
+		<div class="padron-panel-cabecera">
+			<div>
+				<h2 id="importar-titulo">Importar un listado</h2>
+				<p>
+					{listado
+						? 'Revisá el listado antes de incorporarlo.'
+						: 'Incorporá a varias personas desde una planilla.'}
+				</p>
+			</div>
+			{@render botonCerrar()}
+		</div>
+
+		<div class="padron-panel-cuerpo">
+			{#if leyendo}
+				<div class="padron-leyendo">
+					<span class="evaluado-vacio-icono"><Icono nombre="subir" tamano={24} /></span>
+					<strong>Leyendo el archivo…</strong>
+					<span>{archivoLeido}</span>
+				</div>
+			{:else if !listado}
+				{#if fallaDelListado}
+					<p class="dialogo-error" role="alert"><Icono nombre="error" tamano={18} />{fallaDelListado}</p>
+				{/if}
+				<div
+					class="padron-soltar"
+					class:arrastrando
+					role="presentation"
+					ondragover={(evento) => {
+						evento.preventDefault();
+						arrastrando = true;
+					}}
+					ondragleave={() => (arrastrando = false)}
+					ondrop={soltar}
+				>
+					<span class="evaluado-vacio-icono"><Icono nombre="subir" tamano={24} /></span>
+					<strong>
+						<span class="solo-ancho">Elegí la planilla o arrastrala hasta acá</span>
+						<span class="solo-angosto">Elegí la planilla</span>
+					</strong>
+					<span>Excel (.xlsx, .xls), OpenDocument (.ods) o CSV. Hasta 2000 filas.</span>
+					<label class="boton enviar">
+						Elegir la planilla
+						<input
+							class="visualmente-oculto"
+							type="file"
+							accept={EXTENSIONES_DEL_LISTADO.join(',')}
+							onchange={elegirListado}
+							data-enfocar
+						/>
+					</label>
+				</div>
+				<div class="padron-requisitos">
+					<p class="rotulo-chico">Qué tiene que tener</p>
+					<p>
+						Una columna para el DNI, otra para el apellido y otra para el nombre, en cualquier orden.
+						También sirve una sola columna «Apellido y nombre», con una coma entre los dos: «Pérez,
+						Juan».
+					</p>
+					<a href={planillaDeEjemplo} download="padron.csv">
+						<Icono nombre="descargar" tamano={18} />
+						Descargar una planilla de ejemplo
+					</a>
+				</div>
+			{:else}
+				{#if respuestaDe('importar')}
+					<p class="dialogo-error" role="alert">
+						<Icono nombre="error" tamano={18} />{respuestaDe('importar')?.mensaje}
+					</p>
+				{/if}
+
+				<div class="padron-archivo">
+					<span><Icono nombre="planificacion" tamano={20} /></span>
+					<div>
+						<strong>{listado.archivo}</strong>
+						<span>{cifra(listado.personas.length + listado.errores.length)} filas leídas</span>
+					</div>
+				</div>
+
+				<div class="padron-cifras">
+					<div class="nuevas">
+						<strong>{cifra(nuevas.length)}</strong>
+						<span>para incorporar</span>
+					</div>
+					<div>
+						<strong>{cifra(yaCargadas)}</strong>
+						<span>ya en el padrón</span>
+					</div>
+					<div class="errores">
+						<strong>{cifra(listado.errores.length)}</strong>
+						<span>con errores</span>
+					</div>
+				</div>
+
+				{#if listado.errores.length > 0}
+					{@const filas = todosLosErrores ? listado.errores : listado.errores.slice(0, 5)}
+					<section class="padron-seccion">
+						<h3>Filas que no se van a incorporar</h3>
+						<p>Corregilas en la planilla y volvé a elegirla, o incorporá a esas personas de a una.</p>
+						<ul class="padron-filas-error">
+							{#each filas as error (error.fila)}
+								<li><span>Fila {error.fila}</span>{error.motivo}</li>
+							{/each}
+						</ul>
+						{#if listado.errores.length > 5}
+							<button
+								class="padron-ver-mas"
+								type="button"
+								aria-expanded={todosLosErrores}
+								onclick={() => (todosLosErrores = !todosLosErrores)}
+							>
+								{todosLosErrores ? 'Ver menos' : `Ver las ${cifra(listado.errores.length)}`}
+							</button>
+						{/if}
+					</section>
+				{/if}
+
+				<section class="padron-seccion">
+					<h3>Personas nuevas</h3>
+					{#if nuevas.length > 0}
+						{@const filas = todasLasNuevas ? nuevas : nuevas.slice(0, 8)}
+						<div class="padron-nuevas">
+							<div class="padron-nuevas-fila encabezado"><span>DNI</span><span>Apellido y nombre</span></div>
+							{#each filas as persona (persona.dni)}
+								<div class="padron-nuevas-fila">
+									<span>{mostrarDni(persona.dni)}</span>
+									<strong>{persona.apellido}, {persona.nombre}</strong>
+								</div>
+							{/each}
+						</div>
+						{#if nuevas.length > 8}
+							<button
+								class="padron-ver-mas"
+								type="button"
+								aria-expanded={todasLasNuevas}
+								onclick={() => (todasLasNuevas = !todasLasNuevas)}
+							>
+								{todasLasNuevas ? 'Ver menos' : `Ver las ${cifra(nuevas.length)}`}
+							</button>
+						{/if}
+					{:else}
+						<p class="padron-nadie-nuevo">
+							{listado.personas.length > 0
+								? 'Todas las personas del archivo ya están en el padrón.'
+								: 'No hay personas para incorporar.'}
+						</p>
+					{/if}
+				</section>
+			{/if}
+		</div>
+
+		{#if listado}
+			<form class="padron-panel-pie" method="POST" action="?/importar" use:enhance={enviar('importar')}>
+				<input
+					type="hidden"
+					name="personas"
+					value={JSON.stringify(nuevas.map(({ dni, apellido, nombre }) => ({ dni, apellido, nombre })))}
+				/>
+				<button class="boton secundario neutro" type="button" onclick={descartarListado} disabled={trabajando}>
+					Elegir otro archivo
+				</button>
+				{#if nuevas.length > 0}
+					<button class="boton enviar" type="submit" disabled={trabajando}>
+						{trabajando
+							? 'Incorporando…'
+							: nuevas.length === 1
+								? 'Incorporar 1 persona'
+								: `Incorporar ${cifra(nuevas.length)} personas`}
+					</button>
+				{/if}
+			</form>
+		{/if}
+	</div>
+{/if}
+
+{#if panel === 'quitar' && aQuitar}
+	<div class="padron-dialogo" role="alertdialog" aria-modal="true" aria-labelledby="quitar-titulo">
+		<span class="padron-asa" aria-hidden="true"></span>
+		<h2 id="quitar-titulo">¿Quitar a {aQuitar.apellido}, {aQuitar.nombre} del padrón?</h2>
+		<p>
+			{aQuitar.registros
+				? `${aQuitar.apellido}, ${aQuitar.nombre} ocupó ${roles(aQuitar.registros)} en las mesas. Sus evaluaciones no se borran, pero quedan sin identificar.`
+				: 'No ocupó ningún rol en las mesas. Si más adelante participa, va a aparecer entre los DNI sin resolver.'}
+		</p>
+		{#if respuestaDe('quitar')}
+			<p class="dialogo-error" role="alert">
+				<Icono nombre="error" tamano={18} />{respuestaDe('quitar')?.mensaje}
+			</p>
+		{/if}
+		<form method="POST" action="?/quitar" use:enhance={enviar('quitar')}>
+			<input type="hidden" name="id" value={aQuitar.id} />
+			<button class="boton secundario neutro" type="button" onclick={cerrar} disabled={trabajando} data-enfocar>
+				Cancelar
+			</button>
+			<button class="boton peligro" type="submit" disabled={trabajando}>
+				{trabajando ? 'Quitando…' : 'Sí, quitar del padrón'}
+			</button>
+		</form>
+	</div>
+{/if}
