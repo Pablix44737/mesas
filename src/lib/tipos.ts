@@ -46,5 +46,6 @@ export type Escenario = {
 	planificacion_tamano: number | null;
 	planificacion_subida_en: string | null;
 	disponible: boolean;
+	tenant_id: string;
 	creado_en: string;
 };

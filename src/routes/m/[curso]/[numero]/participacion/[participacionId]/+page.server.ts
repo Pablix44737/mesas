@@ -44,7 +44,18 @@ async function traerParticipacion(
 		.maybeSingle();
 
 	if (fallo) error(500, fallo.message);
-	if (!participacion) error(404, 'Ese registro no existe');
+
+	/**
+	 * El registro no está. Lo más probable es que el líder haya sacado a esta
+	 * persona del ciclo —se equivocó de rol, o de mesa—, y en ese momento está
+	 * mirando esta pantalla: un 404 la deja levantando la mano. Vuelve entonces a
+	 * la entrada de la mesa, que es justamente donde tiene que volver a elegir.
+	 *
+	 * Vale igual para un id inventado, y por eso el aviso no afirma quién lo sacó.
+	 */
+	if (!participacion) {
+		redirect(303, `/m/${codigoDelCurso}/${numeroMesa}?volvesAElegir=1`);
+	}
 
 	// Que el registro sea de esta mesa Y de este curso: con la numeración por curso,
 	// el número solo ya no alcanza para saber de qué mesa se está hablando.

@@ -1,5 +1,6 @@
 import { error, fail } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
+import { tenantActual } from '$lib/server/tenant';
 import { dniValido, mostrarDni, normalizarDni } from '$lib/dni';
 import { MAXIMO_DE_FILAS } from '$lib/importar-padron';
 import type { Actions, PageServerLoad } from './$types';
@@ -14,18 +15,33 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  */
 const vacio = { dni: '', nombre: '', apellido: '', campo: '', editando: null as string | null };
 
-export const load: PageServerLoad = async () => {
-	const [{ data: padron, error: fallo }, { data: pendientes }, { data: registros }] =
-		await Promise.all([
-			supabase.from('participantes').select('id, dni, nombre, apellido').order('apellido'),
-			supabase
-				.from('participaciones_sin_resolver')
-				.select('*')
-				.order('dni')
-				.order('mesa_numero')
-				.order('corrida_numero'),
-			supabase.from('participaciones').select('participante_id')
-		]);
+export const load: PageServerLoad = async ({ locals }) => {
+	const tenant = tenantActual(locals);
+
+	const [{ data: padron, error: fallo }, { data: pendientes }] = await Promise.all([
+		supabase
+			.from('participantes')
+			.select('id, dni, nombre, apellido')
+			.eq('tenant_id', tenant)
+			.order('apellido'),
+		supabase
+			.from('participaciones_sin_resolver')
+			.select('*')
+			.eq('tenant_id', tenant)
+			.order('dni')
+			.order('mesa_numero')
+			.order('corrida_numero')
+	]);
+
+	// Los roles ocupados se cuentan contra este padrón: sin acotarlo se traía una
+	// fila por cada participación del sistema para usar sólo las propias.
+	const { data: registros } =
+		(padron ?? []).length > 0
+			? await supabase
+					.from('participaciones')
+					.select('participante_id')
+					.in('participante_id', (padron ?? []).map((p) => p.id))
+			: { data: [] };
 
 	if (fallo) error(500, fallo.message);
 
@@ -70,7 +86,7 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions: Actions = {
-	incorporar: async ({ request }) => {
+	incorporar: async ({ request, locals }) => {
 		const formulario = await request.formData();
 		const dni = normalizarDni(String(formulario.get('dni') ?? ''));
 		const nombre = String(formulario.get('nombre') ?? '').trim();
@@ -86,7 +102,7 @@ export const actions: Actions = {
 
 		const { error: fallo } = await supabase
 			.from('participantes')
-			.insert({ dni, nombre, apellido });
+			.insert({ dni, nombre, apellido, tenant_id: tenantActual(locals) });
 
 		if (fallo) {
 			return fallo.code === '23505'
@@ -117,7 +133,7 @@ export const actions: Actions = {
 	 * navegador. Quien ya esté en el padrón se saltea, aunque se haya sumado entre
 	 * la vista previa y la confirmación.
 	 */
-	importar: async ({ request }) => {
+	importar: async ({ request, locals }) => {
 		const formulario = await request.formData();
 		const rechazar = (estado: number, mensaje: string) =>
 			fail(estado, { ...vacio, mensaje, exito: null });
@@ -135,7 +151,12 @@ export const actions: Actions = {
 			return rechazar(400, `El listado tiene más de ${MAXIMO_DE_FILAS} personas.`);
 		}
 
-		const personas = new Map<string, { dni: string; nombre: string; apellido: string }>();
+		const tenant = tenantActual(locals);
+
+		const personas = new Map<
+			string,
+			{ dni: string; nombre: string; apellido: string; tenant_id: string }
+		>();
 		for (const fila of filas as Array<Record<string, unknown> | null>) {
 			const dni = normalizarDni(String(fila?.dni ?? ''));
 			const nombre = String(fila?.nombre ?? '').trim();
@@ -143,12 +164,15 @@ export const actions: Actions = {
 			if (!dniValido(dni) || nombre.length < 2 || apellido.length < 2) {
 				return rechazar(400, 'El listado tiene datos inválidos. Volvé a elegir el archivo.');
 			}
-			if (!personas.has(dni)) personas.set(dni, { dni, nombre, apellido });
+			if (!personas.has(dni)) personas.set(dni, { dni, nombre, apellido, tenant_id: tenant });
 		}
 
+		// `onConflict` tiene que nombrar la clave única tal como quedó: el padrón se
+		// repite entre instituciones, así que lo único es (tenant_id, dni) y no el
+		// DNI solo. Con el nombre viejo, PostgREST rechaza el lote entero.
 		const { data: nuevas, error: fallo } = await supabase
 			.from('participantes')
-			.upsert([...personas.values()], { onConflict: 'dni', ignoreDuplicates: true })
+			.upsert([...personas.values()], { onConflict: 'tenant_id,dni', ignoreDuplicates: true })
 			.select('dni');
 
 		if (fallo) return rechazar(500, 'No se pudo incorporar el listado. Intentá de nuevo.');
@@ -196,7 +220,8 @@ export const actions: Actions = {
 	 * números se cuentan antes de tocar nada y se informan después: si no, el
 	 * administrador ve aparecer y desaparecer registros sin saber por qué.
 	 */
-	editar: async ({ request }) => {
+	editar: async ({ request, locals }) => {
+		const tenant = tenantActual(locals);
 		const formulario = await request.formData();
 		const id = String(formulario.get('id') ?? '');
 		const dni = normalizarDni(String(formulario.get('dni') ?? ''));
@@ -216,6 +241,7 @@ export const actions: Actions = {
 			.from('participantes')
 			.select('dni, nombre, apellido')
 			.eq('id', id)
+			.eq('tenant_id', tenant)
 			.maybeSingle();
 
 		if (!antes) return rechazar(404, 'Esa persona ya no está en el padrón.', '');
@@ -250,7 +276,8 @@ export const actions: Actions = {
 		const { error: fallo } = await supabase
 			.from('participantes')
 			.update(cambiaElDni ? { dni, nombre, apellido } : { nombre, apellido })
-			.eq('id', id);
+			.eq('id', id)
+			.eq('tenant_id', tenant);
 
 		if (fallo) {
 			return fallo.code === '23505'
@@ -294,7 +321,8 @@ export const actions: Actions = {
 	 * participaciones y evaluaciones quedan, con el DNI, pero sin nombre. Si se lo
 	 * vuelve a incorporar, se resuelven solas.
 	 */
-	quitar: async ({ request }) => {
+	quitar: async ({ request, locals }) => {
+		const tenant = tenantActual(locals);
 		const formulario = await request.formData();
 		const id = String(formulario.get('id') ?? '');
 
@@ -307,6 +335,7 @@ export const actions: Actions = {
 			.from('participantes')
 			.select('nombre, apellido')
 			.eq('id', id)
+			.eq('tenant_id', tenant)
 			.maybeSingle();
 
 		if (!persona) return rechazar(404, 'Esa persona ya no está en el padrón.');
@@ -316,7 +345,11 @@ export const actions: Actions = {
 			.select('id', { count: 'exact', head: true })
 			.eq('participante_id', id);
 
-		const { error: fallo } = await supabase.from('participantes').delete().eq('id', id);
+		const { error: fallo } = await supabase
+			.from('participantes')
+			.delete()
+			.eq('id', id)
+			.eq('tenant_id', tenant);
 
 		if (fallo) return rechazar(400, 'No se pudo quitar a la persona. Intentá de nuevo.');
 

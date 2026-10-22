@@ -51,11 +51,32 @@ runtime, así que el build no las necesita.
    | -------- | ----- |
    | `SUPABASE_URL` | `https://ihqirdjsrxqovxjwtoto.supabase.co` |
    | `SUPABASE_SERVICE_ROLE_KEY` | la clave `service_role` del dashboard |
-   | `CLAVE_ADMIN` | opcional: la clave de administración (por defecto `centrosimu123`) |
+   | `CLAVE_PLATAFORMA` | la clave de `/plataforma`, donde se dan de alta las instituciones |
 
    La `service_role` es secreta y sólo se usa del lado del servidor. Si se cargan
    después del primer deploy, hay que volver a desplegar para que las funciones las
-   tomen. Cambiar `CLAVE_ADMIN` invalida sola las sesiones abiertas con la anterior.
+   tomen.
+
+   **La clave de administración es de cada institución**, guardada hasheada en
+   `tenants.clave_hash`, y se fija al darla de alta: no hay ninguna variable de
+   entorno que abra la administración de nadie.
+
+   `CLAVE_PLATAFORMA` es otra cosa: es la de la única zona que está por encima de
+   una institución —`/plataforma`, que las da de alta y les restablece la clave—.
+   **No tiene valor por defecto a propósito**: sin la variable configurada esa zona
+   no existe y responde 404, en vez de existir con una clave que está en el código.
+   No hay usuarios ni superadmins en la base; quien tiene esta clave es quien
+   despliega el sistema, que es exactamente quien podría hacer lo mismo por SQL.
+
+   La firma de la cookie de administración deriva de `SUPABASE_SERVICE_ROLE_KEY` y no
+   de la clave de administración: con una clave por institución, derivarla de ella
+   obligaría a saber de qué institución es la cookie para poder validarla, que es
+   justamente lo que la firma tiene que probar. Tampoco hay un secreto de firma por
+   defecto en el código: uno conocido permitiría falsificar una sesión de
+   administración de cualquier institución sin saber ninguna clave. A cambio,
+   cambiar una clave ya no corta las sesiones abiertas, que caducan en 12 horas.
+   La de plataforma sí incluye la clave en su firma —hay una sola para toda la
+   zona—, así que cambiarla corta en el acto las sesiones abiertas.
 
 A partir de ahí, cada `git push` publica una versión nueva.
 
@@ -206,6 +227,81 @@ distinguir «evaluación en curso» de «evaluación registrada», y una séptim
 y fue incorporada después.
 
 ## Decisiones de diseño
+
+**El tenant va en cuatro tablas, no en todas.** Multitenencia: cada universidad ve
+lo suyo. `tenant_id` está sólo donde no se deduce de nada más —`cursos`,
+`escenarios`, `checklist_plantillas` y `participantes`—. En el resto ya está
+determinado por una clave foránea: una participación sabe su institución por
+corrida → mesa → curso. Repetirlo ahí sería una dependencia transitiva, que es
+exactamente lo que la tercera forma normal no admite, y las estadísticas que vienen
+después la necesitan limpia. Cuando quieran el tenant plano, va en las vistas, que
+no son relaciones almacenadas y por lo tanto no normalizan nada. `roles`,
+`destinatarios` y `roles_por_destinatario` no llevan tenant: son el modelo MESAS,
+igual para todas; si alguna necesitara los suyos, el patrón sería nulo = común.
+
+**Las claves únicas eran el peligro, y confirmaron el diseño.** De las doce del
+esquema rompían exactamente cuatro, y son las de esas mismas cuatro tablas:
+`participantes.dni` (dos universidades no podrían tener el mismo documento),
+`cursos.nombre`, `escenarios.nombre` y, la peor, el índice parcial del checklist
+común —una sola universidad en todo el sistema habría podido tener un checklist
+vigente del observador del proceso—. Las demás ya estaban acotadas por una clave
+foránea que pertenece a un tenant, así que no necesitaron nada. Que las que rompen
+sean las de las tablas que necesitan la columna no es casualidad: es la señal de que
+la descomposición está bien hecha.
+
+**`cursos.codigo` queda global.** Va en la URL del QR y el alta ya numera las
+colisiones. Meter la institución en la dirección obligaría a reimprimir todos los
+carteles para no ganar nada: un slug no es un secreto.
+
+**Y había cuatro funciones que buscaban sin saber de qué institución.** Funcionaban
+porque hay una sola. Con dos, `plantilla_de_la_participacion()` y
+`asignar_docente_a_la_mesa()` cortan con error —subconsulta de dos filas— y las
+otras dos hacen algo peor, que es seguir: `resolver_identidad_de_participacion()`
+le habría colgado a una participación el nombre de un homónimo de otra universidad,
+y `dar_por_terminado_el_checklist()` habría dejado sin checklist vigente a la otra
+institución al publicar el propio. Verificado con un segundo tenant en una
+transacción revertida: el mismo DNI en los dos padrones resuelve contra el suyo.
+
+**La columna no tiene valor por defecto, a propósito.** Un default haría que un alta
+que se olvidó del tenant funcionara igual, cayendo siempre en la misma institución
+—justo el error que no queremos que pase inadvertido—.
+
+**Lo que filtra no son treinta consultas sueltas, son seis resolvers y las listas.**
+Las pantallas de detalle de la administración resuelven primero —`traerCurso`,
+`traerEscenario`, `traerPlantilla`, `mesaDelCurso`— y todo lo que sigue cuelga de
+eso, así que acotar el resolver acota la pantalla entera. Lo que hubo que tocar uno
+por uno son las listas, que piden «todo X», y **las acciones que reciben un id por
+formulario**: ahí el id no pasó por ningún resolver, así que archivar un curso,
+borrar una mesa, un ciclo o una participación comprueban antes de quién es. Un
+`.eq('id', …)` sin más habría dejado borrar lo de otra institución mandando su id.
+
+Que no exista y que sea de otra institución devuelven lo mismo —404— a propósito:
+distinguirlos convertiría cualquier pantalla en una forma de averiguar qué hay del
+otro lado.
+
+**La institución es parte de la credencial, no un dato que se consulta.** La cookie
+de sesión lleva, firmada, a qué institución pertenece quien administra, y
+`tenantActual(locals)` la lee de ahí sin tocar la base: eso corre en cada alta y el
+guardián ya corre en cada pedido. La firma cubre la institución y el vencimiento, así
+que retocar cualquiera de los dos invalida la cookie —comprobado contra el servidor:
+cambiarle la institución a una sesión válida devuelve el redirect a `/ingresar`—.
+
+**El superadmin es el entorno, no una fila.** Dar de alta una institución exige una
+autoridad por encima de todas, y esa autoridad ya existía: quien despliega el
+sistema. En vez de inventarle una tabla de usuarios —la primera del proyecto, para
+una operación que pasa una vez por universidad— hay una zona `/plataforma` con su
+propia clave en `CLAVE_PLATAFORMA`, su propia cookie y ninguna institución adentro.
+Sin la variable configurada la zona responde 404, para no anunciar que hay una puerta
+esperando una clave. Si algún día el alta la tiene que dar alguien que no despliega,
+se agrega la tabla y cambia solo cómo se autentica: la zona ya está.
+
+**Y la institución dejó de poder nacer sin clave.** `tenants.clave_hash` era nulo
+mientras una institución no fijaba la suya, y en ese caso el ingreso aceptaba la
+`CLAVE_ADMIN` del entorno —que tenía un valor por defecto en el código—. Eso existía
+para que el sistema en marcha no quedara afuera el día que las claves se separaron, y
+con una sola institución era justamente el objetivo; con dos habría sido una puerta
+abierta a la nueva. El alta crea la fila y el hash en la misma transacción, la columna
+es `not null`, y la rama de transición se fue junto con la variable.
 
 **Paleta de la Escuela de Enfermería (UNaM).** Azul `#126199` y verde `#99cc33`,
 tomados del sitio de la institución. El verde de marca sobre blanco da 1.9:1, muy
@@ -407,6 +503,26 @@ puesto son las participaciones de esa corrida y los checklists abiertos sin envi
 —son de la corrida equivocada—, y el resumen los cuenta antes y los informa después.
 La numeración no queda con huecos: `habilitar_siguiente_corrida()` calcula
 `max(numero) + 1`, así que después de borrar la 2 la siguiente vuelve a ser la 2.
+
+**El líder puede sacar a alguien del ciclo, y por eso ya no hace falta el
+administrador.** Equivocarse de rol al entrar es el error más frecuente, y hasta
+ahora la única salida era que alguien con la clave de administración diera de baja
+ese registro: con una mesa es un trámite, con veinte a la vez es una cola. El líder
+ahora lo corrige desde su propia pantalla, y de paso saca a quien no corresponde que
+esté en esa mesa.
+
+Es sólo del ciclo en curso: sacarlo de la mesa entera se llevaría su recorrido y las
+evaluaciones de los ciclos anteriores, que están bien hechas. Lo que haya enviado en
+*este* ciclo sí se va con él —`checklist_instancias` cuelga de la participación en
+cascada—, y la confirmación lo dice en una línea antes de hacerlo: entró mal, así que
+no le correspondía evaluar eso. El id de la participación viene de un formulario, así
+que se comprueba contra la corrida habilitada de esa mesa; sin eso alcanzaría con
+mandar el de otra. Y como quien fue sacado está mirando su pantalla en ese momento,
+esa pantalla deja de ser un 404 y lo devuelve a la entrada de la mesa, que es donde
+tiene que volver a elegir.
+
+La acción vive detrás de un «Corregir» que hay que encender: lo normal es mirar la
+lista, no tocarla.
 
 **Una mesa pertenece a un curso; los instrumentos, a la institución.** Al querer usar
 el sistema para una cohorte nueva, las mesas de las dos ediciones se mezclarían en la
@@ -699,15 +815,24 @@ supabase/
   habilitar corridas. Es deliberado —el líder no tiene por qué recordar una clave
   en medio de la práctica— pero conviene revisarlo si el sistema se usa fuera del
   aula.
-- **La clave de administración es una sola y compartida.** No hay usuarios ni
-  registro de quién hizo qué en la administración. Alcanza para un evento; no para
-  auditar.
+- **La clave de administración es una por institución, pero compartida dentro de
+  ella.** No hay usuarios ni registro de quién hizo qué. Alcanza para un evento; no
+  para auditar.
+- **Nada limita los intentos de clave en `/plataforma` tampoco.** Es la misma
+  carencia que en `/ingresar`, con más en juego: desde ahí se dan de alta
+  instituciones y se restablecen claves.
+- **`/mesas` y `/participar` todavía listan todo de todas las instituciones.** Son
+  las dos pantallas sin sesión, así que no hay «tu institución» contra la cual
+  filtrar. Y `/mesas` deja habilitar ciclos sin credencial. Es la decisión de diseño
+  que falta —subdominio por institución, institución en la URL, o una preferencia
+  guardada— y conviene tomarla antes de que entre la segunda universidad. La
+  administración sí filtra, y las pantallas del participante y del líder que cuelgan
+  de un curso resuelven por su código, que es único en todo el sistema.
 - **Nada limita los intentos de clave.** Un ataque por fuerza bruta contra
   `/ingresar` no encuentra freno más que la latencia de la red.
-- **Cambiar de rol lo tiene que destrabar el administrador.** Quien se equivoca al
-  elegir vuelve siempre a su registro original; para corregirlo, el administrador da
-  de baja ese registro y la persona escanea de nuevo. Alcanza para el aula, pero
-  depende de que haya alguien en la administración en ese momento.
+- **Nada impide que dos personas ocupen el mismo rol en un ciclo.** En los
+  observadores es deliberado; en el facilitador y el operador no debería pasar, y
+  pasa. Hoy el líder lo corrige sacando a quien sobra, pero el sistema no lo evita.
 - **Los criterios siguen siendo editables después de terminado el checklist.** Es
   a propósito: la feature «Resultado de una evaluación» pide que un cambio de peso
   se refleje en las evaluaciones ya enviadas. Pero agregar o quitar criterios de un

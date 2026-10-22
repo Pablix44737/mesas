@@ -1,5 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
+import { tenantActual } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -16,11 +17,12 @@ type Resumen = {
 const cuantas = (n: number, singular: string, plural: string) =>
 	`${n} ${n === 1 ? singular : plural}`;
 
-async function traerCurso(codigo: string) {
+async function traerCurso(codigo: string, tenantId: string) {
 	const { data, error: fallo } = await supabase
 		.from('cursos')
 		.select('*')
 		.eq('codigo', codigo)
+		.eq('tenant_id', tenantId)
 		.maybeSingle();
 
 	if (fallo) error(500, fallo.message);
@@ -29,8 +31,8 @@ async function traerCurso(codigo: string) {
 	return data;
 }
 
-export const load: PageServerLoad = async ({ params }) => {
-	const curso = await traerCurso(params.curso);
+export const load: PageServerLoad = async ({ params, locals }) => {
+	const curso = await traerCurso(params.curso, tenantActual(locals));
 
 	const [{ data: mesas }, { data: evaluaciones }] = await Promise.all([
 		supabase
@@ -87,8 +89,8 @@ export const actions: Actions = {
 	 * y cambiarlo después dejaría participaciones con roles que su propio curso ya
 	 * no admite. Es la misma regla con la que se deshace una corrida.
 	 */
-	destinatario: async ({ request, params }) => {
-		const curso = await traerCurso(params.curso);
+	destinatario: async ({ request, params, locals }) => {
+		const curso = await traerCurso(params.curso, tenantActual(locals));
 
 		const formulario = await request.formData();
 		const destinadoA = String(formulario.get('destinadoA') ?? '');
@@ -123,8 +125,8 @@ export const actions: Actions = {
 	},
 
 	/** Corregir el nombre. El código no se toca: va a estar impreso en los QR. */
-	renombrar: async ({ request, params }) => {
-		const curso = await traerCurso(params.curso);
+	renombrar: async ({ request, params, locals }) => {
+		const curso = await traerCurso(params.curso, tenantActual(locals));
 
 		const formulario = await request.formData();
 		const nombre = String(formulario.get('nombre') ?? '').trim();
@@ -160,7 +162,9 @@ export const actions: Actions = {
 	 * lo que se informa es lo que de verdad se destruyó y no lo que había cuando se
 	 * dibujó la confirmación.
 	 */
-	eliminar: async ({ request }) => {
+	eliminar: async ({ request, params, locals }) => {
+		const curso = await traerCurso(params.curso, tenantActual(locals));
+
 		const formulario = await request.formData();
 		const id = String(formulario.get('id') ?? '');
 		const confirmacion = String(formulario.get('confirmacion') ?? '').trim();
@@ -173,7 +177,16 @@ export const actions: Actions = {
 		// El número contra el que se confirma sale de la base y no del formulario:
 		// si viniera del cliente, quien manda el pedido estaría eligiendo a la vez
 		// qué borrar y contra qué se comprueba, y la traba no trabaría nada.
-		const { data: mesa } = await supabase.from('mesas').select('numero').eq('id', id).maybeSingle();
+		//
+		// Y acotada al curso de la URL, que a su vez está acotado a la institución
+		// de la sesión: el id viene del formulario, así que sin esto bastaría con
+		// mandar el de una mesa de otra institución.
+		const { data: mesa } = await supabase
+			.from('mesas')
+			.select('numero')
+			.eq('id', id)
+			.eq('curso_id', curso.id)
+			.maybeSingle();
 
 		if (!mesa) return rechazar(404, 'Esa mesa ya no existe: alguien la eliminó antes.');
 
@@ -234,8 +247,8 @@ export const actions: Actions = {
 	 *
 	 * `borrar_curso()` cuenta y borra en una sola transacción.
 	 */
-	eliminarCurso: async ({ request, params }) => {
-		const curso = await traerCurso(params.curso);
+	eliminarCurso: async ({ request, params, locals }) => {
+		const curso = await traerCurso(params.curso, tenantActual(locals));
 
 		const formulario = await request.formData();
 		const confirmacion = String(formulario.get('confirmacion') ?? '').trim();

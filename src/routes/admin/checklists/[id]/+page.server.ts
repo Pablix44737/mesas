@@ -1,18 +1,20 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
+import { tenantActual } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const rechazar = (estado: number, mensaje: string) => fail(estado, { mensaje, exito: null });
 
-async function traerPlantilla(id: string) {
+async function traerPlantilla(id: string, tenantId: string) {
 	if (!UUID.test(id)) error(404, 'El checklist no existe');
 
 	const { data, error: fallo } = await supabase
 		.from('checklist_plantillas')
-		.select('id, nombre, rol_codigo, ponderado, estado, rol:roles(nombre, checklist)')
+		.select('id, nombre, rol_codigo, ponderado, estado, tenant_id, rol:roles(nombre, checklist)')
 		.eq('id', id)
+		.eq('tenant_id', tenantId)
 		.maybeSingle();
 
 	if (fallo) error(500, fallo.message);
@@ -29,8 +31,8 @@ function leerPeso(valor: FormDataEntryValue | null, ponderado: boolean): number 
 	return peso;
 }
 
-export const load: PageServerLoad = async ({ params }) => {
-	const plantilla = await traerPlantilla(params.id);
+export const load: PageServerLoad = async ({ params, locals }) => {
+	const plantilla = await traerPlantilla(params.id, tenantActual(locals));
 
 	const { data: items } = await supabase
 		.from('checklist_items')
@@ -47,6 +49,7 @@ export const load: PageServerLoad = async ({ params }) => {
 					.select('nombre')
 					.eq('rol_codigo', plantilla.rol_codigo)
 					.eq('estado', 'disponible')
+					.eq('tenant_id', plantilla.tenant_id)
 					.maybeSingle()
 			: { data: null };
 
@@ -83,8 +86,8 @@ export const actions: Actions = {
 	 * título corregido. Es el mismo instrumento, bien escrito; misma lógica con la
 	 * que un cambio de peso corre el resultado de lo ya enviado.
 	 */
-	renombrar: async ({ request, params }) => {
-		const plantilla = await traerPlantilla(params.id);
+	renombrar: async ({ request, params, locals }) => {
+		const plantilla = await traerPlantilla(params.id, tenantActual(locals));
 
 		const formulario = await request.formData();
 		const nombre = String(formulario.get('nombre') ?? '').trim();
@@ -106,8 +109,8 @@ export const actions: Actions = {
 		return { mensaje: null, exito: `El checklist ahora se llama «${nombre}».` };
 	},
 
-	agregarItem: async ({ request, params }) => {
-		const plantilla = await traerPlantilla(params.id);
+	agregarItem: async ({ request, params, locals }) => {
+		const plantilla = await traerPlantilla(params.id, tenantActual(locals));
 
 		const formulario = await request.formData();
 		const texto = String(formulario.get('texto') ?? '').trim();
@@ -136,8 +139,8 @@ export const actions: Actions = {
 		return { mensaje: null, exito: 'Criterio agregado.' };
 	},
 
-	editarItem: async ({ request, params }) => {
-		const plantilla = await traerPlantilla(params.id);
+	editarItem: async ({ request, params, locals }) => {
+		const plantilla = await traerPlantilla(params.id, tenantActual(locals));
 
 		const formulario = await request.formData();
 		const itemId = String(formulario.get('itemId') ?? '');
@@ -175,8 +178,8 @@ export const actions: Actions = {
 	 * escenario o si alguien lo abrió alguna vez: una instancia es el trabajo de
 	 * una persona, aunque no lo haya enviado. Sus criterios caen por cascada.
 	 */
-	eliminar: async ({ params }) => {
-		const plantilla = await traerPlantilla(params.id);
+	eliminar: async ({ params, locals }) => {
+		const plantilla = await traerPlantilla(params.id, tenantActual(locals));
 
 		const { error: fallo } = await supabase.rpc('borrar_checklist', {
 			p_plantilla_id: plantilla.id
@@ -204,8 +207,8 @@ export const actions: Actions = {
 		redirect(303, '/admin/checklists');
 	},
 
-	reordenarItems: async ({ request, params }) => {
-		const plantilla = await traerPlantilla(params.id);
+	reordenarItems: async ({ request, params, locals }) => {
+		const plantilla = await traerPlantilla(params.id, tenantActual(locals));
 
 		const formulario = await request.formData();
 		const orden = String(formulario.get('orden') ?? '')
@@ -236,8 +239,8 @@ export const actions: Actions = {
 	 * JavaScript: con JavaScript la pantalla reacomoda localmente y guarda el
 	 * orden entero con `reordenarItems`, en un viaje en vez de uno por flecha.
 	 */
-	moverItem: async ({ request, params }) => {
-		const plantilla = await traerPlantilla(params.id);
+	moverItem: async ({ request, params, locals }) => {
+		const plantilla = await traerPlantilla(params.id, tenantActual(locals));
 
 		const formulario = await request.formData();
 		const itemId = String(formulario.get('itemId') ?? '');
@@ -267,8 +270,8 @@ export const actions: Actions = {
 		return { mensaje: null, exito: null };
 	},
 
-	quitarItem: async ({ request, params }) => {
-		const plantilla = await traerPlantilla(params.id);
+	quitarItem: async ({ request, params, locals }) => {
+		const plantilla = await traerPlantilla(params.id, tenantActual(locals));
 
 		const formulario = await request.formData();
 		const itemId = String(formulario.get('itemId') ?? '');
@@ -286,8 +289,8 @@ export const actions: Actions = {
 	},
 
 	/** Al despoderar, un trigger iguala todos los pesos en 1. */
-	ponderacion: async ({ request, params }) => {
-		const plantilla = await traerPlantilla(params.id);
+	ponderacion: async ({ request, params, locals }) => {
+		const plantilla = await traerPlantilla(params.id, tenantActual(locals));
 
 		const formulario = await request.formData();
 		const ponderado = formulario.get('ponderado') === 'true';
@@ -308,8 +311,8 @@ export const actions: Actions = {
 	},
 
 	/** Da el checklist por terminado: queda disponible para usarse. */
-	terminar: async ({ params }) => {
-		const plantilla = await traerPlantilla(params.id);
+	terminar: async ({ params, locals }) => {
+		const plantilla = await traerPlantilla(params.id, tenantActual(locals));
 
 		const { data, error: fallo } = await supabase.rpc('dar_por_terminado_el_checklist', {
 			p_plantilla_id: plantilla.id

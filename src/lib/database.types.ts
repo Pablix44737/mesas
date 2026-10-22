@@ -127,6 +127,7 @@ export type Database = {
 					nombre: string;
 					ponderado: boolean;
 					rol_codigo: string;
+					tenant_id: string;
 				};
 				Insert: {
 					creada_en?: string;
@@ -135,6 +136,7 @@ export type Database = {
 					nombre: string;
 					ponderado?: boolean;
 					rol_codigo: string;
+					tenant_id: string;
 				};
 				Update: {
 					creada_en?: string;
@@ -143,6 +145,7 @@ export type Database = {
 					nombre?: string;
 					ponderado?: boolean;
 					rol_codigo?: string;
+					tenant_id?: string;
 				};
 				Relationships: [
 					{
@@ -198,6 +201,7 @@ export type Database = {
 					planificacion_subida_en: string | null;
 					planificacion_tamano: number | null;
 					planificacion_tipo: string | null;
+					tenant_id: string;
 				};
 				Insert: {
 					checklist_tecnica_id?: string | null;
@@ -210,6 +214,7 @@ export type Database = {
 					planificacion_subida_en?: string | null;
 					planificacion_tamano?: number | null;
 					planificacion_tipo?: string | null;
+					tenant_id?: string;
 				};
 				Update: {
 					checklist_tecnica_id?: string | null;
@@ -222,6 +227,7 @@ export type Database = {
 					planificacion_subida_en?: string | null;
 					planificacion_tamano?: number | null;
 					planificacion_tipo?: string | null;
+					tenant_id?: string;
 				};
 				Relationships: [
 					{
@@ -239,6 +245,7 @@ export type Database = {
 					codigo: string;
 					creado_en: string;
 					destinado_a: string;
+					tenant_id: string;
 					id: string;
 					nombre: string;
 				};
@@ -247,6 +254,7 @@ export type Database = {
 					codigo: string;
 					creado_en?: string;
 					destinado_a: string;
+					tenant_id: string;
 					id?: string;
 					nombre: string;
 				};
@@ -255,6 +263,7 @@ export type Database = {
 					codigo?: string;
 					creado_en?: string;
 					destinado_a?: string;
+					tenant_id?: string;
 					id?: string;
 					nombre?: string;
 				};
@@ -387,6 +396,7 @@ export type Database = {
 					dni: string;
 					id: string;
 					nombre: string;
+					tenant_id: string;
 				};
 				Insert: {
 					apellido: string;
@@ -394,11 +404,43 @@ export type Database = {
 					dni: string;
 					id?: string;
 					nombre: string;
+					tenant_id: string;
 				};
 				Update: {
 					apellido?: string;
 					creado_en?: string;
 					dni?: string;
+					id?: string;
+					nombre?: string;
+					tenant_id?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'participantes_tenant_id_fkey';
+						columns: ['tenant_id'];
+						isOneToOne: false;
+						referencedRelation: 'tenants';
+						referencedColumns: ['id'];
+					}
+				];
+			};
+			tenants: {
+				Row: {
+					codigo: string;
+					creado_en: string;
+					id: string;
+					nombre: string;
+					clave_hash: string | null;
+				};
+				Insert: {
+					codigo: string;
+					creado_en?: string;
+					id?: string;
+					nombre: string;
+				};
+				Update: {
+					codigo?: string;
+					creado_en?: string;
 					id?: string;
 					nombre?: string;
 				};
@@ -515,6 +557,19 @@ export type Database = {
 				};
 				Relationships: [];
 			};
+			instituciones_resumen: {
+				Row: {
+					id: string | null;
+					nombre: string | null;
+					codigo: string | null;
+					creado_en: string | null;
+					cursos: number | null;
+					mesas: number | null;
+					escenarios: number | null;
+					padron: number | null;
+				};
+				Relationships: [];
+			};
 			participaciones_sin_resolver: {
 				Row: {
 					corrida_id: string | null;
@@ -522,6 +577,7 @@ export type Database = {
 					creada_en: string | null;
 					curso_codigo: string | null;
 					curso_nombre: string | null;
+					tenant_id: string | null;
 					dni: string | null;
 					mesa_id: string | null;
 					mesa_numero: number | null;
@@ -574,6 +630,18 @@ export type Database = {
 				Returns: Json;
 			};
 			quitar_el_docente_de_la_mesa: { Args: { p_mesa_id: string }; Returns: Json };
+			verificar_clave_del_tenant: {
+				Args: { p_tenant_id: string; p_clave: string };
+				Returns: boolean;
+			};
+			fijar_clave_del_tenant: {
+				Args: { p_tenant_id: string; p_clave: string };
+				Returns: undefined;
+			};
+			crear_institucion: {
+				Args: { p_nombre: string; p_codigo: string; p_clave: string };
+				Returns: Json;
+			};
 			cambiar_el_destinatario: {
 				Args: { p_curso_id: string; p_destinatario: string };
 				Returns: Json;
@@ -587,6 +655,7 @@ export type Database = {
 					nombre: string;
 					ponderado: boolean;
 					rol_codigo: string;
+					tenant_id: string;
 				};
 				SetofOptions: {
 					from: '*';

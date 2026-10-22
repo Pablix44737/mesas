@@ -1,14 +1,18 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
+import { tenantActual } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ locals }) => {
+	const tenant = tenantActual(locals);
+
 	const [{ data: escenarios, error: falloEscenarios }, { data: operacion }] = await Promise.all([
 		supabase
 			.from('escenarios')
 			.select(
 				'id, nombre, disponible, planificacion_archivo, checklist_tecnica:checklist_plantillas(id, nombre)'
 			)
+			.eq('tenant_id', tenant)
 			.order('nombre'),
 		// Los checklists que no cuelgan de un escenario sino de su rol, uno por rol
 		// de checklist común. Son dos: el del facilitador y el del proceso, cada uno
@@ -18,6 +22,7 @@ export const load: PageServerLoad = async () => {
 			.select('id, nombre, rol:roles!inner(nombre, checklist)')
 			.eq('estado', 'disponible')
 			.eq('roles.checklist', 'comun')
+			.eq('tenant_id', tenant)
 	]);
 
 	if (falloEscenarios) error(500, falloEscenarios.message);
@@ -34,7 +39,7 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions: Actions = {
-	crear: async ({ request }) => {
+	crear: async ({ request, locals }) => {
 		const formulario = await request.formData();
 		const nombre = String(formulario.get('nombre') ?? '').trim();
 
@@ -44,7 +49,7 @@ export const actions: Actions = {
 
 		const { data: escenario, error: fallo } = await supabase
 			.from('escenarios')
-			.insert({ nombre })
+			.insert({ nombre, tenant_id: tenantActual(locals) })
 			.select('id')
 			.single();
 
