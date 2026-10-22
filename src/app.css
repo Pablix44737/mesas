@@ -1875,6 +1875,120 @@ fieldset.roles.invalido legend {
 	max-width: 62ch;
 }
 
+/* El criterio abre su propia evolución: se comporta como enlace, pero sin
+   subrayado permanente, que en una tabla de doce filas sería ruido. */
+.criterio-enlace {
+	color: inherit;
+	text-decoration: none;
+}
+
+.criterio-enlace:hover .criterio-texto,
+.criterio-enlace:focus-visible .criterio-texto {
+	color: var(--azul);
+	text-decoration: underline;
+}
+
+.tabla tbody tr.abierta {
+	background: var(--azul-tenue);
+	box-shadow: inset 3px 0 0 var(--azul);
+}
+
+/* --- la evolución de un criterio --- */
+
+.evolucion-quien {
+	padding: var(--e-4) var(--e-5) 0;
+}
+
+.evolucion-quien .criterio-texto {
+	margin: 0 0 2px;
+	max-width: 62ch;
+}
+
+/* Las pestañas del eje son enlaces y no botones: el eje queda en la dirección. */
+.pestanas a {
+	display: flex;
+	flex: 1 1 0;
+	align-items: center;
+	justify-content: center;
+	min-height: 44px;
+	border-radius: var(--r-md);
+	color: var(--tinta-suave);
+	font-size: 15px;
+	font-weight: 600;
+	text-align: center;
+	text-decoration: none;
+}
+
+.pestanas a[aria-current='page'] {
+	background: var(--superficie);
+	color: var(--tinta);
+	box-shadow: 0 1px 2px rgba(18, 48, 63, 0.12);
+}
+
+.serie {
+	margin: var(--e-2) 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.serie li {
+	display: flex;
+	align-items: center;
+	gap: var(--e-3);
+	min-height: 48px;
+	padding: var(--e-2) var(--e-5);
+	border-top: 1px solid var(--borde);
+}
+
+.serie-eje {
+	flex: 0 0 auto;
+	min-width: 5.5rem;
+	color: var(--tinta-suave);
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.serie-barra {
+	position: relative;
+	flex: 1 1 auto;
+	height: 10px;
+	border-radius: var(--r-full);
+	background: var(--superficie-media);
+}
+
+.serie-propia {
+	display: block;
+	height: 100%;
+	border-radius: var(--r-full);
+	background: var(--error);
+}
+
+/* Dónde estuvo todo el checklist en ese mismo punto: una marca, no otra barra,
+   porque no se suman ni compiten — una es la referencia de la otra. */
+.serie-conjunto {
+	position: absolute;
+	top: -3px;
+	width: 2px;
+	height: 16px;
+	border-radius: 1px;
+	background: var(--tinta-suave);
+}
+
+.serie-cifra {
+	flex: 0 0 auto;
+	display: flex;
+	align-items: baseline;
+	gap: var(--e-2);
+	min-width: 7.5rem;
+	justify-content: flex-end;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+.serie li.vacia .serie-cifra {
+	font-weight: 400;
+}
+
 /* --- administración: el marco ---
    Una barra superior blanca con la marca, las cuatro secciones y la salida. En el
    teléfono las secciones bajan a una barra fija abajo, al alcance del pulgar. */

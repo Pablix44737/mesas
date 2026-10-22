@@ -74,6 +74,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			itemId: string;
 			criterio: string;
 			checklist: string;
+			plantillaId: string;
 			rol: string;
 			peso: number;
 			respondido: number;
@@ -89,6 +90,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			itemId: fila.item_id,
 			criterio: fila.criterio,
 			checklist: fila.checklist ?? '',
+			plantillaId: fila.plantilla_id ?? '',
 			rol: fila.rol ?? '',
 			peso: Number(fila.peso ?? 0),
 			respondido: 0,
@@ -189,6 +191,95 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const paresTotales = comparados.reduce((total, c) => total + c.pares, 0);
 	const discrepanTotales = comparados.reduce((total, c) => total + c.discrepan, 0);
 
+	/**
+	 * La evolución de un criterio, cuando se eligió uno.
+	 *
+	 * Dos ejes posibles y no son lo mismo. `vuelta` es el número de ciclo dentro
+	 * de la mesa: el eje del modelo, donde la pregunta es si la segunda práctica
+	 * sale mejor que la primera. `fecha` es el calendario: el eje que contesta si
+	 * una corrección que se hizo sirvió. Hoy casi todo cae en un mismo día, así
+	 * que el que tiene algo para decir es la vuelta; después del próximo evento el
+	 * otro empieza a valer.
+	 *
+	 * Al lado del criterio va la serie de todo su checklist. Con cuatro respuestas
+	 * por vuelta, una sola marca mueve el número veinticinco puntos: lo único que
+	 * permite distinguir un movimiento real de un rebote es ver contra qué se
+	 * mueve el conjunto, que sí tiene cientos de respuestas por vuelta.
+	 */
+	const porEje = url.searchParams.get('eje') === 'fecha' ? 'fecha' : 'vuelta';
+	const criterioPedido = url.searchParams.get('criterio');
+	const elCriterio = criterioPedido ? (porCriterio.get(criterioPedido) ?? null) : null;
+
+	let evolucion: {
+		criterio: { itemId: string; texto: string; rol: string; checklist: string };
+		eje: 'vuelta' | 'fecha';
+		puntos: {
+			etiqueta: string;
+			respondido: number;
+			fallos: number;
+			tasa: number;
+			conjunto: number | null;
+		}[];
+	} | null = null;
+
+	if (elCriterio) {
+		const consulta = supabase
+			.from('criterios_en_el_tiempo')
+			.select('*')
+			.eq('tenant_id', tenant)
+			.eq('plantilla_id', elCriterio.plantillaId);
+
+		const { data: enElTiempo } = escenarioId
+			? await consulta.eq('escenario_id', escenarioId)
+			: await consulta;
+
+		// Una casilla por punto del eje: la del criterio y la de todo el checklist.
+		const suyo = new Map<string, { respondido: number; fallos: number }>();
+		const delChecklist = new Map<string, { respondido: number; fallos: number }>();
+
+		for (const fila of enElTiempo ?? []) {
+			const clave = porEje === 'fecha' ? (fila.dia ?? '') : String(fila.vuelta ?? '');
+			if (!clave) continue;
+
+			const sumar = (donde: Map<string, { respondido: number; fallos: number }>) => {
+				const casilla = donde.get(clave) ?? { respondido: 0, fallos: 0 };
+				casilla.respondido += fila.respondido ?? 0;
+				casilla.fallos += fila.fallos ?? 0;
+				donde.set(clave, casilla);
+			};
+
+			sumar(delChecklist);
+			if (fila.item_id === elCriterio.itemId) sumar(suyo);
+		}
+
+		// El eje se ordena por su propia naturaleza: la vuelta es un número, el día
+		// es una fecha ISO, que ordenada como texto queda cronológica igual.
+		const claves = [...delChecklist.keys()].sort((a, b) =>
+			porEje === 'vuelta' ? Number(a) - Number(b) : a.localeCompare(b)
+		);
+
+		evolucion = {
+			criterio: {
+				itemId: elCriterio.itemId,
+				texto: elCriterio.criterio,
+				rol: elCriterio.rol,
+				checklist: elCriterio.checklist
+			},
+			eje: porEje,
+			puntos: claves.map((clave) => {
+				const propio = suyo.get(clave) ?? { respondido: 0, fallos: 0 };
+				const todos = delChecklist.get(clave)!;
+				return {
+					etiqueta: clave,
+					respondido: propio.respondido,
+					fallos: propio.fallos,
+					tasa: propio.respondido > 0 ? propio.fallos / propio.respondido : 0,
+					conjunto: todos.respondido > 0 ? todos.fallos / todos.respondido : null
+				};
+			})
+		};
+	}
+
 	const ciclosDelEscenario = escenarioId
 		? todosLosCiclos.filter((c) => c.escenario_id === escenarioId)
 		: todosLosCiclos;
@@ -225,6 +316,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			fallidas,
 			cumplimiento: respondidas > 0 ? (respondidas - fallidas) / respondidas : null
 		},
+		evolucion,
 		practicas: [...practicas.values()].sort((a, b) => b.ciclos - a.ciclos),
 		concordancia: {
 			discrepancias,

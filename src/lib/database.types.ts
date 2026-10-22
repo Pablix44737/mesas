@@ -594,6 +594,19 @@ export type Database = {
 				};
 				Relationships: [];
 			};
+			criterios_en_el_tiempo: {
+				Row: {
+					tenant_id: string | null;
+					escenario_id: string | null;
+					plantilla_id: string | null;
+					item_id: string | null;
+					vuelta: number | null;
+					dia: string | null;
+					respondido: number | null;
+					fallos: number | null;
+				};
+				Relationships: [];
+			};
 			criterios_evaluados: {
 				Row: {
 					tenant_id: string | null;

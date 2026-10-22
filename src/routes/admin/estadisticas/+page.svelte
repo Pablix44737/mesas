@@ -11,6 +11,25 @@
 
 	const cuantos = (n: number, singular: string, plural: string) =>
 		`${n} ${n === 1 ? singular : plural}`;
+
+	/** La dirección de este mismo tablero con un criterio abierto, o sin él. */
+	function conCriterio(itemId: string | null, eje?: 'vuelta' | 'fecha') {
+		const parametros = new URLSearchParams();
+		if (data.escenarioElegido) parametros.set('escenario', data.escenarioElegido);
+		if (itemId) parametros.set('criterio', itemId);
+		const cual = eje ?? data.evolucion?.eje;
+		if (itemId && cual === 'fecha') parametros.set('eje', 'fecha');
+		const cola = parametros.toString();
+		return cola ? `?${cola}#evolucion` : '?#evolucion';
+	}
+
+	const fechaCorta = (iso: string) => {
+		const [a, m, d] = iso.split('-').map(Number);
+		return new Date(a, m - 1, d).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+	};
+
+	const etiquetaDe = (punto: { etiqueta: string }) =>
+		data.evolucion?.eje === 'fecha' ? fechaCorta(punto.etiqueta) : `Vuelta ${punto.etiqueta}`;
 </script>
 
 <svelte:head>
@@ -102,9 +121,13 @@
 					</thead>
 					<tbody>
 						{#each data.puntosCriticos as punto (punto.itemId)}
-							<tr>
+							<tr class:abierta={data.evolucion?.criterio.itemId === punto.itemId}>
 								<td class="principal">
-									<span class="criterio-texto">{punto.criterio}</span>
+									<!-- El criterio abre su propia evolución. Es un enlace y no un botón:
+									     queda en la dirección, se puede compartir, y anda sin JavaScript. -->
+									<a class="criterio-enlace" href={conCriterio(punto.itemId)}>
+										<span class="criterio-texto">{punto.criterio}</span>
+									</a>
 									<span class="detalle">
 										{punto.rol}{#if !data.escenarioElegido && punto.enEscenarios > 1}
 											· {cuantos(punto.enEscenarios, 'escenario', 'escenarios')}
@@ -142,6 +165,76 @@
 			</div>
 		{/if}
 	</div>
+
+	{#if data.evolucion}
+		{@const evo = data.evolucion}
+		{@const masAlto = Math.max(...evo.puntos.map((p) => Math.max(p.tasa, p.conjunto ?? 0)), 0.01)}
+		<div class="tarjeta evolucion" id="evolucion">
+			<div class="tarjeta-cabecera">
+				<h2>Cómo viene cambiando</h2>
+				<a class="enlace-accion" href={conCriterio(null)}>Cerrar</a>
+			</div>
+
+			<div class="evolucion-quien">
+				<p class="criterio-texto">{evo.criterio.texto}</p>
+				<p class="detalle">{evo.criterio.rol} · {evo.criterio.checklist}</p>
+			</div>
+
+			<!-- Dos ejes distintos, no dos formas de ver lo mismo: la vuelta pregunta
+			     si la práctica repetida mejora, la fecha si una corrección sirvió. -->
+			<div class="pestanas" role="group" aria-label="Contra qué eje">
+				<a href={conCriterio(evo.criterio.itemId, 'vuelta')} aria-current={evo.eje === 'vuelta' ? 'page' : undefined}>
+					Por vuelta de la mesa
+				</a>
+				<a href={conCriterio(evo.criterio.itemId, 'fecha')} aria-current={evo.eje === 'fecha' ? 'page' : undefined}>
+					Por fecha
+				</a>
+			</div>
+
+			{#if evo.puntos.length <= 1}
+				<div class="vacio">
+					{evo.eje === 'fecha'
+						? 'Todas las evaluaciones de este checklist se enviaron el mismo día, así que todavía no hay nada que comparar contra el calendario.'
+						: 'Este checklist se evaluó en una sola vuelta.'}
+				</div>
+			{:else}
+				<ul class="serie">
+					{#each evo.puntos as punto (punto.etiqueta)}
+						<li class:vacia={punto.respondido === 0}>
+							<span class="serie-eje">{etiquetaDe(punto)}</span>
+							<span class="serie-barra" aria-hidden="true">
+								<span class="serie-propia" style="width: {(punto.tasa / masAlto) * 100}%"></span>
+								{#if punto.conjunto !== null}
+									<span class="serie-conjunto" style="left: {(punto.conjunto / masAlto) * 100}%"></span>
+								{/if}
+							</span>
+							<span class="serie-cifra">
+								{#if punto.respondido === 0}
+									<span class="detalle">sin datos</span>
+								{:else}
+									{Math.round(punto.tasa * 100)}%
+									<span class="de-cuantas">{punto.fallos} de {punto.respondido}</span>
+								{/if}
+							</span>
+						</li>
+					{/each}
+				</ul>
+
+				<div class="tarjeta-pie">
+					<p class="detalle">
+						La marca gris es cómo le fue a todo el checklist en ese mismo punto. Hace falta
+						porque un criterio solo se mide con pocas respuestas en cada punto, y ahí una sola
+						marca mueve el número varios puntos: lo que distingue un cambio real de un rebote
+						es si se movió contra el conjunto o con él.
+						{#if evo.eje === 'vuelta'}
+							Y la vuelta mide la mesa, no a una persona: los roles rotan, así que quien opera
+							en la tercera no es quien operó en la primera.
+						{/if}
+					</p>
+				</div>
+			{/if}
+		</div>
+	{/if}
 
 	<div class="tarjeta">
 		<div class="tarjeta-cabecera">
@@ -182,9 +275,11 @@
 					</thead>
 					<tbody>
 						{#each data.concordancia.discrepancias as fila (fila.itemId)}
-							<tr>
+							<tr class:abierta={data.evolucion?.criterio.itemId === fila.itemId}>
 								<td class="principal">
-									<span class="criterio-texto">{fila.criterio}</span>
+									<a class="criterio-enlace" href={conCriterio(fila.itemId)}>
+										<span class="criterio-texto">{fila.criterio}</span>
+									</a>
 									<span class="detalle">{fila.rol}</span>
 								</td>
 								<td class="numerica">
