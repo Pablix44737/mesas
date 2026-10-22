@@ -1860,6 +1860,21 @@ fieldset.roles.invalido legend {
 	font-variant-numeric: tabular-nums;
 }
 
+/* La discrepancia no es un fallo de nadie: es el instrumento que se lee de dos
+   maneras. Va en el ámbar de las alertas y no en el rojo de los errores. */
+.barra-fallo.discrepa > span {
+	background: var(--alerta);
+}
+
+.nota-panel {
+	margin: 0;
+	padding: var(--e-4) var(--e-5) 0;
+	color: var(--tinta-suave);
+	font-size: 15px;
+	line-height: 22px;
+	max-width: 62ch;
+}
+
 /* --- administración: el marco ---
    Una barra superior blanca con la marca, las cuatro secciones y la salida. En el
    teléfono las secciones bajan a una barra fija abajo, al alcance del pulgar. */

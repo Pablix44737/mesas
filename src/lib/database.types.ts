@@ -577,6 +577,23 @@ export type Database = {
 				};
 				Relationships: [];
 			};
+			concordancia_entre_observadores: {
+				Row: {
+					tenant_id: string | null;
+					escenario_id: string | null;
+					escenario: string | null;
+					plantilla_id: string | null;
+					checklist: string | null;
+					rol_codigo: string | null;
+					rol: string | null;
+					item_id: string | null;
+					item_orden: number | null;
+					criterio: string | null;
+					pares: number | null;
+					discrepan: number | null;
+				};
+				Relationships: [];
+			};
 			criterios_evaluados: {
 				Row: {
 					tenant_id: string | null;

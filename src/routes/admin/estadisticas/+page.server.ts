@@ -16,21 +16,34 @@ const MINIMO = 5;
 /** Cuántos criterios se listan: es un ranking para actuar, no un inventario. */
 const CUANTOS = 12;
 
+/**
+ * Lo mismo para la concordancia, pero contra pares de observadores, que son
+ * bastante más escasos que las respuestas: hay un par sólo cuando dos personas
+ * miraron el mismo ciclo con el mismo checklist.
+ */
+const MINIMO_PARES = 4;
+
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const tenant = tenantActual(locals);
 	const elegido = url.searchParams.get('escenario');
 
-	const [{ data: ciclos, error: falloCiclos }, { data: criterios, error: falloCriterios }] =
-		await Promise.all([
-			supabase.from('ciclos_de_la_institucion').select('*').eq('tenant_id', tenant),
-			supabase.from('criterios_evaluados').select('*').eq('tenant_id', tenant)
-		]);
+	const [
+		{ data: ciclos, error: falloCiclos },
+		{ data: criterios, error: falloCriterios },
+		{ data: concordancia, error: falloConcordancia }
+	] = await Promise.all([
+		supabase.from('ciclos_de_la_institucion').select('*').eq('tenant_id', tenant),
+		supabase.from('criterios_evaluados').select('*').eq('tenant_id', tenant),
+		supabase.from('concordancia_entre_observadores').select('*').eq('tenant_id', tenant)
+	]);
 
 	if (falloCiclos) error(500, falloCiclos.message);
 	if (falloCriterios) error(500, falloCriterios.message);
+	if (falloConcordancia) error(500, falloConcordancia.message);
 
 	const todosLosCiclos = ciclos ?? [];
 	const todosLosCriterios = criterios ?? [];
+	const todaLaConcordancia = concordancia ?? [];
 
 	// Los escenarios que se pueden mirar son los que tienen algo evaluado: ofrecer
 	// uno vacío es ofrecer una pantalla en blanco.
@@ -114,6 +127,68 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	// Lo que no alcanza el mínimo: se dice cuántos son y no se los ordena.
 	const sinSuficiente = porCriterio.size - medidos.length;
 
+	/**
+	 * Concordancia: lo mismo que arriba, sumando por criterio cuando se miran
+	 * todos los escenarios.
+	 *
+	 * La tasa de fallo del criterio viaja al lado a propósito. Un criterio que
+	 * falla mucho y además se marca distinto no es lo mismo que uno que falla
+	 * mucho y todos leen igual: el primero probablemente esté mal redactado, el
+	 * segundo es algo que de verdad cuesta. Separarlos es la diferencia entre
+	 * corregir el checklist y corregir la clase.
+	 */
+	const tasaDeFallo = new Map(
+		[...porCriterio.values()].map((c) => [
+			c.itemId,
+			c.respondido > 0 ? c.fallos / c.respondido : null
+		])
+	);
+
+	const deLaConcordancia = escenarioId
+		? todaLaConcordancia.filter((c) => c.escenario_id === escenarioId)
+		: todaLaConcordancia;
+
+	const porPar = new Map<
+		string,
+		{ itemId: string; criterio: string; rol: string; pares: number; discrepan: number }
+	>();
+
+	for (const fila of deLaConcordancia) {
+		if (!fila.item_id || !fila.criterio) continue;
+
+		const suyo = porPar.get(fila.item_id) ?? {
+			itemId: fila.item_id,
+			criterio: fila.criterio,
+			rol: fila.rol ?? '',
+			pares: 0,
+			discrepan: 0
+		};
+
+		suyo.pares += fila.pares ?? 0;
+		suyo.discrepan += fila.discrepan ?? 0;
+		porPar.set(fila.item_id, suyo);
+	}
+
+	const comparados = [...porPar.values()];
+	const conSuficientesPares = comparados.filter((c) => c.pares >= MINIMO_PARES);
+
+	const discrepancias = conSuficientesPares
+		.map((c) => ({
+			itemId: c.itemId,
+			criterio: c.criterio,
+			rol: c.rol,
+			pares: c.pares,
+			discrepan: c.discrepan,
+			tasa: c.pares > 0 ? c.discrepan / c.pares : 0,
+			fallo: tasaDeFallo.get(c.itemId) ?? null
+		}))
+		.filter((c) => c.discrepan > 0)
+		.sort((a, b) => b.tasa - a.tasa || b.discrepan - a.discrepan)
+		.slice(0, CUANTOS);
+
+	const paresTotales = comparados.reduce((total, c) => total + c.pares, 0);
+	const discrepanTotales = comparados.reduce((total, c) => total + c.discrepan, 0);
+
 	const ciclosDelEscenario = escenarioId
 		? todosLosCiclos.filter((c) => c.escenario_id === escenarioId)
 		: todosLosCiclos;
@@ -150,6 +225,17 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			fallidas,
 			cumplimiento: respondidas > 0 ? (respondidas - fallidas) / respondidas : null
 		},
-		practicas: [...practicas.values()].sort((a, b) => b.ciclos - a.ciclos)
+		practicas: [...practicas.values()].sort((a, b) => b.ciclos - a.ciclos),
+		concordancia: {
+			discrepancias,
+			minimoPares: MINIMO_PARES,
+			// Un «par» es un ciclo que tuvo dos observadores con el mismo checklist.
+			// Sin pares no hay nada que comparar, y eso se dice en vez de mostrar
+			// una tabla vacía.
+			comparaciones: paresTotales,
+			discrepan: discrepanTotales,
+			tasa: paresTotales > 0 ? discrepanTotales / paresTotales : null,
+			criterios: comparados.length
+		}
 	};
 };

@@ -145,6 +145,81 @@
 
 	<div class="tarjeta">
 		<div class="tarjeta-cabecera">
+			<h2>Dónde los observadores no coinciden</h2>
+			{#if data.concordancia.tasa !== null}
+				<span class="detalle">
+					{porcentaje(data.concordancia.tasa)} de {data.concordancia.comparaciones} comparaciones
+				</span>
+			{/if}
+		</div>
+
+		{#if data.concordancia.comparaciones === 0}
+			<div class="vacio">
+				Todavía no hubo ningún ciclo con dos observadores del mismo checklist, así que no hay nada
+				que comparar.
+			</div>
+		{:else if data.concordancia.discrepancias.length === 0}
+			<div class="vacio">
+				En los criterios con al menos {data.concordancia.minimoPares} comparaciones, los observadores
+				marcaron siempre lo mismo.
+			</div>
+		{:else}
+			<p class="nota-panel">
+				Cuando dos personas observaron el mismo ciclo con el mismo checklist, ¿marcaron igual?
+				Donde no, el criterio se está leyendo de dos maneras: es el instrumento el que hay que
+				revisar, no la práctica.
+			</p>
+
+			<div class="tabla-envoltorio">
+				<table class="tabla criticos">
+					<thead>
+						<tr>
+							<th>Criterio</th>
+							<th class="numerica"><abbr title="Pares que marcaron distinto">Distinto</abbr></th>
+							<th>Con qué frecuencia</th>
+							<th class="numerica"><abbr title="Tasa de fallo del mismo criterio">Falla</abbr></th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each data.concordancia.discrepancias as fila (fila.itemId)}
+							<tr>
+								<td class="principal">
+									<span class="criterio-texto">{fila.criterio}</span>
+									<span class="detalle">{fila.rol}</span>
+								</td>
+								<td class="numerica">
+									<span class="de-cuantas">{fila.discrepan} de {fila.pares}</span>
+								</td>
+								<td class="barra-celda">
+									<span class="barra-fallo discrepa" aria-hidden="true">
+										<span style="width: {fila.tasa * 100}%"></span>
+									</span>
+									<span class="barra-cifra">{porcentaje(fila.tasa)}</span>
+								</td>
+								<td class="numerica">
+									{fila.fallo === null ? '—' : porcentaje(fila.fallo)}
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+
+			<div class="tarjeta-pie">
+				<p class="detalle">
+					La última columna es cuánto falla ese mismo criterio. Los dos números altos juntos
+					suelen querer decir que está mal redactado; sólo el de fallo, que es algo que de
+					verdad cuesta. Entran los criterios con al menos {data.concordancia.minimoPares} comparaciones,
+					y la coincidencia no se corrige por azar: en un criterio que casi siempre se cumple,
+					coincidir es fácil. Eso infla la coincidencia, nunca la discrepancia — lo que aparece
+					acá arriba es real.
+				</p>
+			</div>
+		{/if}
+	</div>
+
+	<div class="tarjeta">
+		<div class="tarjeta-cabecera">
 			<h2>Cuánto se practicó cada escenario</h2>
 			<span class="detalle">{data.practicas.length}</span>
 		</div>
