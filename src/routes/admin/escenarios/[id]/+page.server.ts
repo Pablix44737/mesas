@@ -1,5 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
+import { recordarEliminado } from '$lib/server/escenarios';
 import { tenantActual } from '$lib/server/tenant';
 import {
 	TAMANO_MAXIMO,
@@ -84,7 +85,7 @@ export const actions: Actions = {
 	 * escenario igual se fue: queda un archivo sin nada que lo referencie, que es
 	 * mejor que dejar a medias el borrado de la fila.
 	 */
-	eliminar: async ({ params, locals }) => {
+	eliminar: async ({ params, locals, cookies }) => {
 		const escenario = await traerEscenario(params.id, tenantActual(locals));
 
 		const { data, error: fallo } = await supabase.rpc('borrar_escenario', {
@@ -109,6 +110,7 @@ export const actions: Actions = {
 			await supabase.storage.from(BUCKET).remove([resumen.planificacion_ruta]);
 		}
 
+		recordarEliminado(cookies, resumen.nombre);
 		redirect(303, '/admin/escenarios');
 	},
 

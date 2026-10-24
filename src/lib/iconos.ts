@@ -14,6 +14,7 @@ export const iconos: Record<string, string[]> = {
 
 	tilde: ['M20 6L9 17l-5-5'],
 	'tilde-circulo': ['M22 11.08V12a10 10 0 1 1-5.93-9.14', 'M22 4L12 14.01l-3-3'],
+	exclamacion: ['M12 7v6', 'M12 17h.01'],
 	alerta: [
 		'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z',
 		'M12 9v4',

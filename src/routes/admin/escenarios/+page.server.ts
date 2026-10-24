@@ -1,10 +1,13 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
+import { leerEliminado } from '$lib/server/escenarios';
 import { tenantActual } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, cookies }) => {
 	const tenant = tenantActual(locals);
+
+	const eliminado = leerEliminado(cookies);
 
 	const [{ data: escenarios, error: falloEscenarios }, { data: operacion }] = await Promise.all([
 		supabase
@@ -28,6 +31,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	if (falloEscenarios) error(500, falloEscenarios.message);
 
 	return {
+		eliminado,
 		escenarios: escenarios ?? [],
 		// Comunes a todos los escenarios: no se eligen, se informan.
 		checklistsComunes: (operacion ?? []).map((p) => ({
@@ -44,7 +48,11 @@ export const actions: Actions = {
 		const nombre = String(formulario.get('nombre') ?? '').trim();
 
 		if (nombre.length < 3) {
-			return fail(400, { nombre, mensaje: 'Poné un nombre de al menos 3 caracteres.' });
+			return fail(400, {
+				nombre,
+				campo: 'nombre',
+				mensaje: 'Poné un nombre de al menos 3 caracteres.'
+			});
 		}
 
 		const { data: escenario, error: fallo } = await supabase
@@ -57,6 +65,7 @@ export const actions: Actions = {
 			const repetido = fallo.code === '23505';
 			return fail(repetido ? 409 : 500, {
 				nombre,
+				campo: repetido ? 'nombre' : '',
 				mensaje: repetido
 					? 'Ya hay un escenario con ese nombre.'
 					: 'No se pudo crear el escenario. Intentá de nuevo.'

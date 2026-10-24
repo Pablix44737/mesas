@@ -9,7 +9,8 @@
 		{ href: '/admin/escenarios', nombre: 'Escenarios', icono: 'escenario' },
 		{ href: '/admin/checklists', nombre: 'Checklists', icono: 'checklist' },
 		{ href: '/admin/cursos', nombre: 'Cursos', icono: 'mesa' },
-		{ href: '/admin/padron', nombre: 'Padrón', icono: 'padron' }
+		{ href: '/admin/padron', nombre: 'Padrón', icono: 'padron' },
+		{ href: '/admin/estadisticas', nombre: 'Estadísticas', icono: 'resultado' }
 	];
 
 	const actual = (href: string) => (page.url.pathname.startsWith(href) ? 'page' : undefined);
@@ -18,7 +19,7 @@
 	 * Las secciones ya rediseñadas arman su propio encabezado a todo el ancho; las
 	 * demás siguen dentro del envoltorio de siempre hasta que les toque.
 	 */
-	const rediseñadas = ['/admin/padron'];
+	const rediseñadas = ['/admin/escenarios', '/admin/padron'];
 	const propia = $derived(rediseñadas.some((ruta) => page.url.pathname.startsWith(ruta)));
 </script>
 

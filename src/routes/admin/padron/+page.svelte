@@ -278,24 +278,24 @@
 {/snippet}
 
 {#snippet botonCerrar()}
-	<button class="padron-cerrar" type="button" aria-label="Cerrar" onclick={cerrar}>
+	<button class="admin-cerrar" type="button" aria-label="Cerrar" onclick={cerrar}>
 		<Icono nombre="cerrar" tamano={20} />
 	</button>
 {/snippet}
 
-<div class="padron-encabezado">
-	<div class="padron-encabezado-dentro">
-		<div class="padron-titulo">
+<div class="admin-encabezado">
+	<div class="admin-encabezado-dentro">
+		<div class="admin-titulo">
 			<div>
 				<h1>Padrón</h1>
-				<span class="padron-total">
+				<span class="admin-total">
 					{cifra(data.padron.length)}
 					{data.padron.length === 1 ? 'persona' : 'personas'}
 				</span>
 			</div>
 			<p>Las personas que pueden participar en las mesas, identificadas por su DNI.</p>
 		</div>
-		<div class="padron-acciones-encabezado">
+		<div class="admin-acciones-encabezado">
 			<button class="boton secundario" type="button" onclick={importar}>
 				<Icono nombre="subir" tamano={20} />
 				<span class="solo-ancho">Importar un listado</span>
@@ -309,9 +309,9 @@
 	</div>
 </div>
 
-<div class="padron-cuerpo">
+<div class="admin-cuerpo">
 	{#if aviso}
-		<div class="padron-aviso" class:error={!aviso.exito} role={aviso.exito ? 'status' : 'alert'}>
+		<div class="admin-aviso" class:error={!aviso.exito} role={aviso.exito ? 'status' : 'alert'}>
 			<Icono nombre={aviso.exito ? 'tilde-circulo' : 'error'} />
 			<p>{aviso.texto}</p>
 			<button type="button" aria-label="Cerrar el mensaje" onclick={() => (avisoCerrado = true)}>
@@ -506,20 +506,20 @@
 </div>
 
 {#if panel}
-	<div class="padron-velo" role="presentation" onclick={cerrar}></div>
+	<div class="admin-velo" role="presentation" onclick={cerrar}></div>
 {/if}
 
 {#if panel === 'incorporar' || (panel === 'editar' && editada)}
-	<div class="padron-panel" role="dialog" aria-modal="true" aria-labelledby="panel-titulo">
+	<div class="admin-panel" role="dialog" aria-modal="true" aria-labelledby="panel-titulo">
 		<form
-			class="padron-panel-formulario"
+			class="admin-panel-formulario"
 			method="POST"
 			action={panel === 'editar' ? '?/editar' : '?/incorporar'}
 			novalidate
 			use:enhance={enviar(panel === 'editar' ? 'editar' : 'incorporar', true)}
 		>
-			<span class="padron-asa" aria-hidden="true"></span>
-			<div class="padron-panel-cabecera">
+			<span class="admin-asa" aria-hidden="true"></span>
+			<div class="admin-panel-cabecera">
 				<div>
 					<h2 id="panel-titulo">
 						{panel === 'editar' ? 'Editar a una persona' : 'Incorporar a una persona'}
@@ -539,7 +539,7 @@
 				{@render botonCerrar()}
 			</div>
 
-			<div class="padron-panel-cuerpo">
+			<div class="admin-panel-cuerpo">
 				{#if panel === 'editar' && editada}
 					<input type="hidden" name="id" value={editada.id} />
 				{/if}
@@ -560,7 +560,7 @@
 					<p class="dialogo-error" role="alert"><Icono nombre="error" tamano={18} />{errorDelPanel}</p>
 				{/if}
 
-				<div class="padron-campo">
+				<div class="admin-campo">
 					<label for="campo-dni">DNI</label>
 					<input
 						id="campo-dni"
@@ -599,7 +599,7 @@
 					</p>
 				{/if}
 
-				<div class="padron-campo">
+				<div class="admin-campo">
 					<label for="campo-nombre">Nombre</label>
 					<input
 						id="campo-nombre"
@@ -615,7 +615,7 @@
 					{@render errorDeCampo('nombre')}
 				</div>
 
-				<div class="padron-campo">
+				<div class="admin-campo">
 					<label for="campo-apellido">Apellido</label>
 					<input
 						id="campo-apellido"
@@ -640,7 +640,7 @@
 				{/if}
 			</div>
 
-			<div class="padron-panel-pie">
+			<div class="admin-panel-pie">
 				<button class="boton secundario neutro" type="button" onclick={cerrar} disabled={trabajando}>
 					Cancelar
 				</button>
@@ -658,13 +658,13 @@
 
 {#if panel === 'importar'}
 	<div
-		class="padron-panel ancho"
+		class="admin-panel ancho"
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="importar-titulo"
 	>
-		<span class="padron-asa" aria-hidden="true"></span>
-		<div class="padron-panel-cabecera">
+		<span class="admin-asa" aria-hidden="true"></span>
+		<div class="admin-panel-cabecera">
 			<div>
 				<h2 id="importar-titulo">Importar un listado</h2>
 				<p>
@@ -676,7 +676,7 @@
 			{@render botonCerrar()}
 		</div>
 
-		<div class="padron-panel-cuerpo">
+		<div class="admin-panel-cuerpo">
 			{#if leyendo}
 				<div class="padron-leyendo">
 					<span class="evaluado-vacio-icono"><Icono nombre="subir" tamano={24} /></span>
@@ -688,7 +688,7 @@
 					<p class="dialogo-error" role="alert"><Icono nombre="error" tamano={18} />{fallaDelListado}</p>
 				{/if}
 				<div
-					class="padron-soltar"
+					class="admin-soltar"
 					class:arrastrando
 					role="presentation"
 					ondragover={(evento) => {
@@ -815,7 +815,7 @@
 		</div>
 
 		{#if listado}
-			<form class="padron-panel-pie" method="POST" action="?/importar" use:enhance={enviar('importar')}>
+			<form class="admin-panel-pie" method="POST" action="?/importar" use:enhance={enviar('importar')}>
 				<input
 					type="hidden"
 					name="personas"
@@ -839,8 +839,8 @@
 {/if}
 
 {#if panel === 'quitar' && aQuitar}
-	<div class="padron-dialogo" role="alertdialog" aria-modal="true" aria-labelledby="quitar-titulo">
-		<span class="padron-asa" aria-hidden="true"></span>
+	<div class="admin-dialogo" role="alertdialog" aria-modal="true" aria-labelledby="quitar-titulo">
+		<span class="admin-asa" aria-hidden="true"></span>
 		<h2 id="quitar-titulo">¿Quitar a {aQuitar.apellido}, {aQuitar.nombre} del padrón?</h2>
 		<p>
 			{aQuitar.registros
