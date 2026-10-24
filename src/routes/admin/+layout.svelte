@@ -19,7 +19,12 @@
 	 * Las secciones ya rediseñadas arman su propio encabezado a todo el ancho; las
 	 * demás siguen dentro del envoltorio de siempre hasta que les toque.
 	 */
-	const rediseñadas = ['/admin/escenarios', '/admin/padron'];
+	const rediseñadas = [
+		'/admin/checklists',
+		'/admin/escenarios',
+		'/admin/estadisticas',
+		'/admin/padron'
+	];
 	const propia = $derived(rediseñadas.some((ruta) => page.url.pathname.startsWith(ruta)));
 </script>
 

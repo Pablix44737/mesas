@@ -1,19 +1,25 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
+import { leerEliminado } from '$lib/server/aviso';
 import { tenantActual } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, cookies }) => {
 	const tenant = tenantActual(locals);
+	const eliminado = leerEliminado(cookies, '/admin/checklists');
 
 	const [{ data: plantillas, error: fallo }, { data: roles }] = await Promise.all([
 		supabase
 			.from('checklist_plantillas')
-			.select('id, nombre, rol_codigo, ponderado, estado, creada_en, rol:roles(nombre)')
+			.select('id, nombre, rol_codigo, ponderado, estado, creada_en, rol:roles(nombre, checklist)')
 			.eq('tenant_id', tenant)
 			.order('creada_en', { ascending: false }),
 		// Solo los roles observadores llevan checklist.
-		supabase.from('roles').select('codigo, nombre').eq('observador', true).order('orden')
+		supabase
+			.from('roles')
+			.select('codigo, nombre, checklist')
+			.eq('observador', true)
+			.order('orden')
 	]);
 
 	if (fallo) error(500, fallo.message);
@@ -35,6 +41,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	}
 
 	return {
+		eliminado,
 		plantillas: (plantillas ?? []).map((p) => ({
 			...p,
 			...(conteo.get(p.id) ?? { items: 0, maximo: 0 })

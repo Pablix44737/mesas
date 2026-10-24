@@ -1,13 +1,13 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
-import { leerEliminado } from '$lib/server/escenarios';
+import { leerEliminado } from '$lib/server/aviso';
 import { tenantActual } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, cookies }) => {
 	const tenant = tenantActual(locals);
 
-	const eliminado = leerEliminado(cookies);
+	const eliminado = leerEliminado(cookies, '/admin/escenarios');
 
 	const [{ data: escenarios, error: falloEscenarios }, { data: operacion }] = await Promise.all([
 		supabase

@@ -112,7 +112,7 @@
 	<div class="escenarios-rejilla">
 		<div class="escenarios-principal">
 			{#if data.escenarios.length === 0}
-				<section class="mesa-tarjeta escenarios-vacio">
+				<section class="mesa-tarjeta admin-vacio">
 					<span class="evaluado-vacio-icono"><Icono nombre="escenario" tamano={24} /></span>
 					<strong>Todavía no hay escenarios preparados.</strong>
 					<p>Dá de alta el primero. Después le asociás el checklist de la técnica y le adjuntás la planificación.</p>
@@ -122,7 +122,7 @@
 					</button>
 				</section>
 			{:else}
-				<section class="escenarios-lista" aria-label="Escenarios">
+				<section class="admin-lista" aria-label="Escenarios">
 					<div class="escenarios-columnas" aria-hidden="true">
 						<span></span>
 						<span>Escenario</span>
@@ -131,7 +131,7 @@
 						<span></span>
 					</div>
 					{#each grupos as grupo (grupo.clave)}
-						<div class="escenarios-grupo">
+						<div class="admin-grupo">
 							<h2>{grupo.titulo}</h2>
 							<span class:listos={grupo.clave === 'listos'}>{grupo.escenarios.length}</span>
 						</div>
@@ -163,7 +163,7 @@
 												<span class="escenarios-falta">Sin adjuntar</span>
 											{/if}
 										</span>
-										<Icono nombre="adelante" tamano={18} clase="escenarios-flecha" />
+										<Icono nombre="adelante" tamano={18} clase="admin-flecha" />
 									</a>
 								</li>
 							{/each}

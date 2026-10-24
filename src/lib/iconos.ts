@@ -80,6 +80,8 @@ export const iconos: Record<string, string[]> = {
 	// Acciones
 	enviar: ['M22 2L11 13', 'M22 2l-7 20-4-9-9-4 20-7z'],
 	mas: ['M12 5v14', 'M5 12h14'],
+	menos: ['M5 12h14'],
+	puntos: ['M5 12h.01', 'M12 12h.01', 'M19 12h.01'],
 	editar: [
 		'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7',
 		'M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z'
@@ -100,6 +102,10 @@ export const iconos: Record<string, string[]> = {
 	],
 	buscar: ['M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', 'M21 21l-4.35-4.35'],
 	avanzar: ['M5 12h14', 'M12 5l7 7-7 7'],
+	enlace: [
+		'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71',
+		'M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'
+	],
 	externo: [
 		'M15 3h6v6',
 		'M10 14L21 3',

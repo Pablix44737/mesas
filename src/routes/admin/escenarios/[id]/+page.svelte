@@ -191,7 +191,7 @@
 <svelte:window onkeydown={(evento) => evento.key === 'Escape' && cerrar()} />
 
 <div class="admin-encabezado">
-	<div class="escenario-encabezado">
+	<div class="admin-ficha">
 		<a class="mesa-volver" href="/admin/escenarios">
 			<Icono nombre="atras" tamano={18} />
 			Todos los escenarios
@@ -199,7 +199,7 @@
 
 		{#if renombrando}
 			<form
-				class="escenario-renombrar"
+				class="admin-renombrar"
 				method="POST"
 				action="?/renombrar"
 				novalidate
@@ -232,7 +232,7 @@
 						</p>
 					{/if}
 				</div>
-				<div class="escenario-renombrar-botones">
+				<div class="admin-renombrar-botones">
 					<button class="boton enviar" type="submit" disabled={trabajando === 'renombrar'}>
 						{trabajando === 'renombrar' ? 'Guardando…' : 'Guardar'}
 					</button>
@@ -247,7 +247,7 @@
 				</div>
 			</form>
 		{:else}
-			<div class="escenario-titulo">
+			<div class="admin-ficha-titulo">
 				<h1>{escenario.nombre}</h1>
 				<button class="boton secundario neutro" type="button" aria-label="Renombrar" onclick={renombrar}>
 					<Icono nombre="editar" tamano={18} />
@@ -256,12 +256,12 @@
 			</div>
 		{/if}
 
-		<p class="escenario-bajada">Checklist de la técnica y planificación</p>
-		<div class="escenario-estados">
+		<p class="admin-ficha-bajada">Checklist de la técnica y planificación</p>
+		<div class="admin-ficha-estados">
 			{#if falta}
-				<span class="escenario-pastilla falta"><Icono nombre="exclamacion" tamano={14} grosor={2.5} />{falta}</span>
+				<span class="admin-pastilla falta"><Icono nombre="exclamacion" tamano={14} grosor={2.5} />{falta}</span>
 			{:else}
-				<span class="escenario-pastilla listo"><Icono nombre="tilde" tamano={14} grosor={2.5} />Listo para las mesas</span>
+				<span class="admin-pastilla listo"><Icono nombre="tilde" tamano={14} grosor={2.5} />Listo para las mesas</span>
 			{/if}
 			{#if data.mesasQueLoPractican > 0}
 				<span class="admin-total">
@@ -292,7 +292,7 @@
 					<h2 id="checklist-titulo">Checklist de la técnica</h2>
 					<p>Lo completa el Observador de la técnica en cada ciclo.</p>
 				</div>
-				<span class="escenario-pastilla" class:listo={conChecklist} class:falta={!conChecklist}>
+				<span class="admin-pastilla" class:listo={conChecklist} class:falta={!conChecklist}>
 					<Icono nombre={conChecklist ? 'tilde' : 'exclamacion'} tamano={14} grosor={2.5} />
 					{conChecklist ? 'Listo' : 'Falta'}
 				</span>
@@ -336,10 +336,10 @@
 					action="?/asociarChecklist"
 					use:enhance={enviar('checklist')}
 				>
-					<fieldset class="escenario-opciones">
+					<fieldset class="admin-opciones">
 						<legend>Elegí el checklist</legend>
 						{#each data.plantillasDeTecnica as plantilla (plantilla.id)}
-							<label class="escenario-opcion">
+							<label class="admin-opcion">
 								<input type="radio" name="plantillaId" value={plantilla.id} bind:group={elegido} />
 								<span>
 									<strong>{plantilla.nombre}</strong>
@@ -347,7 +347,7 @@
 								</span>
 							</label>
 						{/each}
-						<label class="escenario-opcion">
+						<label class="admin-opcion">
 							<input type="radio" name="plantillaId" value="" bind:group={elegido} />
 							<span>
 								<strong>Sin checklist de la técnica</strong>
@@ -388,7 +388,7 @@
 					<p>La ve el facilitador de la mesa.</p>
 				</div>
 				<span
-					class="escenario-pastilla"
+					class="admin-pastilla"
 					class:listo={escenario.planificacion_archivo}
 					class:falta={!escenario.planificacion_archivo}
 				>
@@ -416,7 +416,7 @@
 						</div>
 					</div>
 					<button
-						class="escenario-quitar"
+						class="admin-quitar"
 						type="button"
 						onclick={() => abrirDialogo('quitarPlanificacion')}
 					>
@@ -522,7 +522,7 @@
 		</section>
 	</div>
 
-	<section class="escenario-eliminar" aria-label="Eliminar el escenario">
+	<section class="admin-eliminar" aria-label="Eliminar el escenario">
 		{#if data.mesasQueLoPractican === 0}
 			<div>
 				<strong>Eliminar el escenario</strong>

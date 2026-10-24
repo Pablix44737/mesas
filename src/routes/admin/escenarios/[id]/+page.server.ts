@@ -1,6 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
-import { recordarEliminado } from '$lib/server/escenarios';
+import { recordarEliminado } from '$lib/server/aviso';
 import { tenantActual } from '$lib/server/tenant';
 import {
 	TAMANO_MAXIMO,
@@ -110,7 +110,7 @@ export const actions: Actions = {
 			await supabase.storage.from(BUCKET).remove([resumen.planificacion_ruta]);
 		}
 
-		recordarEliminado(cookies, resumen.nombre);
+		recordarEliminado(cookies, '/admin/escenarios', resumen.nombre);
 		redirect(303, '/admin/escenarios');
 	},
 

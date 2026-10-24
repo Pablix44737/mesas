@@ -1,5 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
+import { recordarEliminado } from '$lib/server/aviso';
 import { tenantActual } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -178,7 +179,7 @@ export const actions: Actions = {
 	 * escenario o si alguien lo abrió alguna vez: una instancia es el trabajo de
 	 * una persona, aunque no lo haya enviado. Sus criterios caen por cascada.
 	 */
-	eliminar: async ({ params, locals }) => {
+	eliminar: async ({ params, locals, cookies }) => {
 		const plantilla = await traerPlantilla(params.id, tenantActual(locals));
 
 		const { error: fallo } = await supabase.rpc('borrar_checklist', {
@@ -204,6 +205,7 @@ export const actions: Actions = {
 			return rechazar(500, 'No se pudo eliminar el checklist. Intentá de nuevo.');
 		}
 
+		recordarEliminado(cookies, '/admin/checklists', plantilla.nombre);
 		redirect(303, '/admin/checklists');
 	},
 
@@ -283,9 +285,54 @@ export const actions: Actions = {
 			.eq('id', itemId)
 			.eq('plantilla_id', plantilla.id);
 
-		if (fallo) return rechazar(400, 'No se pudo quitar el criterio. Intentá de nuevo.');
+		if (fallo) {
+			// Las respuestas ya enviadas apuntan al criterio: quitarlo las dejaría sin
+			// saber qué se evaluó. Se puede corregir su texto, no sacarlo.
+			return fallo.code === '23503'
+				? rechazar(409, 'Ese criterio ya se respondió en alguna mesa, así que no se puede quitar. Podés corregir su texto.')
+				: rechazar(400, 'No se pudo quitar el criterio. Intentá de nuevo.');
+		}
 
 		return { mensaje: null, exito: 'Criterio quitado.' };
+	},
+
+	/**
+	 * Deshace «Quitar»: vuelve a poner el criterio con su texto y su peso, en el
+	 * lugar que ocupaba. Sólo se pudo quitar si nadie lo había respondido, así que
+	 * reponerlo con otro id no deja nada sin su criterio.
+	 */
+	restaurarItem: async ({ request, params, locals }) => {
+		const plantilla = await traerPlantilla(params.id, tenantActual(locals));
+
+		const formulario = await request.formData();
+		const texto = String(formulario.get('texto') ?? '').trim();
+		const peso = leerPeso(formulario.get('peso'), plantilla.ponderado);
+		const posicion = Number(formulario.get('posicion'));
+
+		if (texto.length < 3 || peso === null || !Number.isInteger(posicion) || posicion < 0) {
+			return rechazar(400, 'No se pudo volver a poner el criterio.');
+		}
+
+		const { data: actuales } = await supabase
+			.from('checklist_items')
+			.select('id, orden')
+			.eq('plantilla_id', plantilla.id)
+			.order('orden');
+
+		const ultimo = actuales?.at(-1)?.orden ?? 0;
+		const { data: repuesto, error: fallo } = await supabase
+			.from('checklist_items')
+			.insert({ plantilla_id: plantilla.id, orden: ultimo + 1, texto, peso })
+			.select('id')
+			.single();
+
+		if (fallo || !repuesto) return rechazar(400, 'No se pudo volver a poner el criterio.');
+
+		const orden = (actuales ?? []).map((i) => i.id);
+		orden.splice(Math.min(posicion, orden.length), 0, repuesto.id);
+		await supabase.rpc('reordenar_criterios', { p_plantilla_id: plantilla.id, p_items: orden });
+
+		return { mensaje: null, exito: 'El criterio volvió a su lugar.' };
 	},
 
 	/** Al despoderar, un trigger iguala todos los pesos en 1. */

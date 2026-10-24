@@ -104,31 +104,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		porCriterio.set(fila.item_id, suyo);
 	}
 
-	const medidos = [...porCriterio.values()].filter((c) => c.respondido >= MINIMO);
-
-	const puntosCriticos = medidos
-		.map((c) => ({
-			itemId: c.itemId,
-			criterio: c.criterio,
-			checklist: c.checklist,
-			rol: c.rol,
-			respondido: c.respondido,
-			fallos: c.fallos,
-			// La tasa de fallo es la que ordena: no depende del peso, y el peso en
-			// este sistema se puede corregir hacia atrás.
-			tasa: c.respondido > 0 ? c.fallos / c.respondido : 0,
-			// Los puntos perdidos son la lectura de impacto, al lado.
-			puntos: Math.round(c.peso * c.fallos * 10) / 10,
-			// Con «todos», decir en cuántas técnicas aparece distingue un criterio del
-			// checklist común de uno que es propio de un escenario.
-			enEscenarios: c.escenarios.size
-		}))
-		.sort((a, b) => b.tasa - a.tasa || b.fallos - a.fallos)
-		.slice(0, CUANTOS);
-
-	// Lo que no alcanza el mínimo: se dice cuántos son y no se los ordena.
-	const sinSuficiente = porCriterio.size - medidos.length;
-
 	/**
 	 * Concordancia: lo mismo que arriba, sumando por criterio cuando se miran
 	 * todos los escenarios.
@@ -171,6 +146,35 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		porPar.set(fila.item_id, suyo);
 	}
 
+	const medidos = [...porCriterio.values()].filter((c) => c.respondido >= MINIMO);
+
+	const puntosCriticos = medidos
+		.map((c) => ({
+			itemId: c.itemId,
+			criterio: c.criterio,
+			checklist: c.checklist,
+			rol: c.rol,
+			respondido: c.respondido,
+			fallos: c.fallos,
+			// La tasa de fallo es la que ordena: no depende del peso, y el peso en
+			// este sistema se puede corregir hacia atrás.
+			tasa: c.respondido > 0 ? c.fallos / c.respondido : 0,
+			// Los puntos perdidos son la lectura de impacto, al lado.
+			puntos: Math.round(c.peso * c.fallos * 10) / 10,
+			// Con «todos», decir en cuántas técnicas aparece distingue un criterio del
+			// checklist común de uno que es propio de un escenario.
+			enEscenarios: c.escenarios.size,
+			// Cuánto lo leen distinto los observadores: un criterio que falla mucho y
+			// además se marca distinto probablemente esté mal redactado.
+			pares: porPar.get(c.itemId)?.pares ?? 0,
+			discrepan: porPar.get(c.itemId)?.discrepan ?? 0
+		}))
+		.sort((a, b) => b.tasa - a.tasa || b.fallos - a.fallos)
+		.slice(0, CUANTOS);
+
+	// Lo que no alcanza el mínimo: se dice cuántos son y no se los ordena.
+	const sinSuficiente = porCriterio.size - medidos.length;
+
 	const comparados = [...porPar.values()];
 	const conSuficientesPares = comparados.filter((c) => c.pares >= MINIMO_PARES);
 
@@ -187,6 +191,17 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		.filter((c) => c.discrepan > 0)
 		.sort((a, b) => b.tasa - a.tasa || b.discrepan - a.discrepan)
 		.slice(0, CUANTOS);
+
+	// Cada criterio con suficientes comparaciones, ubicado por cuánto falla y cuánto
+	// difieren: es lo que separa «está mal redactado» de «cuesta de verdad».
+	const mapa = conSuficientesPares
+		.map((c) => ({
+			itemId: c.itemId,
+			criterio: c.criterio,
+			falla: tasaDeFallo.get(c.itemId) ?? null,
+			difieren: c.pares > 0 ? c.discrepan / c.pares : 0
+		}))
+		.filter((c) => c.falla !== null);
 
 	const paresTotales = comparados.reduce((total, c) => total + c.pares, 0);
 	const discrepanTotales = comparados.reduce((total, c) => total + c.discrepan, 0);
@@ -289,10 +304,14 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	// Cuántas veces se practicó cada escenario: el modelo prescribe tres por
 	// técnica, así que el que no llegó se ve de un vistazo.
-	const practicas = new Map<string, { nombre: string; ciclos: number; evaluaciones: number }>();
+	const practicas = new Map<
+		string,
+		{ id: string; nombre: string; ciclos: number; evaluaciones: number }
+	>();
 	for (const ciclo of todosLosCiclos) {
 		if (!ciclo.escenario_id || !ciclo.escenario) continue;
 		const suyo = practicas.get(ciclo.escenario_id) ?? {
+			id: ciclo.escenario_id,
 			nombre: ciclo.escenario,
 			ciclos: 0,
 			evaluaciones: 0
@@ -314,6 +333,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			evaluaciones: ciclosDelEscenario.reduce((t, c) => t + (c.evaluaciones ?? 0), 0),
 			respondidas,
 			fallidas,
+			criterios: porCriterio.size,
+			escenarios: new Set(ciclosDelEscenario.map((c) => c.escenario_id)).size,
 			cumplimiento: respondidas > 0 ? (respondidas - fallidas) / respondidas : null
 		},
 		evolucion,
@@ -324,6 +345,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			// Un «par» es un ciclo que tuvo dos observadores con el mismo checklist.
 			// Sin pares no hay nada que comparar, y eso se dice en vez de mostrar
 			// una tabla vacía.
+			mapa,
 			comparaciones: paresTotales,
 			discrepan: discrepanTotales,
 			tasa: paresTotales > 0 ? discrepanTotales / paresTotales : null,
