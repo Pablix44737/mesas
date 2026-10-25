@@ -267,19 +267,6 @@ a {
 	white-space: nowrap;
 }
 
-/**
- * Acciones que actúan sobre la fila en la que están —editar, quitar, mover— van
- * como iconos, en toda la administración. Con etiqueta harían crecer la columna
- * y competirían por la atención con el dato de la fila, que es lo que se lee.
- * Las acciones que llevan a otra pantalla ("Consultar", "Preparar") sí van con
- * texto: no son lo mismo y conviene que se distingan.
- */
-.acciones-fila {
-	display: inline-flex;
-	align-items: center;
-	gap: 2px;
-}
-
 .icono-boton {
 	display: inline-grid;
 	place-items: center;
@@ -407,23 +394,6 @@ a {
 	background: var(--azul-claro);
 }
 
-.enlace {
-	padding: 0;
-	border: 0;
-	background: none;
-	font: inherit;
-	font-size: 14px;
-	font-weight: 600;
-	color: var(--azul);
-	text-decoration: underline;
-	text-underline-offset: 2px;
-	cursor: pointer;
-}
-
-.enlace.peligroso {
-	color: var(--error);
-}
-
 :focus-visible {
 	outline: 3px solid var(--azul);
 	outline-offset: 2px;
@@ -450,7 +420,6 @@ a {
 	overflow: hidden;
 }
 
-/* Que el último hijo no agregue aire de más al padding de abajo. */
 .tarjeta > :last-child:not(.tarjeta-pie):not(.tabla-envoltorio):not(.tarjeta-cabecera) {
 	margin-bottom: 0;
 }
@@ -503,14 +472,6 @@ a {
 	color: var(--tinta);
 }
 
-.tarjeta-pie {
-	margin-top: var(--e-5);
-	margin-bottom: calc(var(--e-5) * -1);
-	padding: var(--e-4) var(--e-5);
-	background: var(--superficie-baja);
-	border-top: 1px solid var(--borde);
-}
-
 /* --- encabezado de página --- */
 
 .pagina-cabecera {
@@ -549,20 +510,6 @@ a {
 		line-height: 40px;
 		letter-spacing: -0.02em;
 	}
-}
-
-.miga {
-	display: inline-flex;
-	align-items: center;
-	gap: var(--e-1);
-	margin: 0 0 var(--e-3);
-	font-size: 14px;
-	color: var(--tinta-suave);
-	text-decoration: none;
-}
-
-.miga:hover {
-	color: var(--azul);
 }
 
 /* --- chips de estado --- */
@@ -701,26 +648,6 @@ input[type='file'] {
 	padding-left: 42px;
 }
 
-/* Renombrar en el lugar del título de la página: el campo ocupa la fila entera y
-   los botones se le acomodan al lado, o debajo cuando no entran. */
-.renombrar {
-	flex: 1 1 100%;
-	min-width: 0;
-}
-
-.renombrar .fila {
-	flex-wrap: wrap;
-	gap: var(--e-2);
-}
-
-.renombrar input {
-	flex: 1 1 16rem;
-	min-width: 0;
-	font-family: var(--fuente-titulo);
-	font-size: 18px;
-	font-weight: 600;
-}
-
 /* --- avisos --- */
 
 .aviso {
@@ -786,11 +713,6 @@ input[type='file'] {
 	line-height: 24px;
 }
 
-.identidad .nombre.sin-resolver {
-	color: var(--alerta);
-	font-weight: 500;
-}
-
 .pendiente {
 	color: var(--alerta);
 	font-weight: 600;
@@ -842,102 +764,6 @@ input[type='file'] {
 	color: var(--tinta-suave);
 }
 
-/* --- selección de rol (tarjetas) --- */
-
-fieldset.roles {
-	margin: 0;
-	padding: 0;
-	border: 0;
-}
-
-fieldset.roles legend {
-	padding: 0;
-	margin-bottom: var(--e-2);
-	font-size: 14px;
-	font-weight: 600;
-}
-
-fieldset.roles.invalido legend {
-	color: var(--error);
-}
-
-.rol {
-	position: relative;
-	display: flex;
-	align-items: center;
-	gap: var(--e-3);
-	min-height: 68px;
-	padding: var(--e-4);
-	margin-bottom: var(--e-2);
-	border: 1px solid var(--borde);
-	border-radius: var(--r-lg);
-	background: var(--superficie);
-	font-weight: 400;
-	cursor: pointer;
-	overflow: hidden;
-	transition:
-		border-color 120ms ease,
-		background-color 120ms ease;
-}
-
-.rol::before {
-	content: '';
-	position: absolute;
-	left: 0;
-	top: 0;
-	bottom: 0;
-	width: 3px;
-	background: transparent;
-}
-
-.rol:last-child {
-	margin-bottom: 0;
-}
-
-.rol input {
-	position: absolute;
-	opacity: 0;
-	width: 1px;
-	height: 1px;
-}
-
-.rol:has(input:checked) {
-	background: var(--azul-tenue);
-	border-color: var(--azul);
-}
-
-.rol:has(input:checked)::before {
-	background: var(--azul);
-}
-
-.rol:has(input:focus-visible) {
-	outline: 3px solid var(--azul);
-	outline-offset: 2px;
-}
-
-.rol .texto {
-	display: flex;
-	flex-direction: column;
-	gap: 1px;
-	flex: 1 1 auto;
-	min-width: 0;
-}
-
-.rol-nombre {
-	font-family: var(--fuente-titulo);
-	font-size: 16px;
-	font-weight: 600;
-	line-height: 22px;
-}
-
-.rol .marca-elegido {
-	color: var(--borde-fuerte);
-}
-
-.rol:has(input:checked) .marca-elegido {
-	color: var(--azul);
-}
-
 /* --- progreso --- */
 
 .progreso {
@@ -969,86 +795,6 @@ fieldset.roles.invalido legend {
 	background: var(--verde);
 	border-radius: var(--r-full);
 	transition: width 200ms ease-out;
-}
-
-.resultado {
-	display: flex;
-	align-items: baseline;
-	justify-content: space-between;
-	flex-wrap: wrap;
-	gap: var(--e-1) var(--e-3);
-	margin-bottom: var(--e-2);
-}
-
-.resultado .valor {
-	font-family: var(--fuente-titulo);
-	font-size: 15px;
-	color: var(--tinta-suave);
-}
-
-.resultado .valor strong {
-	font-size: 28px;
-	font-weight: 700;
-	line-height: 1.1;
-	color: var(--tinta);
-}
-
-/* --- ítems de checklist (marcables) --- */
-
-.peso {
-	display: inline-flex;
-	align-items: center;
-	flex: 0 0 auto;
-	padding: 2px 8px;
-	border: 1px solid var(--borde);
-	border-radius: var(--r-full);
-	background: var(--superficie-baja);
-	font-size: 12px;
-	font-weight: 700;
-	color: var(--tinta-suave);
-}
-
-/* --- checklist ya completado (sólo lectura) --- */
-
-.completado {
-	display: grid;
-	gap: var(--e-1);
-	list-style: none;
-	margin: 0;
-	padding: 0;
-}
-
-.completado li {
-	display: flex;
-	align-items: flex-start;
-	gap: var(--e-3);
-	padding: var(--e-3) var(--e-4) var(--e-3) var(--e-5);
-	border-radius: var(--r-md);
-	background: var(--superficie-baja);
-	border-left: 3px solid var(--borde-fuerte);
-	color: var(--tinta-suave);
-	font-size: 15px;
-	line-height: 21px;
-}
-
-.completado li.cumplido {
-	background: var(--verde-claro);
-	border-left-color: var(--verde);
-	color: var(--tinta);
-}
-
-.completado .marca {
-	flex: 0 0 auto;
-	margin-top: 2px;
-	color: var(--tinta-tenue);
-}
-
-.completado li.cumplido .marca {
-	color: var(--verde-oscuro);
-}
-
-.completado .texto {
-	flex: 1 1 auto;
 }
 
 /* --- dónde ocupó el rol un DNI sin resolver --- */
@@ -1538,15 +1284,6 @@ fieldset.roles.invalido legend {
 	}
 }
 
-/* Un bloque que no es parte de lo que la pantalla viene haciendo sino de lo que
-   sigue después —deshacerlo—, separado con una línea para que no se lea como un
-   paso más de lo de arriba. */
-.dar-de-baja {
-	margin-top: var(--e-8);
-	padding-top: var(--e-5);
-	border-top: 1px solid var(--borde);
-}
-
 /* --- listas --- */
 
 .lista {
@@ -1584,18 +1321,6 @@ fieldset.roles.invalido legend {
 	/* Da una unidad con la que medir el ancho visible, no el de la tabla: la usa
 	   `.desplegable` de acá abajo. */
 	container-type: inline-size;
-}
-
-/* Lo que se despliega bajo una fila —confirmar una baja, editar los datos— vive
-   dentro de una tabla que en pantallas angostas es más ancha que la pantalla. Se
-   ancla al borde visible del scroll y se mide contra él, así el formulario queda
-   entero a la vista en vez de irse para el costado con el resto de la tabla. */
-.tabla .desplegable {
-	position: sticky;
-	/* Los mismos --e-5 que sangran cualquier celda, para que quede alineado con
-	   el resto de la tabla esté o no corrido el scroll. */
-	left: var(--e-5);
-	width: calc(100cqw - var(--e-5) * 2);
 }
 
 .tabla {
@@ -1822,12 +1547,6 @@ fieldset.roles.invalido legend {
 	}
 }
 
-/* Las barras que se pegan abajo en las secciones que todavía no se rediseñaron
-   no pueden quedar tapadas por las pestañas. */
-.admin .barra-accion {
-	bottom: calc(66px + env(safe-area-inset-bottom));
-}
-
 @media (min-width: 900px) {
 	.admin-barra-dentro {
 		gap: 28px;
@@ -1906,10 +1625,6 @@ fieldset.roles.invalido legend {
 
 	.admin-pestanas {
 		display: none;
-	}
-
-	.admin .barra-accion {
-		bottom: 0;
 	}
 }
 
@@ -8994,106 +8709,1305 @@ input.sumarse-dni[aria-invalid='true'] {
 	}
 }
 
-/* --- cursos: la grilla de tarjetas, una por edición --- */
+/* --- cursos (administración) ---
+   Tres niveles en páginas propias: el curso, la mesa y el ciclo. Lo que está
+   pasando ahora va primero; lo destructivo, al pie y escribiendo a mano. Las
+   evaluaciones de un ciclo se abren en un panel sin perder la mesa de vista. */
 
-.cursos {
+.cursos-grupo {
+	display: flex;
+	align-items: center;
+	gap: var(--e-2);
+}
+
+.cursos-grupo.archivados {
+	margin-top: var(--e-4);
+}
+
+.cursos-grupo h2 {
+	margin: 0;
+	color: var(--tinta-suave);
+	font-family: var(--fuente-texto);
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.cursos-grupo span,
+.cursos-mesas-cabecera > span {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	min-width: 22px;
+	height: 22px;
+	padding: 0 7px;
+	border-radius: var(--r-full);
+	background: var(--superficie-media);
+	color: var(--tinta-suave);
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.cursos-tarjetas,
+.cursos-mesas-lista,
+.cursos-archivados,
+.cursos-roles,
+.cursos-criterios,
+.cursos-ahora ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.cursos-tarjetas {
 	display: grid;
 	gap: var(--e-4);
-	grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-	margin-bottom: var(--e-4);
 }
 
-.curso {
+.cursos-tarjeta {
 	display: flex;
 	flex-direction: column;
-	background: var(--superficie);
+	gap: var(--e-4);
+	height: 100%;
+	box-sizing: border-box;
+	padding: var(--e-5);
 	border: 1px solid var(--borde);
 	border-radius: var(--r-lg);
-	box-shadow: var(--sombra-sm);
-	overflow: hidden;
-	transition:
-		border-color 120ms ease,
-		box-shadow 120ms ease;
-}
-
-.curso:hover {
-	border-color: var(--azul);
-	box-shadow: var(--sombra-md);
-}
-
-/* Un curso archivado sigue estando y se sigue consultando: se apaga, no se esconde. */
-.curso.archivado {
-	background: var(--superficie-baja);
-	box-shadow: none;
-}
-
-.curso.archivado .curso-nombre {
-	color: var(--tinta-suave);
-}
-
-.curso-cuerpo {
-	display: flex;
-	flex: 1 1 auto;
-	flex-direction: column;
-	gap: var(--e-1);
-	padding: var(--e-5);
-	color: inherit;
+	background: var(--superficie);
+	color: var(--tinta);
 	text-decoration: none;
 }
 
-.curso-marca {
+.cursos-tarjeta:hover {
+	border-color: var(--azul);
+}
+
+.cursos-tarjeta-titulo {
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-2);
+}
+
+.cursos-tarjeta-titulo strong {
+	font-family: var(--fuente-titulo);
+	font-size: 21px;
+	font-weight: 700;
+	line-height: 1.2;
+	text-wrap: balance;
+}
+
+.cursos-tarjeta-titulo > span:last-child {
+	color: var(--tinta-suave);
+	font-size: 14px;
+}
+
+/* «En curso»: un punto verde con su aro, el mismo de la mesa del líder. */
+.cursos-en-curso,
+.cursos-estado {
+	display: inline-flex;
+	align-self: flex-start;
+	align-items: center;
+	gap: 7px;
+	box-sizing: border-box;
+	height: 24px;
+	padding: 0 9px;
+	border-radius: var(--r-full);
+	background: var(--superficie-media);
+	color: var(--tinta-suave);
+	font-size: 12px;
+	font-weight: 700;
+	white-space: nowrap;
+}
+
+.cursos-en-curso,
+.cursos-estado.en-curso {
+	background: var(--verde-claro);
+	color: var(--verde-oscuro);
+}
+
+.cursos-en-curso::before,
+.cursos-estado.en-curso::before,
+.cursos-punto {
+	flex: 0 0 auto;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--verde);
+	box-shadow: 0 0 0 3px #d9edb4;
+	content: '';
+}
+
+.cursos-en-curso {
+	height: 26px;
+	padding: 0 10px;
+	font-size: 13px;
+}
+
+.cursos-estado.grande {
+	height: 28px;
+	padding: 0 var(--e-3);
+	font-size: 13px;
+}
+
+.cursos-cifras {
 	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: var(--e-2);
+	padding: var(--e-3) 0;
+	border-top: 1px solid var(--borde);
+	border-bottom: 1px solid var(--borde);
+}
+
+.cursos-cifras > span {
+	display: flex;
+	flex-direction: column;
+	color: var(--tinta-suave);
+	font-size: 13px;
+}
+
+.cursos-cifras strong {
+	color: var(--tinta);
+	font-family: var(--fuente-titulo);
+	font-size: 26px;
+	font-weight: 800;
+	line-height: 1.1;
+}
+
+.cursos-tarjeta-pie {
+	display: flex;
+	align-items: center;
+	gap: var(--e-3);
+	margin-top: auto;
+	color: var(--tinta-suave);
+	font-size: 13px;
+}
+
+.admin code {
+	padding: 1px var(--e-2);
+	border-radius: 6px;
+	background: var(--superficie-media);
+	color: var(--tinta);
+	font-family: var(--fuente-texto);
+	font-size: 0.93em;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	overflow-wrap: anywhere;
+}
+
+.cursos-abrir {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--e-1);
+	margin-left: auto;
+	color: var(--azul);
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.cursos-ninguno {
+	margin: 0;
+	padding: var(--e-4);
+	border: 1px dashed var(--borde-fuerte);
+	border-radius: var(--r-lg);
+	color: var(--tinta-suave);
+	font-size: 15px;
+}
+
+.cursos-archivados li {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--e-3);
+	padding: var(--e-3) var(--e-3) var(--e-3) var(--e-4);
+	border-top: 1px solid var(--borde);
+}
+
+.cursos-archivados li:first-child {
+	border-top: 0;
+}
+
+.cursos-archivado-icono {
+	display: grid;
+	flex: 0 0 auto;
 	place-items: center;
-	width: 44px;
-	height: 44px;
-	margin-bottom: var(--e-2);
+	width: 36px;
+	height: 36px;
 	border-radius: var(--r-md);
+	background: var(--superficie-media);
+	color: var(--tinta-suave);
+}
+
+.cursos-archivados a {
+	display: flex;
+	flex: 1 1 160px;
+	flex-direction: column;
+	min-width: 0;
+	color: var(--tinta);
+	text-decoration: none;
+}
+
+.cursos-archivados a strong {
+	font-size: 16px;
+	font-weight: 600;
+}
+
+.cursos-archivados a:hover strong {
+	color: var(--azul);
+}
+
+.cursos-archivados a span {
+	color: var(--tinta-suave);
+	font-size: 13px;
+}
+
+.cursos-archivados form {
+	margin: 0;
+}
+
+.cursos-archivados .boton {
+	min-height: 44px;
+	padding: 0 14px;
+}
+
+.cursos-nota {
+	margin: -4px 0 0;
+	color: var(--tinta-suave);
+	font-size: 13px;
+}
+
+/* --- un curso y una mesa: la ficha de arriba --- */
+
+.cursos-migas {
+	display: none;
+}
+
+.cursos-volver span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.admin-ficha .cursos-volver {
+	align-self: stretch;
+	min-width: 0;
+}
+
+.cursos-ficha {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.cursos-ficha > div:first-child {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: var(--e-2);
+	min-width: 0;
+}
+
+.cursos-ficha-titulo {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--e-3);
+}
+
+.cursos-ficha-titulo h1 {
+	margin: 0;
+	font-family: var(--fuente-titulo);
+	font-size: 26px;
+	font-weight: 800;
+	line-height: 1.12;
+	letter-spacing: -0.01em;
+	text-wrap: balance;
+}
+
+.cursos-ficha-titulo .checklist-estado {
+	gap: 6px;
+}
+
+.cursos-ficha-datos {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 14px;
+	margin: 0;
+	color: var(--tinta-suave);
+	font-size: 15px;
+}
+
+.cursos-ficha-datos strong {
+	color: var(--tinta);
+	font-weight: 600;
+}
+
+.cursos-ficha-cifras {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--e-5);
+	margin: var(--e-1) 0 0;
+}
+
+.cursos-ficha-cifras span {
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+	color: var(--tinta-suave);
+	font-size: 14px;
+}
+
+.cursos-ficha-cifras strong {
+	color: var(--tinta);
+	font-family: var(--fuente-titulo);
+	font-size: 24px;
+	font-weight: 800;
+}
+
+.cursos-ficha-acciones {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--e-2);
+}
+
+.cursos-ficha-acciones form {
+	display: flex;
+	flex: 1 1 0;
+	margin: 0;
+}
+
+.cursos-ficha-acciones .boton {
+	flex: 1 1 0;
+	min-height: 44px;
+	padding: 0 14px;
+	white-space: nowrap;
+}
+
+.cursos-mesa-escenario-grande {
+	margin: 0;
+	font-size: 16px;
+	font-weight: 600;
+	text-wrap: pretty;
+}
+
+/* --- ahora en las mesas --- */
+
+.cursos-ahora {
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-3);
+	padding: var(--e-4);
+	border-color: #d9edb4;
+}
+
+.cursos-ahora-cabecera {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+}
+
+.cursos-ahora-cabecera .cursos-punto {
+	width: 10px;
+	height: 10px;
+	box-shadow: 0 0 0 4px #d9edb4;
+}
+
+.cursos-ahora-cabecera h2 {
+	margin: 0;
+	font-family: var(--fuente-titulo);
+	font-size: 18px;
+	font-weight: 700;
+}
+
+.cursos-ahora-cabecera > span:last-child {
+	color: var(--tinta-suave);
+	font-size: 14px;
+}
+
+.cursos-ahora ul {
+	display: grid;
+	gap: var(--e-2);
+}
+
+.cursos-ahora a {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+	padding: 10px var(--e-3);
+	border: 1px solid var(--borde);
+	border-radius: var(--r-md);
+	background: var(--fondo);
+	color: var(--tinta);
+	text-decoration: none;
+}
+
+.cursos-ahora a:hover {
+	border-color: var(--azul);
+	background: var(--azul-tenue);
+}
+
+.cursos-ahora strong {
+	font-size: 15px;
+	font-weight: 700;
+}
+
+.cursos-ahora a > span {
+	color: var(--tinta-suave);
+	font-size: 13px;
+}
+
+.cursos-ahora .cursos-abiertos {
+	margin-top: 2px;
+	color: var(--alerta);
+	font-weight: 600;
+}
+
+.cursos-ahora .cursos-abiertos.ninguno {
+	color: var(--verde-oscuro);
+}
+
+/* --- las mesas de un curso --- */
+
+.cursos-mesas {
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-3);
+}
+
+.cursos-mesas-cabecera {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+	margin-top: var(--e-1);
+}
+
+.cursos-mesas-cabecera h2 {
+	margin: 0;
+	font-family: var(--fuente-titulo);
+	font-size: 20px;
+	font-weight: 700;
+}
+
+.cursos-mesas-cabecera > span {
+	min-width: 24px;
+	height: 24px;
+	padding: 0 var(--e-2);
+	font-size: 13px;
+}
+
+.cursos-mesas-cabecera p {
+	margin: 0;
+	color: var(--tinta-suave);
+	font-size: 14px;
+}
+
+.cursos-mesas-cabecera .boton {
+	width: 100%;
+	min-height: 44px;
+	margin-top: var(--e-1);
+	padding: 0 14px;
+}
+
+.cursos-mesas-lista {
+	display: grid;
+	gap: 10px;
+}
+
+.cursos-mesa {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	height: 100%;
+	box-sizing: border-box;
+	padding: var(--e-4);
+	border: 1px solid var(--borde);
+	border-radius: var(--r-lg);
+	background: var(--superficie);
+	color: var(--tinta);
+	text-decoration: none;
+}
+
+.cursos-mesa:hover {
+	border-color: var(--azul);
+}
+
+.cursos-mesa-titulo {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.cursos-mesa-titulo strong {
+	font-family: var(--fuente-titulo);
+	font-size: 22px;
+	font-weight: 800;
+	line-height: 1.1;
+}
+
+.cursos-mesa-titulo .cursos-estado {
+	align-self: center;
+	margin-left: auto;
+}
+
+.cursos-mesa-escenario {
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 1.35;
+	text-wrap: pretty;
+}
+
+/* Una marca por ciclo: verde el que está en curso, azul los cerrados. */
+.cursos-marcas {
+	display: flex;
+	gap: var(--e-1);
+	margin-top: auto;
+}
+
+.cursos-marcas span {
+	flex: 1 1 0;
+	height: 6px;
+	border-radius: var(--r-full);
+	background: var(--superficie-media);
+}
+
+.cursos-marcas span.hecho {
+	background: var(--azul);
+}
+
+.cursos-marcas span.en-curso {
+	background: var(--verde);
+}
+
+.cursos-mesa-pie {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--e-2);
+	color: var(--tinta-suave);
+	font-size: 14px;
+}
+
+.cursos-mesa-pie .icono {
+	color: var(--azul);
+}
+
+/* --- los diálogos que piden escribir para confirmar --- */
+
+.cursos-se-van {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--e-2);
+	margin: 14px 0 0;
+}
+
+.cursos-se-van span {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 6px;
+	padding: 6px var(--e-3);
+	border-radius: var(--r-full);
+	background: var(--error-claro);
+	color: var(--error);
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.cursos-se-van strong {
+	font-family: var(--fuente-titulo);
+	font-size: 17px;
+	font-weight: 800;
+}
+
+.admin-dialogo > .cursos-dialogo-nota {
+	margin: var(--e-3) 0 0;
+	font-size: 14px;
+}
+
+.admin-dialogo form:has(.cursos-confirmar) {
+	flex-direction: column;
+	gap: var(--e-6);
+	margin-top: 18px;
+}
+
+.cursos-confirmar input.cursos-confirmar-numero {
+	min-height: 56px;
+	font-family: var(--fuente-titulo);
+	font-size: 20px;
+	font-weight: 700;
+}
+
+.cursos-dialogo-botones {
+	display: flex;
+	gap: var(--e-3);
+}
+
+.cursos-dialogo-botones .boton {
+	flex: 1 1 0;
+	min-height: 52px;
+	font-size: 16px;
+}
+
+.cursos-dialogo-botones .boton.peligro {
+	flex-grow: 1.5;
+	font-weight: 700;
+}
+
+/* --- una mesa: sus ciclos --- */
+
+.cursos-sin-resolver > div {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 0;
+}
+
+.cursos-sin-resolver > div > div {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px var(--e-2);
+}
+
+.cursos-sin-resolver button {
+	display: inline-flex;
+	align-items: center;
+	min-height: 32px;
+	padding: 0 10px;
+	border: 1px solid var(--alerta-borde);
+	border-radius: var(--r-full);
+	background: var(--superficie);
+	color: var(--alerta);
+	font: inherit;
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.cursos-sin-resolver button:hover {
+	background: #fbe8c8;
+}
+
+.cursos-sin-resolver a {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--e-1);
+	min-height: 32px;
+	padding: 0 6px;
+	font-size: 14px;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.cursos-ciclo {
+	overflow: hidden;
+}
+
+.cursos-ciclo.en-curso {
+	border-color: #d9edb4;
+}
+
+.cursos-ciclo-cabecera {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--e-3);
+	padding: var(--e-2) var(--e-4) var(--e-2) var(--e-2);
+}
+
+.cursos-ciclo-cabecera > button {
+	display: flex;
+	flex: 1 1 auto;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+	min-height: 48px;
+	padding: 6px var(--e-2);
+	border: 0;
+	border-radius: var(--r-md);
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.cursos-ciclo-cabecera > button:hover {
+	background: var(--azul-tenue);
+}
+
+.cursos-ciclo-cabecera > button > span {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	min-width: 0;
+}
+
+svg.cursos-ciclo-flecha {
+	color: var(--azul);
+	transition: transform 150ms ease;
+}
+
+[aria-expanded='true'] > svg.cursos-ciclo-flecha {
+	transform: rotate(90deg);
+}
+
+.cursos-ciclo-titulo {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+}
+
+.cursos-ciclo-titulo strong {
+	font-family: var(--fuente-titulo);
+	font-size: 19px;
+	font-weight: 700;
+	line-height: 1.2;
+}
+
+.cursos-ciclo-resumen {
+	color: var(--tinta-suave);
+	font-size: 13px;
+}
+
+.cursos-ver-evaluaciones {
+	width: 100%;
+	min-height: 48px;
+	margin: 0 0 var(--e-2) var(--e-2);
+	padding: 0 14px;
+}
+
+.cursos-ciclo-cuerpo {
+	border-top: 1px solid var(--borde);
+}
+
+.cursos-roles-columnas {
+	display: none;
+}
+
+.cursos-rol {
+	display: grid;
+	grid-template-columns: 36px minmax(0, 1fr) 44px;
+	grid-template-areas:
+		'icono nombre acciones'
+		'icono quien acciones'
+		'icono evaluacion acciones';
+	align-items: center;
+	column-gap: var(--e-3);
+	row-gap: 2px;
+	padding: 10px var(--e-1) 10px var(--e-4);
+	border-top: 1px solid var(--borde);
+	scroll-margin-top: 140px;
+}
+
+.cursos-rol:first-child {
+	border-top: 0;
+}
+
+.cursos-rol.senalado {
+	background: var(--azul-claro);
+	box-shadow: inset 3px 0 0 var(--azul);
+}
+
+.cursos-rol-icono {
+	display: grid;
+	grid-area: icono;
+	place-items: center;
+	box-sizing: border-box;
+	width: 36px;
+	height: 36px;
+	border-radius: var(--r-md);
+	background: var(--superficie-media);
+	color: var(--tinta-suave);
+}
+
+.cursos-rol-icono.sin-identificar {
+	background: var(--alerta-claro);
+	color: var(--alerta);
+}
+
+.cursos-rol-icono.azul {
+	width: 40px;
+	height: 40px;
 	background: var(--azul-claro);
 	color: var(--azul);
 }
 
-.curso.archivado .curso-marca {
-	background: var(--superficie-media);
+.cursos-rol.vacante .cursos-rol-icono {
+	border: 1.5px dashed var(--borde-fuerte);
+	background: transparent;
+	color: var(--tinta-tenue);
+}
+
+.cursos-rol-nombre {
+	grid-area: nombre;
 	color: var(--tinta-suave);
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
 }
 
-.curso-nombre {
-	font-family: var(--fuente-titulo);
-	font-size: 17px;
+.cursos-rol-quien {
+	display: flex;
+	grid-area: quien;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--e-1) 10px;
+	min-width: 0;
+}
+
+.cursos-rol-quien strong {
+	font-size: 15px;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+.cursos-rol-quien em {
+	color: var(--tinta-suave);
+	font-size: 14px;
+}
+
+.cursos-identificado {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--e-1);
+	color: var(--verde-oscuro);
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.cursos-sin-identificar {
+	display: inline-flex;
+	align-items: center;
+	box-sizing: border-box;
+	height: 22px;
+	padding: 0 var(--e-2);
+	border: 1px solid var(--alerta-borde);
+	border-radius: var(--r-full);
+	background: var(--alerta-claro);
+	color: var(--alerta);
+	font-size: 12px;
 	font-weight: 700;
-	line-height: 24px;
-	text-wrap: balance;
 }
 
-/* Las cifras se van al fondo para que las tarjetas queden alineadas entre sí
-   aunque los nombres ocupen distinta cantidad de renglones. */
-.curso-cifras {
+.cursos-rol-evaluacion {
+	grid-area: evaluacion;
+	min-width: 0;
+}
+
+.cursos-rol-evaluacion > span {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 14px;
+	font-weight: 500;
+}
+
+.cursos-rol-evaluacion .enviada {
+	color: var(--verde-oscuro);
+}
+
+.cursos-rol-evaluacion .abierta {
+	color: var(--alerta);
+}
+
+.cursos-rol-evaluacion .ninguna {
+	color: var(--tinta-tenue);
+}
+
+.cursos-rol-acciones {
+	display: flex;
+	grid-area: acciones;
+	justify-content: flex-end;
+}
+
+.cursos-rol-acciones .icono-boton {
+	width: 44px;
+	height: 44px;
+	border-radius: var(--r-md);
+	color: var(--tinta-tenue);
+}
+
+.cursos-rol-acciones .icono-boton:hover:not(:disabled) {
+	background: var(--error-claro);
+	color: var(--error);
+}
+
+.cursos-ciclo-vacio {
+	margin: 0;
+	padding: var(--e-5) var(--e-4);
+	color: var(--tinta-suave);
+	font-size: 15px;
+}
+
+.cursos-ciclo-pie {
 	display: flex;
 	flex-wrap: wrap;
-	gap: var(--e-1) var(--e-4);
-	margin-top: auto;
-	padding-top: var(--e-4);
-	font-size: 13px;
-	color: var(--tinta-suave);
-}
-
-.curso-cifras strong {
-	font-family: var(--fuente-titulo);
-	font-size: 16px;
-	color: var(--tinta);
-}
-
-.curso-pie {
-	display: flex;
 	align-items: center;
 	gap: var(--e-3);
-	padding: var(--e-2) var(--e-5);
-	background: var(--superficie-baja);
+	padding: 10px var(--e-4) var(--e-3);
+	border-top: 1px solid var(--borde);
+	background: #fbfcfd;
+}
+
+.cursos-ciclo-pie > span {
+	flex: 1 1 180px;
+	color: var(--tinta-suave);
+	font-size: 13px;
+}
+
+.cursos-ciclo-pie .admin-quitar {
+	margin: 0;
+}
+
+/* --- las evaluaciones de un ciclo, en el panel --- */
+
+.cursos-evaluaciones {
+	height: 94vh;
+	background: var(--fondo);
+}
+
+.cursos-evaluaciones .admin-panel-cabecera {
+	border-bottom: 1px solid var(--borde);
+	background: var(--superficie);
+}
+
+.cursos-evaluaciones .admin-panel-cabecera h2 {
+	font-size: 21px;
+}
+
+.cursos-evaluaciones .admin-panel-cuerpo {
+	gap: var(--e-3);
+	padding-top: var(--e-3);
+}
+
+.cursos-evaluaciones .admin-panel-cuerpo > * {
+	flex: 0 0 auto;
+}
+
+a.admin-velo {
+	display: block;
+}
+
+.cursos-evaluacion {
+	overflow: hidden;
+	border: 1px solid var(--borde);
+	border-radius: var(--r-lg);
+	background: var(--superficie);
+}
+
+.cursos-evaluacion-cabecera {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--e-3);
+	padding: 14px var(--e-4);
+}
+
+.cursos-evaluacion-cabecera > div:nth-child(2) {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.cursos-evaluacion-cabecera strong {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--e-2);
+	font-size: 16px;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+.cursos-evaluacion-cabecera > div:nth-child(2) > span:last-child {
+	color: var(--tinta-suave);
+	font-size: 13px;
+}
+
+.cursos-evaluacion-resultado {
+	display: flex;
+	flex: 0 0 auto;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 1px;
+}
+
+.cursos-evaluacion-resultado strong {
+	font-family: var(--fuente-titulo);
+	font-size: 22px;
+	font-weight: 800;
+	line-height: 1.1;
+	white-space: nowrap;
+}
+
+.cursos-evaluacion-resultado span {
+	color: var(--tinta-suave);
+	font-size: 14px;
+	font-weight: 700;
+}
+
+.cursos-evaluacion-barra {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 0 var(--e-4) var(--e-3);
+}
+
+.cursos-evaluacion-barra .estadisticas-cumplimiento {
+	margin: 0;
+}
+
+.cursos-evaluacion-barra p {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2px 10px;
+	margin: 0;
+	color: var(--tinta-suave);
+	font-size: 13px;
+}
+
+.cursos-evaluacion-desplegar {
+	display: flex;
+	align-items: center;
+	gap: var(--e-2);
+	width: 100%;
+	min-height: 44px;
+	padding: 0 var(--e-4);
+	border: 0;
+	border-top: 1px solid var(--borde);
+	background: var(--fondo);
+	color: var(--azul);
+	font: inherit;
+	font-size: 15px;
+	font-weight: 600;
+	text-align: left;
+	cursor: pointer;
+}
+
+.cursos-evaluacion-desplegar:hover {
+	background: var(--azul-tenue);
+}
+
+.cursos-criterios li {
+	display: grid;
+	grid-template-columns: 22px 22px minmax(0, 1fr) auto;
+	align-items: start;
+	gap: 10px;
+	padding: 10px var(--e-4);
 	border-top: 1px solid var(--borde);
 }
 
-.curso.archivado .curso-pie {
-	background: var(--superficie-media);
+.cursos-criterios li.no-hizo {
+	background: #fffafa;
+}
+
+.cursos-criterio-numero {
+	padding-top: 2px;
+	color: var(--tinta-tenue);
+	font-size: 13px;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+.cursos-criterio-marca {
+	display: grid;
+	place-items: center;
+	width: 22px;
+	height: 22px;
+	margin-top: 1px;
+	border-radius: 50%;
+	background: var(--verde-claro);
+	color: var(--verde-oscuro);
+}
+
+.no-hizo .cursos-criterio-marca {
+	background: var(--error-claro);
+	color: var(--error);
+}
+
+.cursos-criterio-texto {
+	min-width: 0;
+	font-size: 15px;
+	line-height: 1.45;
+	overflow-wrap: anywhere;
+	text-wrap: pretty;
+}
+
+.cursos-criterio-resultado {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 1px;
+	padding-top: 2px;
+}
+
+.cursos-criterio-resultado strong {
+	color: var(--verde-oscuro);
+	font-size: 13px;
+	font-weight: 700;
+	white-space: nowrap;
+}
+
+.no-hizo .cursos-criterio-resultado strong {
+	color: var(--error);
+}
+
+.cursos-criterio-resultado span {
+	color: var(--tinta-suave);
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+@media (min-width: 900px) {
+	.cursos-tarjetas {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.cursos-migas {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 2px;
+		min-height: 44px;
+		font-size: 15px;
+		font-weight: 600;
+	}
+
+	.cursos-migas a {
+		margin-left: -8px;
+		padding: 6px var(--e-2);
+		border-radius: var(--r-md);
+		text-decoration: none;
+	}
+
+	.cursos-migas a + svg + a {
+		margin-left: 0;
+	}
+
+	.cursos-migas a:hover {
+		background: var(--azul-claro);
+	}
+
+	.cursos-migas .icono {
+		color: var(--tinta-tenue);
+	}
+
+	.cursos-migas span {
+		padding: 6px var(--e-2);
+		color: var(--tinta-suave);
+	}
+
+	.admin-ficha .cursos-volver {
+		display: none;
+	}
+
+	.cursos-ficha {
+		flex-direction: row;
+		align-items: flex-end;
+		gap: var(--e-6);
+	}
+
+	.cursos-ficha-titulo h1 {
+		font-size: 30px;
+	}
+
+	.cursos-ficha-acciones {
+		flex: 0 0 auto;
+		flex-direction: column;
+		align-items: flex-end;
+	}
+
+	.cursos-ficha:has(form) .cursos-ficha-acciones {
+		flex-direction: row;
+	}
+
+	.cursos-ficha-acciones form,
+	.cursos-ficha-acciones .boton {
+		flex: 0 0 auto;
+	}
+
+	.cursos-ahora ul {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	.cursos-mesas-cabecera .boton {
+		width: auto;
+		margin: 0 0 0 auto;
+	}
+
+	.cursos-mesas-lista {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: var(--e-4);
+	}
+
+	.cursos-ciclo-cabecera {
+		flex-wrap: nowrap;
+	}
+
+	.cursos-ver-evaluaciones {
+		flex: 0 0 auto;
+		width: auto;
+		min-height: 44px;
+		margin: 0;
+	}
+
+	.cursos-roles-columnas,
+	.cursos-rol {
+		grid-template-columns: 36px 220px minmax(0, 1fr) 230px 44px;
+		gap: var(--e-3);
+	}
+
+	.cursos-roles-columnas {
+		display: grid;
+		padding: var(--e-2) var(--e-4);
+		background: var(--fondo);
+		color: var(--tinta-suave);
+		font-size: 12px;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+
+	.cursos-rol {
+		grid-template-areas: 'icono nombre quien evaluacion acciones';
+		min-height: 56px;
+		padding: var(--e-2) var(--e-4);
+	}
+
+	.cursos-rol:first-child {
+		border-top: 1px solid var(--borde);
+	}
+
+	.cursos-rol.vacante {
+		grid-template-areas: 'icono nombre quien quien acciones';
+	}
+
+	.cursos-rol-nombre {
+		color: var(--tinta);
+		font-size: 15px;
+		letter-spacing: 0;
+		text-transform: none;
+	}
+
+	.cursos-evaluaciones {
+		width: 720px;
+		height: auto;
+	}
+}
+
+@media (min-width: 1200px) {
+	.cursos-mesas-lista {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
 }
 
 /* --- cartel de la mesa: el QR para proyectar, imprimir o mostrar en la mano ---
@@ -9363,11 +10277,6 @@ input.sumarse-dni[aria-invalid='true'] {
 	.rejilla.tres {
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 	}
-}
-
-.confirmacion {
-	display: grid;
-	gap: var(--e-2);
 }
 
 .vacio {

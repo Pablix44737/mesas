@@ -1,21 +1,8 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
+import { avisar, leerAviso } from '$lib/server/aviso';
 import { tenantActual } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/** Lo que `borrar_mesa()` informa de lo que se llevo puesto. */
-type Resumen = {
-	numero: number;
-	corridas: number;
-	participaciones: number;
-	evaluaciones: number;
-	enviadas: number;
-};
-
-const cuantas = (n: number, singular: string, plural: string) =>
-	`${n} ${n === 1 ? singular : plural}`;
 
 async function traerCurso(codigo: string, tenantId: string) {
 	const { data, error: fallo } = await supabase
@@ -31,230 +18,196 @@ async function traerCurso(codigo: string, tenantId: string) {
 	return data;
 }
 
-export const load: PageServerLoad = async ({ params, locals }) => {
+export const load: PageServerLoad = async ({ params, locals, cookies }) => {
 	const curso = await traerCurso(params.curso, tenantActual(locals));
+	const aviso = leerAviso(cookies, `/admin/cursos/${curso.codigo}`);
 
-	const [{ data: mesas }, { data: evaluaciones }] = await Promise.all([
-		supabase
-			.from('mesas')
-			.select('id, numero, escenario:escenarios(nombre), corridas(id, numero, habilitada)')
-			.eq('curso_id', curso.id)
-			.order('numero'),
-		supabase.from('evaluaciones_enviadas').select('mesa_id')
-	]);
+	const { data: mesas } = await supabase
+		.from('mesas')
+		.select('id, numero, escenario:escenarios(nombre), corridas(id, numero, habilitada, creada_en)')
+		.eq('curso_id', curso.id)
+		.order('numero');
+
+	const idsDeMesas = (mesas ?? []).map((m) => m.id);
+	const corridasDelCurso = (mesas ?? []).flatMap((mesa) => mesa.corridas.map((c) => c.id));
+	const enCurso = (mesas ?? []).flatMap((mesa) =>
+		mesa.corridas.filter((c) => c.habilitada).map((c) => c.id)
+	);
 
 	// El destinatario decide qué roles se ocupan, así que mientras nadie haya
 	// declarado uno todavía se puede corregir. Después no: quedarían
 	// participaciones con roles que el curso ya no admite.
-	const corridasDelCurso = (mesas ?? []).flatMap((mesa) => mesa.corridas.map((c) => c.id));
+	const [{ data: destinatarios }, { data: evaluaciones }, { data: ocupados }, { data: abiertos }] =
+		await Promise.all([
+			supabase.from('destinatarios').select('*').order('orden'),
+			idsDeMesas.length > 0
+				? supabase.from('evaluaciones_enviadas').select('mesa_id').in('mesa_id', idsDeMesas)
+				: Promise.resolve({ data: [] }),
+			corridasDelCurso.length > 0
+				? supabase.from('participaciones').select('corrida_id').in('corrida_id', corridasDelCurso)
+				: Promise.resolve({ data: [] }),
+			// Lo que quedó abierto en los ciclos en curso: es lo que todavía puede
+			// llegar, y lo que se pierde si el líder pasa de ciclo sin enviarlo.
+			enCurso.length > 0
+				? supabase.from('checklists_sin_enviar').select('corrida_id').in('corrida_id', enCurso)
+				: Promise.resolve({ data: [] })
+		]);
 
-	const [{ data: destinatarios }, { count: ocupados }] = await Promise.all([
-		supabase.from('destinatarios').select('*').order('orden'),
-		corridasDelCurso.length > 0
-			? supabase
-					.from('participaciones')
-					.select('id', { count: 'exact', head: true })
-					.in('corrida_id', corridasDelCurso)
-			: Promise.resolve({ count: 0 })
-	]);
-
-	const porMesa = new Map<string, number>();
-	for (const evaluacion of evaluaciones ?? []) {
-		if (evaluacion.mesa_id) {
-			porMesa.set(evaluacion.mesa_id, (porMesa.get(evaluacion.mesa_id) ?? 0) + 1);
+	const contar = <T>(filas: T[], clave: (fila: T) => string | null) => {
+		const por = new Map<string, number>();
+		for (const fila of filas) {
+			const k = clave(fila);
+			if (k) por.set(k, (por.get(k) ?? 0) + 1);
 		}
-	}
+		return por;
+	};
+	const evaluacionesPorMesa = contar(evaluaciones ?? [], (e) => e.mesa_id);
+	const rolesPorCorrida = contar(ocupados ?? [], (p) => p.corrida_id);
+	const abiertosPorCorrida = contar(abiertos ?? [], (a) => a.corrida_id);
 
 	return {
+		aviso,
 		curso,
 		destinatarios: destinatarios ?? [],
-		rolesYaOcupados: ocupados ?? 0,
-		// Para decir antes de eliminar el curso cuánto trabajo se va con él.
-		evaluacionesDelCurso: (mesas ?? []).reduce((total, mesa) => total + (porMesa.get(mesa.id) ?? 0), 0),
-		mesas: (mesas ?? []).map((mesa) => ({
-			id: mesa.id,
-			numero: mesa.numero,
-			escenario: mesa.escenario?.nombre ?? null,
-			corridas: mesa.corridas.length,
-			corridaEnCurso: mesa.corridas.find((c) => c.habilitada)?.numero ?? null,
-			evaluaciones: porMesa.get(mesa.id) ?? 0
-		}))
+		rolesYaOcupados: (ocupados ?? []).length,
+		mesas: (mesas ?? []).map((mesa) => {
+			const ciclos = [...mesa.corridas].sort((a, b) => a.numero - b.numero);
+			const actual = ciclos.find((c) => c.habilitada) ?? null;
+			return {
+				id: mesa.id,
+				numero: mesa.numero,
+				escenario: mesa.escenario?.nombre ?? null,
+				ciclos: ciclos.map((c) => ({ numero: c.numero, enCurso: c.habilitada })),
+				evaluaciones: evaluacionesPorMesa.get(mesa.id) ?? 0,
+				enCurso: actual
+					? {
+							numero: actual.numero,
+							desde: actual.creada_en,
+							roles: rolesPorCorrida.get(actual.id) ?? 0,
+							abiertos: abiertosPorCorrida.get(actual.id) ?? 0
+						}
+					: null
+			};
+		})
 	};
 };
 
 export const actions: Actions = {
 	/**
-	 * Corregir a quién está destinado el curso. `cambiar_el_destinatario()` lo
-	 * rechaza si ya se declaró algún rol: el destinatario decide cuáles se ocupan,
-	 * y cambiarlo después dejaría participaciones con roles que su propio curso ya
-	 * no admite. Es la misma regla con la que se deshace una corrida.
+	 * Corregir el nombre, el destinatario o los dos, de una vez. El código no se
+	 * toca: va a estar impreso en los QR.
+	 *
+	 * El destinatario lo cambia `cambiar_el_destinatario()`, que lo rechaza si ya se
+	 * declaró algún rol: el destinatario decide cuáles se ocupan, y cambiarlo
+	 * después dejaría participaciones con roles que su propio curso ya no admite.
 	 */
-	destinatario: async ({ request, params, locals }) => {
-		const curso = await traerCurso(params.curso, tenantActual(locals));
-
-		const formulario = await request.formData();
-		const destinadoA = String(formulario.get('destinadoA') ?? '');
-
-		const rechazar = (estado: number, mensaje: string) => fail(estado, { mensaje, exito: null });
-
-		const { data, error: fallo } = await supabase.rpc('cambiar_el_destinatario', {
-			p_curso_id: curso.id,
-			p_destinatario: destinadoA
-		});
-
-		if (fallo) {
-			if (fallo.message.includes('ya no existe')) return rechazar(404, 'Ese curso ya no existe.');
-			if (fallo.message.includes('roles ocupados')) {
-				return rechazar(
-					409,
-					'En este curso ya se ocuparon roles, así que su destinatario no se puede cambiar.'
-				);
-			}
-			if (fallo.message.includes('destinatario no existe')) {
-				return rechazar(400, 'Elegí uno de los destinatarios de la lista.');
-			}
-			return rechazar(500, 'No se pudo cambiar el destinatario. Intentá de nuevo.');
-		}
-
-		const resumen = data as unknown as { nombre: string };
-
-		return {
-			mensaje: null,
-			exito: `«${resumen.nombre}» quedó con su destinatario corregido.`
-		};
-	},
-
-	/** Corregir el nombre. El código no se toca: va a estar impreso en los QR. */
-	renombrar: async ({ request, params, locals }) => {
+	editar: async ({ request, params, locals }) => {
 		const curso = await traerCurso(params.curso, tenantActual(locals));
 
 		const formulario = await request.formData();
 		const nombre = String(formulario.get('nombre') ?? '').trim();
+		const destinadoA = String(formulario.get('destinadoA') ?? curso.destinado_a);
 
-		// `renombrando` reabre el campo con lo tipeado aunque no haya JavaScript.
-		const rechazarNombre = (estado: number, mensaje: string) =>
-			fail(estado, { mensaje, exito: null, renombrando: true, nombre });
+		// `editando` reabre el panel con lo elegido aunque no haya JavaScript.
+		const rechazar = (estado: number, mensaje: string, campo = '') =>
+			fail(estado, { mensaje, campo, exito: null, editando: true, nombre, destinadoA });
 
-		if (nombre.length < 4) return rechazarNombre(400, 'El nombre no puede quedar vacío.');
-		if (nombre === curso.nombre) return { mensaje: null, exito: 'No había nada que cambiar.' };
+		if (nombre.length < 4) return rechazar(400, 'El nombre no puede quedar vacío.', 'nombre');
 
-		const { error: fallo } = await supabase
-			.from('cursos')
-			.update({ nombre })
-			.eq('id', curso.id);
-
-		if (fallo) {
-			return fallo.code === '23505'
-				? rechazarNombre(409, `Ya hay otro curso que se llama «${nombre}».`)
-				: rechazarNombre(400, 'No se pudo cambiar el nombre. Intentá de nuevo.');
+		const cambiaElNombre = nombre !== curso.nombre;
+		const cambiaElDestinatario = destinadoA !== curso.destinado_a;
+		if (!cambiaElNombre && !cambiaElDestinatario) {
+			return { mensaje: null, campo: '', exito: 'No había nada que cambiar.' };
 		}
 
-		return { mensaje: null, exito: `El curso ahora se llama «${nombre}».` };
+		// El destinatario primero: es lo que puede no estar permitido, y así un
+		// rechazo no deja el nombre cambiado a medias.
+		if (cambiaElDestinatario) {
+			const { error: fallo } = await supabase.rpc('cambiar_el_destinatario', {
+				p_curso_id: curso.id,
+				p_destinatario: destinadoA
+			});
+
+			if (fallo) {
+				if (fallo.message.includes('ya no existe')) return rechazar(404, 'Ese curso ya no existe.');
+				if (fallo.message.includes('roles ocupados')) {
+					return rechazar(
+						409,
+						'En este curso ya se ocuparon roles, así que su destinatario no se puede cambiar.',
+						'destinadoA'
+					);
+				}
+				if (fallo.message.includes('destinatario no existe')) {
+					return rechazar(400, 'Elegí uno de los destinatarios de la lista.', 'destinadoA');
+				}
+				return rechazar(500, 'No se pudo cambiar el destinatario. Intentá de nuevo.');
+			}
+		}
+
+		if (cambiaElNombre) {
+			const { error: fallo } = await supabase.from('cursos').update({ nombre }).eq('id', curso.id);
+
+			if (fallo) {
+				return fallo.code === '23505'
+					? rechazar(409, `Ya hay otro curso que se llama «${nombre}».`, 'nombre')
+					: rechazar(400, 'No se pudo cambiar el nombre. Intentá de nuevo.');
+			}
+		}
+
+		const mensajes = [];
+		if (cambiaElNombre) mensajes.push(`El curso ahora se llama «${nombre}».`);
+		if (cambiaElDestinatario) mensajes.push(`«${nombre}» quedó con su destinatario corregido.`);
+
+		return { mensaje: null, campo: '', exito: mensajes.join(' ') };
 	},
 
 	/**
-	 * Eliminar una mesa se lleva puesto todo lo que colgó de ella: sus corridas,
-	 * quiénes ocuparon cada rol y las evaluaciones que se hicieron, enviadas o no.
-	 * No hay vuelta atrás, así que el número de mesa se escribe a mano: es el único
-	 * paso de todo el sistema que destruye trabajo de otras personas.
-	 *
-	 * Contar y borrar pasan dentro de `borrar_mesa()`, en una sola transacción, así
-	 * lo que se informa es lo que de verdad se destruyó y no lo que había cuando se
-	 * dibujó la confirmación.
+	 * Archivar no borra nada: saca al curso del frente para que las ediciones
+	 * viejas no compitan por la atención con la que está en marcha. Sus mesas y
+	 * evaluaciones siguen consultándose igual.
 	 */
-	eliminar: async ({ request, params, locals }) => {
+	archivar: async ({ request, params, locals }) => {
 		const curso = await traerCurso(params.curso, tenantActual(locals));
+		const archivado = (await request.formData()).get('archivado') === 'true';
 
-		const formulario = await request.formData();
-		const id = String(formulario.get('id') ?? '');
-		const confirmacion = String(formulario.get('confirmacion') ?? '').trim();
-
-		const rechazar = (estado: number, mensaje: string) =>
-			fail(estado, { mensaje, exito: null, eliminando: id });
-
-		if (!UUID.test(id)) return fail(400, { mensaje: 'Mesa inválida.', exito: null, eliminando: null });
-
-		// El número contra el que se confirma sale de la base y no del formulario:
-		// si viniera del cliente, quien manda el pedido estaría eligiendo a la vez
-		// qué borrar y contra qué se comprueba, y la traba no trabaría nada.
-		//
-		// Y acotada al curso de la URL, que a su vez está acotado a la institución
-		// de la sesión: el id viene del formulario, así que sin esto bastaría con
-		// mandar el de una mesa de otra institución.
-		const { data: mesa } = await supabase
-			.from('mesas')
-			.select('numero')
-			.eq('id', id)
-			.eq('curso_id', curso.id)
-			.maybeSingle();
-
-		if (!mesa) return rechazar(404, 'Esa mesa ya no existe: alguien la eliminó antes.');
-
-		if (confirmacion !== String(mesa.numero)) {
-			return rechazar(400, `Para eliminarla hay que escribir el número de la mesa: ${mesa.numero}.`);
-		}
-
-		const { data, error: fallo } = await supabase.rpc('borrar_mesa', { p_mesa_id: id });
+		const { error: fallo } = await supabase
+			.from('cursos')
+			.update({ archivado })
+			.eq('id', curso.id);
 
 		if (fallo) {
-			return rechazar(
-				fallo.code === 'P0002' ? 404 : 500,
-				fallo.code === 'P0002'
-					? 'Esa mesa ya no existe: alguien la eliminó antes.'
-					: 'No se pudo eliminar la mesa. Intentá de nuevo.'
-			);
-		}
-
-		const resumen = data as unknown as Resumen;
-
-		// Cuántas evaluaciones cayeron, y cuántas de ellas ya estaban enviadas: es la
-		// parte del arrastre que de verdad duele, así que se dice en una sola frase.
-		const evaluaciones = () => {
-			if (resumen.evaluaciones === 0) return 'ninguna evaluación';
-			const total = cuantas(resumen.evaluaciones, 'evaluación', 'evaluaciones');
-			if (resumen.enviadas === 0) return `${total} sin enviar`;
-			if (resumen.enviadas === resumen.evaluaciones) {
-				return resumen.evaluaciones === 1 ? `${total} ya enviada` : `${total}, todas ya enviadas`;
-			}
-			return `${total}, ${resumen.enviadas} de ellas ya ${resumen.enviadas === 1 ? 'enviada' : 'enviadas'}`;
-		};
-
-		// Una mesa que nunca se usó no necesita el inventario de lo que arrastró.
-		if (resumen.corridas === 0) {
-			return {
-				mensaje: null,
-				eliminando: null,
-				exito: `La mesa ${resumen.numero} quedó eliminada.`
-			};
+			return fail(400, {
+				mensaje: 'No se pudo cambiar el estado del curso. Intentá de nuevo.',
+				campo: '',
+				exito: null
+			});
 		}
 
 		return {
 			mensaje: null,
-			eliminando: null,
-			exito:
-				`La mesa ${resumen.numero} quedó eliminada, y con ella ` +
-				`${cuantas(resumen.corridas, 'ciclo', 'ciclos')}, ` +
-				`${cuantas(resumen.participaciones, 'rol ocupado', 'roles ocupados')} y ` +
-				`${evaluaciones()}. El padrón y el material del escenario quedaron intactos.`
+			campo: '',
+			exito: archivado
+				? `«${curso.nombre}» quedó archivado. Sus mesas se siguen consultando.`
+				: `«${curso.nombre}» volvió a los cursos en marcha.`
 		};
 	},
 
 	/**
 	 * Eliminar el curso entero: sus mesas, y con ellas todo lo que colgó de cada
 	 * una. Es pensado para los cursos de prueba; una edición real que terminó se
-	 * archiva. Igual que con una mesa, se confirma escribiendo a mano, y el nombre
-	 * contra el que se compara sale de la base y no del formulario.
+	 * archiva. Se confirma escribiendo el nombre, y el nombre contra el que se
+	 * compara sale de la base y no del formulario.
 	 *
 	 * `borrar_curso()` cuenta y borra en una sola transacción.
 	 */
-	eliminarCurso: async ({ request, params, locals }) => {
+	eliminarCurso: async ({ request, params, locals, cookies }) => {
 		const curso = await traerCurso(params.curso, tenantActual(locals));
 
 		const formulario = await request.formData();
 		const confirmacion = String(formulario.get('confirmacion') ?? '').trim();
 
 		const rechazar = (estado: number, mensaje: string) =>
-			fail(estado, { mensaje, exito: null, eliminandoCurso: true });
+			fail(estado, { mensaje, campo: '', exito: null, eliminandoCurso: true });
 
 		// Sin distinguir mayúsculas ni espacios de más: lo que se pide es intención,
 		// no exactitud tipográfica.
@@ -274,6 +227,8 @@ export const actions: Actions = {
 			);
 		}
 
+		avisar(cookies, '/admin/cursos', `«${curso.nombre}» quedó eliminado.`);
 		redirect(303, '/admin/cursos');
 	}
 };
+

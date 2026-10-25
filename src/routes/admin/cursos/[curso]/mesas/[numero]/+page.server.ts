@@ -1,8 +1,11 @@
-import { error, fail } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
 import { tenantActual } from '$lib/server/tenant';
 import { mostrarDni } from '$lib/dni';
 import { mesaDelCurso } from '$lib/server/mesas';
+import { avisar } from '$lib/server/aviso';
+import { evaluacionesDeLaCorrida } from '$lib/server/evaluaciones';
+import { rolesDelDestinatario } from '$lib/server/roles';
 import type { Actions, PageServerLoad } from './$types';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -34,7 +37,7 @@ async function esDeLaMesa(tabla: 'corridas' | 'participaciones', id: string, mes
 	return data !== null;
 }
 
-export const load: PageServerLoad = async ({ params, locals }) => {
+export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const { curso, mesa: encontrada } = await mesaDelCurso(params.curso, params.numero, tenantActual(locals));
 
 	const { data: mesa, error: fallo } = await supabase
@@ -46,14 +49,14 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	if (fallo) error(500, fallo.message);
 	if (!mesa) error(404, 'Esa mesa ya no existe');
 
-	const [{ data: corridas }, { data: evaluaciones }, { data: abiertos }] = await Promise.all([
+	const [{ data: corridas }, { data: evaluaciones }, { data: abiertos }, roles] = await Promise.all([
 		supabase
 			.from('corridas')
 			.select(
 				`id, numero, habilitada, creada_en,
 				 participaciones(
 					id, dni, rol_codigo,
-					rol:roles(nombre, orden),
+					rol:roles(nombre, orden, observador),
 					participante:participantes(nombre, apellido)
 				 )`
 			)
@@ -61,12 +64,19 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			.order('numero', { ascending: false }),
 		supabase
 			.from('evaluaciones_enviadas')
-			.select('corrida_id, participacion_id')
+			.select('corrida_id, participacion_id, enviada_en')
 			.eq('mesa_id', mesa.id),
-		supabase.from('checklists_sin_enviar').select('corrida_id').eq('mesa_id', mesa.id)
+		supabase
+			.from('checklists_sin_enviar')
+			.select('corrida_id, participacion_id, marcados')
+			.eq('mesa_id', mesa.id),
+		// Los roles que se ocupan en un curso como este: los que falten en el ciclo
+		// en curso son los que el líder todavía tiene que conseguir.
+		rolesDelDestinatario(curso.destinado_a)
 	]);
 
-	const evaluadas = new Set((evaluaciones ?? []).map((e) => e.participacion_id));
+	const enviadaEn = new Map((evaluaciones ?? []).map((e) => [e.participacion_id, e.enviada_en]));
+	const marcasAbiertas = new Map((abiertos ?? []).map((a) => [a.participacion_id, a.marcados ?? 0]));
 	const porCorrida = new Map<string, number>();
 	for (const evaluacion of evaluaciones ?? []) {
 		if (evaluacion.corrida_id) {
@@ -88,8 +98,12 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	// Vienen ordenadas de la más nueva a la más vieja, así que la última es la primera.
 	const ultima = (corridas ?? [])[0]?.id ?? null;
 
+	// Las evaluaciones de un ciclo se abren en un panel; cuál, lo dice la dirección.
+	const cicloPedido = Number(url.searchParams.get('ciclo'));
+	const cicloAbierto = (corridas ?? []).find((c) => c.numero === cicloPedido) ?? null;
+
 	return {
-		mesa: { numero: mesa.numero, creada_en: mesa.creada_en },
+		mesa: { id: mesa.id, numero: mesa.numero, creada_en: mesa.creada_en },
 		curso,
 		escenario: mesa.escenario,
 		corridas: (corridas ?? []).map((corrida) => ({
@@ -106,6 +120,13 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			 * el botón, no para autorizar nada.
 			 */
 			sePuedeEliminar: corrida.id === ultima && (porCorrida.get(corrida.id) ?? 0) === 0,
+			// Los que nadie ocupó, sólo mientras el ciclo está en curso: después ya no
+			// hay a quién avisarle.
+			sinOcupar: corrida.habilitada
+				? roles
+						.filter((rol) => !corrida.participaciones.some((p) => p.rol_codigo === rol.codigo))
+						.map((rol) => ({ codigo: rol.codigo, nombre: rol.nombre }))
+				: [],
 			// Quiénes ocuparon cada rol, en el orden en que el modelo los enumera.
 			participaciones: corrida.participaciones
 				.map((p) => ({
@@ -117,10 +138,22 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 					nombre: p.participante
 						? `${p.participante.nombre} ${p.participante.apellido}`
 						: null,
-					evaluo: evaluadas.has(p.id)
+					evaluo: enviadaEn.has(p.id),
+					enviadaEn: enviadaEn.get(p.id) ?? null,
+					observador: p.rol?.observador ?? false,
+					// Un checklist abierto sin enviar, con cuántas marcas lleva.
+					marcas: marcasAbiertas.get(p.id) ?? null
 				}))
 				.sort((a, b) => a.orden - b.orden || (a.nombre ?? a.dni).localeCompare(b.nombre ?? b.dni))
-		}))
+		})),
+		evaluacionesDelCiclo: cicloAbierto
+			? {
+					numero: cicloAbierto.numero,
+					enCurso: cicloAbierto.habilitada,
+					desde: cicloAbierto.creada_en,
+					evaluaciones: await evaluacionesDeLaCorrida(cicloAbierto.id)
+				}
+			: null
 	};
 };
 
@@ -135,6 +168,73 @@ const cuantas = (n: number, singular: string, plural: string) =>
 	`${n} ${n === 1 ? singular : plural}`;
 
 export const actions: Actions = {
+	/**
+	 * Eliminar la mesa se lleva puesto todo lo que colgó de ella: sus corridas,
+	 * quiénes ocuparon cada rol y las evaluaciones que se hicieron, enviadas o no.
+	 * No hay vuelta atrás, así que el número de mesa se escribe a mano: es el único
+	 * paso de todo el sistema que destruye trabajo de otras personas.
+	 *
+	 * Contar y borrar pasan dentro de `borrar_mesa()`, en una sola transacción, así
+	 * lo que se informa es lo que de verdad se destruyó y no lo que había cuando se
+	 * dibujó la confirmación. El número contra el que se confirma sale de la base,
+	 * no del formulario.
+	 */
+	eliminarMesa: async ({ request, params, locals, cookies }) => {
+		const { curso, mesa } = await mesaDelCurso(params.curso, params.numero, tenantActual(locals));
+
+		const confirmacion = String((await request.formData()).get('confirmacion') ?? '').trim();
+		const rechazar = (estado: number, mensaje: string) =>
+			fail(estado, { mensaje, exito: null, eliminandoMesa: true });
+
+		if (confirmacion !== String(mesa.numero)) {
+			return rechazar(400, `Para eliminarla hay que escribir el número de la mesa: ${mesa.numero}.`);
+		}
+
+		const { data, error: fallo } = await supabase.rpc('borrar_mesa', { p_mesa_id: mesa.id });
+
+		if (fallo) {
+			return rechazar(
+				fallo.code === 'P0002' ? 404 : 500,
+				fallo.code === 'P0002'
+					? 'Esa mesa ya no existe: alguien la eliminó antes.'
+					: 'No se pudo eliminar la mesa. Intentá de nuevo.'
+			);
+		}
+
+		const resumen = data as unknown as {
+			numero: number;
+			corridas: number;
+			participaciones: number;
+			evaluaciones: number;
+			enviadas: number;
+		};
+
+		// Cuántas evaluaciones cayeron, y cuántas de ellas ya estaban enviadas: es la
+		// parte del arrastre que de verdad duele, así que se dice en una sola frase.
+		const evaluaciones = () => {
+			if (resumen.evaluaciones === 0) return 'ninguna evaluación';
+			const total = cuantas(resumen.evaluaciones, 'evaluación', 'evaluaciones');
+			if (resumen.enviadas === 0) return `${total} sin enviar`;
+			if (resumen.enviadas === resumen.evaluaciones) {
+				return resumen.evaluaciones === 1 ? `${total} ya enviada` : `${total}, todas ya enviadas`;
+			}
+			return `${total}, ${resumen.enviadas} de ellas ya ${resumen.enviadas === 1 ? 'enviada' : 'enviadas'}`;
+		};
+
+		// Una mesa que nunca se usó no necesita el inventario de lo que arrastró.
+		const texto =
+			resumen.corridas === 0
+				? `La mesa ${resumen.numero} quedó eliminada.`
+				: `La mesa ${resumen.numero} quedó eliminada, y con ella ` +
+					`${cuantas(resumen.corridas, 'ciclo', 'ciclos')}, ` +
+					`${cuantas(resumen.participaciones, 'rol ocupado', 'roles ocupados')} y ` +
+					`${evaluaciones()}. El padrón y el material del escenario quedaron intactos.`;
+
+		const ruta = `/admin/cursos/${curso.codigo}`;
+		avisar(cookies, ruta, texto);
+		redirect(303, ruta);
+	},
+
 	/**
 	 * Deshacer una corrida habilitada por error: se elimina y la mesa vuelve a la
 	 * anterior. Las reglas —que sea la última y que no tenga evaluaciones enviadas—

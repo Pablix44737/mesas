@@ -1,5 +1,6 @@
-import { error, fail } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
+import { avisar, leerAviso } from '$lib/server/aviso';
 import { tenantActual } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -22,8 +23,9 @@ function codigoDesde(nombre: string) {
 	return base.length >= 2 ? base : 'curso';
 }
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, cookies }) => {
 	const tenant = tenantActual(locals);
+	const aviso = leerAviso(cookies, '/admin/cursos');
 
 	// Los cursos primero: las mesas no llevan institución —la heredan del curso—,
 	// así que acotarlas es acotarlas a estos cursos.
@@ -50,7 +52,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const [{ data: corridas }, { data: enviadas }] =
 		idsDeMesas.length > 0
 			? await Promise.all([
-					supabase.from('corridas').select('mesa_id').in('mesa_id', idsDeMesas),
+					supabase.from('corridas').select('mesa_id, habilitada').in('mesa_id', idsDeMesas),
 					supabase.from('evaluaciones_enviadas').select('mesa_id').in('mesa_id', idsDeMesas)
 				])
 			: [{ data: [] }, { data: [] }];
@@ -67,6 +69,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 	};
 
 	const corridasPorCurso = contar(corridas ?? []);
+	// Una mesa con su ciclo habilitado es una mesa trabajando ahora mismo.
+	const enCursoPorCurso = contar((corridas ?? []).filter((c) => c.habilitada));
 	const evaluacionesPorCurso = contar(enviadas ?? []);
 	const mesasPorCurso = new Map<string, number>();
 	for (const mesa of mesas ?? []) {
@@ -76,28 +80,31 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const nombreDelDestinatario = new Map((destinatarios ?? []).map((d) => [d.codigo, d.nombre]));
 
 	return {
+		aviso,
 		destinatarios: destinatarios ?? [],
 		cursos: (cursos ?? []).map((curso) => ({
 			...curso,
 			destinatario: nombreDelDestinatario.get(curso.destinado_a) ?? curso.destinado_a,
 			mesas: mesasPorCurso.get(curso.id) ?? 0,
 			corridas: corridasPorCurso.get(curso.id) ?? 0,
+			mesasEnCurso: enCursoPorCurso.get(curso.id) ?? 0,
 			evaluaciones: evaluacionesPorCurso.get(curso.id) ?? 0
 		}))
 	};
 };
 
 export const actions: Actions = {
-	crear: async ({ request, locals }) => {
+	crear: async ({ request, locals, cookies }) => {
 		const formulario = await request.formData();
 		const nombre = String(formulario.get('nombre') ?? '').trim();
 		const destinadoA = String(formulario.get('destinadoA') ?? '');
 
-		const rechazar = (estado: number, mensaje: string) =>
-			fail(estado, { nombre, destinadoA, mensaje, exito: null });
+		// `campo` dice debajo de qué mostrar el error; vacío, es un error de todo el alta.
+		const rechazar = (estado: number, mensaje: string, campo = '') =>
+			fail(estado, { nombre, destinadoA, mensaje, campo, exito: null });
 
-		if (nombre.length < 4) return rechazar(400, 'Escribí el nombre del curso.');
-		if (!destinadoA) return rechazar(400, 'Elegí a quién está destinado el curso.');
+		if (nombre.length < 4) return rechazar(400, 'Escribí el nombre del curso.', 'nombre');
+		if (!destinadoA) return rechazar(400, 'Elegí a quién está destinado el curso.', 'destinadoA');
 
 		// El código se deriva del nombre; si ya está tomado, se le suma un número.
 		const { data: existentes } = await supabase.from('cursos').select('codigo');
@@ -111,18 +118,18 @@ export const actions: Actions = {
 			.insert({ nombre, codigo, destinado_a: destinadoA, tenant_id: tenantActual(locals) });
 
 		if (fallo) {
-			if (fallo.code === '23505') return rechazar(409, `Ya hay un curso que se llama «${nombre}».`);
+			if (fallo.code === '23505') {
+				return rechazar(409, `Ya hay un curso que se llama «${nombre}».`, 'nombre');
+			}
 			// Clave foránea: el destinatario que llegó no es ninguno de los cargados.
-			if (fallo.code === '23503') return rechazar(400, 'Ese destinatario no existe.');
+			if (fallo.code === '23503') return rechazar(400, 'Ese destinatario no existe.', 'destinadoA');
 			return rechazar(500, 'No se pudo crear el curso. Intentá de nuevo.');
 		}
 
-		return {
-			nombre: '',
-			destinadoA: '',
-			mensaje: null,
-			exito: `«${nombre}» quedó creado. Ya podés darle mesas.`
-		};
+		// Recién creado, lo que sigue es mirarlo: se va a su pantalla con el aviso.
+		const ruta = `/admin/cursos/${codigo}`;
+		avisar(cookies, ruta, `«${nombre}» quedó creado. Ya podés darle mesas.`);
+		redirect(303, ruta);
 	},
 
 	/**
@@ -136,7 +143,7 @@ export const actions: Actions = {
 		const archivado = formulario.get('archivado') === 'true';
 
 		const rechazar = (estado: number, mensaje: string) =>
-			fail(estado, { nombre: '', destinadoA: '', mensaje, exito: null });
+			fail(estado, { nombre: '', destinadoA: '', mensaje, campo: '', exito: null });
 
 		if (!UUID.test(id)) return rechazar(400, 'Curso inválido.');
 
@@ -157,6 +164,7 @@ export const actions: Actions = {
 			nombre: '',
 			destinadoA: '',
 			mensaje: null,
+			campo: '',
 			exito: archivado
 				? `«${curso.nombre}» quedó archivado. Sus mesas se siguen consultando.`
 				: `«${curso.nombre}» volvió a los cursos en marcha.`

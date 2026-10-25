@@ -14,18 +14,6 @@
 	];
 
 	const actual = (href: string) => (page.url.pathname.startsWith(href) ? 'page' : undefined);
-
-	/**
-	 * Las secciones ya rediseñadas arman su propio encabezado a todo el ancho; las
-	 * demás siguen dentro del envoltorio de siempre hasta que les toque.
-	 */
-	const rediseñadas = [
-		'/admin/checklists',
-		'/admin/escenarios',
-		'/admin/estadisticas',
-		'/admin/padron'
-	];
-	const propia = $derived(rediseñadas.some((ruta) => page.url.pathname.startsWith(ruta)));
 </script>
 
 <div class="admin">
@@ -64,14 +52,9 @@
 		</div>
 	</header>
 
+	<!-- Cada sección arma su propio encabezado a todo el ancho. -->
 	<div class="admin-contenido">
-		{#if propia}
-			{@render children()}
-		{:else}
-			<div class="envoltorio ancho">
-				{@render children()}
-			</div>
-		{/if}
+		{@render children()}
 	</div>
 
 	<!-- En el teléfono las secciones van abajo, al alcance del pulgar. -->
