@@ -9,9 +9,9 @@ import { supabase } from './supabase';
  * participante, la del líder y la del administrador— pasan por acá para que la
  * resolución sea una sola y no tres parecidas.
  *
- * Son dos consultas y no un embed filtrado a propósito: `curso.codigo` es la
- * parte que viene de la URL y conviene poder distinguir «ese curso no existe» de
- * «ese curso no tiene esa mesa», que son dos errores distintos para quien escanea.
+ * Que no exista el curso y que no exista la mesa son dos errores distintos para
+ * quien escanea, así que se distinguen. Pero sólo cuando la mesa no aparece: en el
+ * caso de todos los días alcanza una consulta (ver `mesaDelCurso`).
  *
  * `tenantId` acota a una institución. Lo pasa la administración, donde quien
  * consulta tiene sesión y no tiene por qué llegar a los cursos de otra pegando un
@@ -39,6 +39,18 @@ export async function cursoPorCodigo(codigo: string, tenantId?: string) {
 	return data;
 }
 
+/**
+ * Lo que trae cada búsqueda de una mesa: lo suyo, su curso y su escenario. Casi
+ * todas las pantallas de mesa necesitan las tres cosas, así que van juntas en una
+ * sola consulta en vez de una por cada una.
+ */
+const DE_LA_MESA = `id, numero, creada_en, curso_id, docente_dni,
+	curso:cursos!inner(id, codigo, nombre, archivado, destinado_a, tenant_id),
+	escenario:escenarios(
+		id, nombre, planificacion_archivo, planificacion_tamano,
+		checklist_tecnica:checklist_plantillas(id, nombre, ponderado)
+	)`;
+
 export async function mesaDelCurso(
 	codigoDelCurso: string,
 	numeroCrudo: string,
@@ -47,19 +59,27 @@ export async function mesaDelCurso(
 	const numero = Number(numeroCrudo);
 	if (!Number.isInteger(numero) || numero <= 0) error(404, 'Mesa inexistente');
 
-	const curso = await cursoPorCodigo(codigoDelCurso, tenantId);
-
-	const { data: mesa, error: fallo } = await supabase
+	// El curso viaja dentro de la misma consulta, filtrado por su código: un solo
+	// viaje a la base en el caso de todos los días, que es que la mesa exista.
+	let consulta = supabase
 		.from('mesas')
-		.select('id, numero, creada_en, curso_id')
-		.eq('curso_id', curso.id)
+		.select(DE_LA_MESA)
 		.eq('numero', numero)
-		.maybeSingle();
+		.eq('cursos.codigo', codigoDelCurso);
+	if (tenantId) consulta = consulta.eq('cursos.tenant_id', tenantId);
+
+	const { data: mesa, error: fallo } = await consulta.maybeSingle();
 
 	if (fallo) error(500, fallo.message);
-	if (!mesa) error(404, `El curso ${curso.nombre} no tiene una mesa ${numero}`);
 
-	return { curso, mesa };
+	if (!mesa || !mesa.curso) {
+		// Recién acá se distingue cuál de las dos cosas no existe: consultar el curso
+		// solo tira su propio 404 si es el curso el que falta.
+		const curso = await cursoPorCodigo(codigoDelCurso, tenantId);
+		error(404, `El curso ${curso.nombre} no tiene una mesa ${numero}`);
+	}
+
+	return { curso: mesa.curso, mesa };
 }
 
 /** La raíz de una mesa en cada zona del sistema, para no repetir el armado. */

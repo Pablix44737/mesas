@@ -1,4 +1,4 @@
-import { error, fail } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
 import { supabase } from '$lib/server/supabase';
 import { evaluacionesDeLaCorrida } from '$lib/server/evaluaciones';
 import { dniValido, normalizarDni } from '$lib/dni';
@@ -11,14 +11,11 @@ const ROLES_QUE_PRACTICAN = ['operador', 'asistente'];
 async function traerMesa(codigoDelCurso: string, numeroCrudo: string) {
 	const { mesa: encontrada } = await mesaDelCurso(codigoDelCurso, numeroCrudo);
 
-	const { data: mesa, error: fallo } = await supabase
-		.from('mesas')
-		.select('id, numero, escenario:escenarios(nombre)')
-		.eq('id', encontrada.id)
-		.maybeSingle();
-
-	if (fallo) error(500, fallo.message);
-	if (!mesa) error(404, 'Esa mesa ya no existe');
+	const mesa = {
+		id: encontrada.id,
+		numero: encontrada.numero,
+		escenario: encontrada.escenario ? { nombre: encontrada.escenario.nombre } : null
+	};
 
 	return mesa;
 }

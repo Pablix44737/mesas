@@ -1,5 +1,3 @@
-import { error } from '@sveltejs/kit';
-import { supabase } from '$lib/server/supabase';
 import { mesaDelCurso } from '$lib/server/mesas';
 import type { PageServerLoad } from './$types';
 
@@ -11,14 +9,11 @@ import type { PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ params, url }) => {
 	const { curso, mesa: encontrada } = await mesaDelCurso(params.curso, params.numero);
 
-	const { data: mesa, error: fallo } = await supabase
-		.from('mesas')
-		.select('numero, escenario:escenarios(nombre)')
-		.eq('id', encontrada.id)
-		.maybeSingle();
-
-	if (fallo) error(500, fallo.message);
-	if (!mesa) error(404, 'Esa mesa ya no existe');
+	// Sólo lo que muestra el cartel: es una página pública.
+	const mesa = {
+		numero: encontrada.numero,
+		escenario: encontrada.escenario ? { nombre: encontrada.escenario.nombre } : null
+	};
 
 	return { curso, mesa, origen: url.origin };
 };

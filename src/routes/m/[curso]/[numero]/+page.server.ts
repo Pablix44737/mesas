@@ -7,50 +7,47 @@ import { dniValido, normalizarDni } from '$lib/dni';
 import type { Actions, PageServerLoad } from './$types';
 
 async function traerMesaYCorrida(codigoDelCurso: string, numeroCrudo: string) {
-	const { curso, mesa: encontrada } = await mesaDelCurso(codigoDelCurso, numeroCrudo);
+	const { curso, mesa } = await mesaDelCurso(codigoDelCurso, numeroCrudo);
 
-	const { data: mesa, error: fallo } = await supabase
-		.from('mesas')
-		.select('id, numero, escenario:escenarios(nombre)')
-		.eq('id', encontrada.id)
-		.maybeSingle();
+	// Todas las corridas de la mesa de una vez: la habilitada es la única donde se
+	// puede declarar rol, y si no hay ninguna, que haya otras dice que ya cerró.
+	const { data: corridas, error: fallo } = await supabase
+		.from('corridas')
+		.select('id, numero, habilitada')
+		.eq('mesa_id', mesa.id);
 
 	if (fallo) error(500, fallo.message);
-	if (!mesa) error(404, 'Esa mesa ya no existe');
 
-	// Solo se puede declarar rol en la corrida que el líder tenga habilitada.
-	const { data: corrida } = await supabase
-		.from('corridas')
-		.select('id, numero')
-		.eq('mesa_id', mesa.id)
-		.eq('habilitada', true)
-		.maybeSingle();
-
-	return { curso, mesa, corrida };
+	const habilitada = (corridas ?? []).find((c) => c.habilitada);
+	return {
+		curso,
+		mesa: {
+			id: mesa.id,
+			numero: mesa.numero,
+			escenario: mesa.escenario ? { nombre: mesa.escenario.nombre } : null
+		},
+		corrida: habilitada ? { id: habilitada.id, numero: habilitada.numero } : null,
+		hubo: (corridas ?? []).length > 0
+	};
 }
 
 export const load: PageServerLoad = async ({ params, url }) => {
-	const { curso, mesa, corrida } = await traerMesaYCorrida(params.curso, params.numero);
-
-	// Sin corrida abierta puede ser que todavía no empezó o que el líder ya la
-	// cerró: al participante se le dice distinto en cada caso.
-	const { count: corridas } = corrida
-		? { count: null }
-		: await supabase
-				.from('corridas')
-				.select('id', { count: 'exact', head: true })
-				.eq('mesa_id', mesa.id);
+	const { curso, mesa, corrida, hubo } = await traerMesaYCorrida(params.curso, params.numero);
+	// De memoria casi siempre: no suma un viaje a la base.
+	const roles = await rolesQueSeEligen(curso.destinado_a);
 
 	return {
 		curso,
 		mesa,
 		corrida,
-		cerrada: !corrida && (corridas ?? 0) > 0,
+		// Sin corrida abierta puede ser que todavía no empezó o que el líder ya la
+		// cerró: al participante se le dice distinto en cada caso.
+		cerrada: !corrida && hubo,
 		// Llega así quien estaba en una participación que ya no existe: el líder lo
 		// sacó del ciclo. Viene en la dirección y no en la sesión porque acá no hay
 		// ninguna; lo único que hace es explicar por qué volvió a esta pantalla.
 		volvesAElegir: url.searchParams.get('volvesAElegir') === '1',
-		roles: await rolesQueSeEligen(curso.destinado_a)
+		roles
 	};
 };
 

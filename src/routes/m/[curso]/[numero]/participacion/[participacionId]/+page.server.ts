@@ -32,7 +32,7 @@ async function traerParticipacion(
 				id, numero, habilitada,
 				mesa:mesas(
 					id, numero, docente_dni,
-					curso:cursos(codigo, nombre, destinado_a),
+					curso:cursos(codigo, nombre, destinado_a, tenant_id),
 					escenario:escenarios(
 						id, nombre, planificacion_archivo, planificacion_tamano,
 						checklist_tecnica:checklist_plantillas(id, nombre, ponderado)
@@ -68,33 +68,50 @@ async function traerParticipacion(
 }
 
 /**
- * Qué lista de cotejo le toca a esta participación, preguntándole al rol en vez
- * de nombrarlo. Espeja a `plantilla_de_la_participacion()` en la base, que es la
- * que manda: si las dos se separaran, la pantalla mostraría un checklist que la
- * función no dejaría abrir. Por eso las dos leen lo mismo, `roles.checklist`.
+ * Qué lista de cotejo le toca a esta participación, con sus criterios,
+ * preguntándole al rol en vez de nombrarlo. Espeja a
+ * `plantilla_de_la_participacion()` en la base, que es la que manda: si las dos se
+ * separaran, la pantalla mostraría un checklist que la función no dejaría abrir.
+ * Por eso las dos leen lo mismo, `roles.checklist`.
+ *
+ * Es una sola consulta en cualquiera de los dos casos, así puede ir en paralelo
+ * con lo demás de la pantalla.
  */
-async function plantillaDe(participacion: {
-	rol_codigo: string;
-	rol: { checklist: string | null } | null;
-	corrida: { mesa: { escenario: { checklist_tecnica: unknown } | null } | null } | null;
-}) {
+type Criterio = { id: string; orden: number; texto: string; peso: number | string };
+
+async function criteriosDe(
+	participacion: {
+		rol_codigo: string;
+		rol: { checklist: string | null } | null;
+	},
+	mesa: {
+		curso: { tenant_id: string } | null;
+		escenario: { checklist_tecnica: { id: string; nombre: string; ponderado: boolean } | null } | null;
+	}
+): Promise<{ plantilla: { id: string; nombre: string; ponderado: boolean } | null; items: Criterio[] }> {
 	if (participacion.rol?.checklist === 'comun') {
+		// Hay uno vigente por rol en cada institución: el de la del curso.
 		const { data } = await supabase
 			.from('checklist_plantillas')
-			.select('id, nombre, ponderado')
+			.select('id, nombre, ponderado, checklist_items(id, orden, texto, peso)')
 			.eq('rol_codigo', participacion.rol_codigo)
 			.eq('estado', 'disponible')
+			.eq('tenant_id', mesa.curso?.tenant_id ?? '')
 			.maybeSingle();
-		return data;
+		if (!data) return { plantilla: null, items: [] };
+		const { checklist_items, ...plantilla } = data;
+		return { plantilla, items: checklist_items };
 	}
 	if (participacion.rol?.checklist === 'del_escenario') {
-		return (participacion.corrida?.mesa?.escenario?.checklist_tecnica ?? null) as {
-			id: string;
-			nombre: string;
-			ponderado: boolean;
-		} | null;
+		const plantilla = mesa.escenario?.checklist_tecnica ?? null;
+		if (!plantilla) return { plantilla: null, items: [] };
+		const { data } = await supabase
+			.from('checklist_items')
+			.select('id, orden, texto, peso')
+			.eq('plantilla_id', plantilla.id);
+		return { plantilla, items: data ?? [] };
 	}
-	return null;
+	return { plantilla: null, items: [] };
 }
 
 export const load: PageServerLoad = async ({ params }) => {
@@ -104,31 +121,36 @@ export const load: PageServerLoad = async ({ params }) => {
 		params.numero
 	);
 
-	const plantilla = await plantillaDe(participacion);
+	// Todo lo que depende sólo de la participación sale en un único viaje, en
+	// paralelo. Antes eran cinco pasos encadenados.
+	const [{ plantilla, items: sinOrdenar }, { data: instancia }, { data: calculado }, { data: vigente }, pendientes] =
+		await Promise.all([
+			criteriosDe(participacion, mesa),
+			// Con sus respuestas: sin respuesta, el ítem está sin marcar, ni «Hizo» ni «No hizo».
+			supabase
+				.from('checklist_instancias')
+				.select('id, enviada_en, checklist_respuestas(item_id, cumplido)')
+				.eq('participacion_id', participacion.id)
+				.maybeSingle(),
+			// El resultado sale de la vista, que lo calcula contra los pesos vigentes.
+			supabase
+				.from('resultados_de_evaluacion')
+				.select('resultado, maximo, items_cumplidos, items')
+				.eq('participacion_id', participacion.id)
+				.maybeSingle(),
+			// La corrida que el líder tiene habilitada ahora, que puede ser más nueva
+			// que esta: de ahí sale si desde acá se puede avanzar.
+			supabase
+				.from('corridas')
+				.select('id, numero')
+				.eq('mesa_id', mesa.id)
+				.eq('habilitada', true)
+				.maybeSingle(),
+			// Lo que dejó a medias en otra corrida de esta mesa: desde acá siempre vuelve.
+			checklistsSinEnviarDe(mesa.id, participacion.dni, participacion.corrida?.id)
+		]);
 
-	const [{ data: instancia }, { data: items }, { data: vigente }] = await Promise.all([
-		supabase
-			.from('checklist_instancias')
-			.select('id, enviada_en')
-			.eq('participacion_id', participacion.id)
-			.maybeSingle(),
-		plantilla
-			? supabase
-					.from('checklist_items')
-					.select('id, orden, texto, peso')
-					.eq('plantilla_id', plantilla.id)
-					.order('orden')
-			: Promise.resolve({ data: null }),
-		// La corrida que el líder tiene habilitada ahora, que puede ser más nueva
-		// que esta: de ahí sale si desde acá se puede avanzar.
-		supabase
-			.from('corridas')
-			.select('id, numero')
-			.eq('mesa_id', mesa.id)
-			.eq('habilitada', true)
-			.maybeSingle()
-	]);
-
+	const items = [...sinOrdenar].sort((a, b) => a.orden - b.orden);
 	const siguiente = vigente && vigente.id !== participacion.corrida?.id ? vigente : null;
 
 	/**
@@ -140,41 +162,24 @@ export const load: PageServerLoad = async ({ params }) => {
 	const conduceLaMesa =
 		mesa.curso?.destinado_a === 'alumnos' && mesa.docente_dni === participacion.dni;
 
-	// El resultado sale de la vista, que lo calcula contra los pesos vigentes.
-	const [{ data: respuestas }, { data: calculado }] = instancia
+	const marcados = new Map(
+		(instancia?.checklist_respuestas ?? []).map((r) => [r.item_id, r.cumplido])
+	);
+
+	// Si hay una corrida más nueva, con qué roles puede entrar a ella —o, si ya se
+	// declaró, cuál es su lugar ahí, para llevarlo en vez de pedirle un rol—. Es lo
+	// único que depende de lo anterior, y sólo hace falta cuando el líder avanzó.
+	const [{ data: yaDeclarado }, roles] = siguiente
 		? await Promise.all([
 				supabase
-					.from('checklist_respuestas')
-					.select('item_id, cumplido')
-					.eq('instancia_id', instancia.id),
-				supabase
-					.from('resultados_de_evaluacion')
-					.select('resultado, maximo, items_cumplidos, items')
-					.eq('instancia_id', instancia.id)
-					.maybeSingle()
-			])
-		: [{ data: null }, { data: null }];
-
-	// Sin respuesta, el ítem está sin marcar: ni «Hizo» ni «No hizo».
-	const marcados = new Map((respuestas ?? []).map((r) => [r.item_id, r.cumplido]));
-
-	// Lo que dejó a medias en otra corrida de esta mesa: desde acá siempre vuelve.
-	// Y, si hay una corrida más nueva, con qué roles puede entrar a ella —o, si ya
-	// se declaró, cuál es su lugar ahí, para llevarlo en vez de pedirle un rol.
-	const [pendientes, { data: yaDeclarado }, roles] = await Promise.all([
-		checklistsSinEnviarDe(mesa.id, participacion.dni, participacion.corrida?.id),
-		siguiente
-			? supabase
 					.from('participaciones')
 					.select('id')
 					.eq('corrida_id', siguiente.id)
 					.eq('dni', participacion.dni)
-					.maybeSingle()
-			: Promise.resolve({ data: null }),
-		siguiente && !conduceLaMesa
-			? rolesQueSeEligen(mesa.curso?.destinado_a ?? '')
-			: Promise.resolve([])
-	]);
+					.maybeSingle(),
+				conduceLaMesa ? Promise.resolve([]) : rolesQueSeEligen(mesa.curso?.destinado_a ?? '')
+			])
+		: [{ data: null }, []];
 
 	const maximo = Number(calculado?.maximo ?? 0);
 	const resultado: ResultadoDeEvaluacion | null = calculado
@@ -206,7 +211,9 @@ export const load: PageServerLoad = async ({ params }) => {
 			habilitada: participacion.corrida?.habilitada ?? false
 		},
 		mesa: { numero: mesa.numero },
-		curso: mesa.curso,
+		curso: mesa.curso
+			? { codigo: mesa.curso.codigo, nombre: mesa.curso.nombre, destinado_a: mesa.curso.destinado_a }
+			: null,
 		conduceLaMesa,
 		// Adónde lleva la flecha de la barra: quien escaneó vuelve a la mesa; el
 		// docente, a la pantalla desde la que la conduce.
@@ -230,14 +237,14 @@ export const load: PageServerLoad = async ({ params }) => {
 		checklist: plantilla
 			? {
 					...plantilla,
-					items: (items ?? []).map((i) => ({
+					items: items.map((i) => ({
 						id: i.id,
 						orden: i.orden,
 						texto: i.texto,
 						peso: Number(i.peso),
 						hizo: marcados.get(i.id) ?? null
 					})),
-					maximo: (items ?? []).reduce((total, i) => total + Number(i.peso), 0)
+					maximo: items.reduce((total, i) => total + Number(i.peso), 0)
 				}
 			: null
 	};
@@ -261,9 +268,12 @@ export const actions: Actions = {
 	 * elegida la quita: el ítem queda sin marcar, que no es lo mismo que «No hizo».
 	 */
 	marcar: async ({ request, params }) => {
-		const { participacion } = await traerParticipacion(params.participacionId, params.curso, params.numero);
-
-		const instancia = await abrirInstancia(participacion.id);
+		// Validar que el registro sea de esta mesa y abrir su instancia no dependen una
+		// de la otra: van juntas. Es el camino de cada toque, el más usado del evento.
+		const [, instancia] = await Promise.all([
+			traerParticipacion(params.participacionId, params.curso, params.numero),
+			abrirInstancia(params.participacionId)
+		]);
 		if (!instancia) return rechazar(409, 'Tu rol no lleva checklist en esta mesa.');
 		if (instancia.enviada_en) {
 			return rechazar(409, 'El checklist ya fue enviado y no admite cambios.');
@@ -300,9 +310,12 @@ export const actions: Actions = {
 
 	/** El envío cierra la evaluación. */
 	enviar: async ({ params }) => {
-		const { participacion } = await traerParticipacion(params.participacionId, params.curso, params.numero);
-
-		const instancia = await abrirInstancia(participacion.id);
+		// Validar que el registro sea de esta mesa y abrir su instancia no dependen una
+		// de la otra: van juntas. Es el camino de cada toque, el más usado del evento.
+		const [, instancia] = await Promise.all([
+			traerParticipacion(params.participacionId, params.curso, params.numero),
+			abrirInstancia(params.participacionId)
+		]);
 		if (!instancia) return rechazar(409, 'Tu rol no lleva checklist en esta mesa.');
 		if (instancia.enviada_en) return rechazar(409, 'Este checklist ya había sido enviado.');
 

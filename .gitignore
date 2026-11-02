@@ -7,3 +7,8 @@ build
 !.env.example
 .DS_Store
 .claude/settings.local.json
+
+# Video para líderes de mesa: solo los scripts van al repo
+video/node_modules
+video/salida
+video/audio

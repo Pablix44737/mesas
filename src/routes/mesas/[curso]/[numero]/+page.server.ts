@@ -9,98 +9,94 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Resumen = { id: string; nombre: string; ponderado: boolean; items: number; maximo: number };
 
+/** La mesa con su curso y su escenario, en una sola consulta (ver `mesaDelCurso`). */
 async function traerMesa(codigoDelCurso: string, numeroCrudo: string) {
-	const { curso, mesa: encontrada } = await mesaDelCurso(codigoDelCurso, numeroCrudo);
-
-	const { data: mesa, error: fallo } = await supabase
-		.from('mesas')
-		.select(
-			`id, numero, creada_en, docente_dni,
-			 escenario:escenarios(
-				id, nombre, planificacion_archivo, planificacion_tamano,
-				checklist_tecnica:checklist_plantillas(id, nombre, ponderado)
-			 )`
-		)
-		.eq('id', encontrada.id)
-		.maybeSingle();
-
-	if (fallo) error(500, fallo.message);
-	if (!mesa) error(404, 'Esa mesa ya no existe');
-
-	return { curso, mesa };
+	return mesaDelCurso(codigoDelCurso, numeroCrudo);
 }
 
 export const load: PageServerLoad = async ({ params, url }) => {
 	const { curso, mesa } = await traerMesa(params.curso, params.numero);
 
-	// El del observador que mira al facilitador no cuelga del escenario: es común
-	// a todas las mesas. Cuál de los dos comunes corresponde lo decide el
-	// destinatario del curso: el del facilitador con docentes, el del proceso con
-	// alumnos. Se resuelve por el rol que ese curso ofrece, no nombrándolo acá.
-	const [operacion, { data: corridas }] = await Promise.all([
-		checklistComunDe(curso.destinado_a),
+	const tecnica = mesa.escenario?.checklist_tecnica ?? null;
+	// En un curso de alumnos la mesa la conduce un docente, que no elige su rol.
+	const conduceElDocente = curso.destinado_a === 'alumnos';
+
+	// Todo lo demás depende sólo de la mesa, así que sale en un único viaje, en
+	// paralelo. Antes eran pasos encadenados: cada uno esperaba al anterior aunque
+	// no necesitara nada de él.
+	const [
+		operacion,
+		{ data: corridas },
+		{ data: itemsDeTecnica },
+		{ data: sinEnviar },
+		{ data: participaciones },
+		rolesQueRotan,
+		{ data: docenteEnElPadron }
+	] = await Promise.all([
+		// El del observador que mira al facilitador no cuelga del escenario: es común
+		// a todas las mesas. Cuál de los dos comunes corresponde lo decide el
+		// destinatario del curso: el del facilitador con docentes, el del proceso con
+		// alumnos. Se resuelve por el rol que ese curso ofrece, no nombrándolo acá.
+		checklistComunDe(curso.destinado_a, curso.tenant_id),
 		supabase
 			.from('corridas')
 			.select('id, numero, habilitada, creada_en')
 			.eq('mesa_id', mesa.id)
-			.order('numero', { ascending: false })
+			.order('numero', { ascending: false }),
+		tecnica
+			? supabase.from('checklist_items').select('peso').eq('plantilla_id', tecnica.id)
+			: Promise.resolve({ data: null }),
+		// Quiénes están observando ahora mismo y todavía no enviaron: si el líder
+		// avanza, esa observación se les va de la vista. Hay una sola corrida
+		// habilitada por mesa, así que alcanza con filtrar por eso.
+		supabase
+			.from('checklists_sin_enviar')
+			.select('participacion_id, dni, participante_nombre, rol_nombre, marcados, items')
+			.eq('mesa_id', mesa.id)
+			.eq('corrida_habilitada', true),
+		// Quiénes entraron a la mesa y con qué rol. Al líder le sirve para saber, sin
+		// andar preguntando, quién ya está y si los observadores enviaron lo suyo.
+		supabase
+			.from('participaciones')
+			.select(
+				`id, dni, corrida_id, rol_codigo,
+				 rol:roles(nombre, orden, checklist),
+				 participante:participantes(nombre, apellido),
+				 checklist_instancias(enviada_en),
+				 corrida:corridas!inner(mesa_id)`
+			)
+			.eq('corridas.mesa_id', mesa.id),
+		// Los roles que rotan entre los participantes, que son los de este curso y no
+		// todos los del sistema. En uno de alumnos el observador del facilitador no
+		// existe, y el facilitador no rota: lo ocupa el docente que conduce la mesa,
+		// así que no es algo que a un alumno le falte ni una columna del recorrido.
+		rolesQueSeEligen(curso.destinado_a),
+		conduceElDocente && mesa.docente_dni
+			? supabase
+					.from('participantes')
+					.select('nombre, apellido')
+					.eq('dni', mesa.docente_dni)
+					.eq('tenant_id', curso.tenant_id)
+					.maybeSingle()
+			: Promise.resolve({ data: null })
 	]);
-
-	const tecnica = mesa.escenario?.checklist_tecnica ?? null;
-	const plantillas = [tecnica, operacion].filter((p) => p !== null);
-
-	const { data: items } = await supabase
-		.from('checklist_items')
-		.select('plantilla_id, peso')
-		.in(
-			'plantilla_id',
-			plantillas.map((p) => p.id)
-		);
 
 	// Cuántos criterios trae cada checklist y contra qué máximo se va a leer su resultado.
-	const resumir = (plantilla: (typeof plantillas)[number] | null): Resumen | null => {
-		if (!plantilla) return null;
-		const suyos = (items ?? []).filter((i) => i.plantilla_id === plantilla.id);
-		return {
-			id: plantilla.id,
-			nombre: plantilla.nombre,
-			ponderado: plantilla.ponderado,
-			items: suyos.length,
-			maximo: suyos.reduce((total, i) => total + Number(i.peso), 0)
-		};
-	};
+	const resumir = (
+		plantilla: { id: string; nombre: string; ponderado: boolean } | null,
+		pesos: { peso: number | string }[]
+	): Resumen | null =>
+		plantilla
+			? {
+					id: plantilla.id,
+					nombre: plantilla.nombre,
+					ponderado: plantilla.ponderado,
+					items: pesos.length,
+					maximo: pesos.reduce((total, i) => total + Number(i.peso), 0)
+				}
+			: null;
 
-	// Quiénes están observando ahora mismo y todavía no enviaron: si el líder
-	// avanza, esa observación se les va de la vista.
 	const corridaEnCurso = (corridas ?? []).find((c) => c.habilitada) ?? null;
-	const { data: sinEnviar } = corridaEnCurso
-		? await supabase
-				.from('checklists_sin_enviar')
-				.select('participacion_id, dni, participante_nombre, rol_nombre, marcados, items')
-				.eq('corrida_id', corridaEnCurso.id)
-		: { data: null };
-
-	// Quiénes entraron a la mesa y con qué rol. Al líder le sirve para saber, sin
-	// andar preguntando, quién ya está y si los observadores enviaron lo suyo.
-	const idsDeCorridas = (corridas ?? []).map((c) => c.id);
-	// Los roles que rotan entre los participantes, que son los de este curso y no
-	// todos los del sistema. En uno de alumnos el observador del facilitador no
-	// existe, y el facilitador no rota: lo ocupa el docente que conduce la mesa,
-	// así que no es algo que a un alumno le falte ni una columna del recorrido.
-	const [{ data: participaciones }, rolesQueRotan] = await Promise.all([
-		idsDeCorridas.length > 0
-			? supabase
-					.from('participaciones')
-					.select(
-						`id, dni, corrida_id, rol_codigo,
-						 rol:roles(nombre, orden, checklist),
-						 participante:participantes(nombre, apellido),
-						 checklist_instancias(enviada_en)`
-					)
-					.in('corrida_id', idsDeCorridas)
-			: Promise.resolve({ data: null }),
-		rolesQueSeEligen(curso.destinado_a)
-	]);
 
 	const todasLasParticipaciones = participaciones ?? [];
 
@@ -200,16 +196,6 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	 * corrida. La evaluación la completa en la pantalla del facilitador, que ya
 	 * existe; desde acá sale el enlace, no una copia del checklist.
 	 */
-	const conduceElDocente = curso.destinado_a === 'alumnos';
-
-	const { data: docenteEnElPadron } =
-		conduceElDocente && mesa.docente_dni
-			? await supabase
-					.from('participantes')
-					.select('nombre, apellido')
-					.eq('dni', mesa.docente_dni)
-					.maybeSingle()
-			: { data: null };
 
 	const suParticipacion = mesa.docente_dni
 		? (enLaCorridaEnCurso.find((p) => p.dni === mesa.docente_dni) ?? null)
@@ -245,11 +231,11 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		})),
 		mesa: { id: mesa.id, numero: mesa.numero, creada_en: mesa.creada_en },
 		escenario: mesa.escenario,
-		checklistDeTecnica: resumir(tecnica),
+		checklistDeTecnica: resumir(tecnica, itemsDeTecnica ?? []),
 		// El común que ocupa este curso, con el nombre del rol que lo completa: en
 		// uno de alumnos no es «del facilitador» sino «del observador del proceso».
 		checklistComun: operacion
-			? { ...resumir(operacion)!, rol: operacion.rolNombre }
+			? { ...resumir(operacion, operacion.checklist_items)!, rol: operacion.rolNombre }
 			: null,
 		// Cada ciclo con cuántas evaluaciones se enviaron de las que se abrieron
 		// lugar: las de quienes ocuparon un rol que evalúa.

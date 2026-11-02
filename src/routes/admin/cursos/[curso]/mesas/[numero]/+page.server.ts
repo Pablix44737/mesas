@@ -40,14 +40,14 @@ async function esDeLaMesa(tabla: 'corridas' | 'participaciones', id: string, mes
 export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const { curso, mesa: encontrada } = await mesaDelCurso(params.curso, params.numero, tenantActual(locals));
 
-	const { data: mesa, error: fallo } = await supabase
-		.from('mesas')
-		.select('id, numero, creada_en, escenario:escenarios(id, nombre)')
-		.eq('id', encontrada.id)
-		.maybeSingle();
-
-	if (fallo) error(500, fallo.message);
-	if (!mesa) error(404, 'Esa mesa ya no existe');
+	const mesa = {
+		id: encontrada.id,
+		numero: encontrada.numero,
+		creada_en: encontrada.creada_en,
+		escenario: encontrada.escenario
+			? { id: encontrada.escenario.id, nombre: encontrada.escenario.nombre }
+			: null
+	};
 
 	const [{ data: corridas }, { data: evaluaciones }, { data: abiertos }, roles] = await Promise.all([
 		supabase

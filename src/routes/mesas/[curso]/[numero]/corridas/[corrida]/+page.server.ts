@@ -22,14 +22,12 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	const { curso, mesa: encontrada } = await mesaDelCurso(params.curso, params.numero);
 
-	const { data: mesa, error: fallo } = await supabase
-		.from('mesas')
-		.select('id, numero, docente_dni, escenario:escenarios(nombre)')
-		.eq('id', encontrada.id)
-		.maybeSingle();
-
-	if (fallo) error(500, fallo.message);
-	if (!mesa) error(404, 'Esa mesa ya no existe');
+	const mesa = {
+		id: encontrada.id,
+		numero: encontrada.numero,
+		docente_dni: encontrada.docente_dni,
+		escenario: encontrada.escenario ? { nombre: encontrada.escenario.nombre } : null
+	};
 
 	// Todas las de la mesa: son las solapas con que se pasa de una a otra sin
 	// volver atrás, que es como se recorre un debriefing.
