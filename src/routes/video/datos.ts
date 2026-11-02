@@ -250,3 +250,78 @@ export function ciclo() {
 		form: null
 	};
 }
+
+/** Los roles que elige quien escanea el QR, con lo que hace falta para las tarjetas. */
+const rolesQueSeEligen = [
+	{ codigo: 'observador_operacion', nombre: 'Observador del facilitador', observador: true, orden: 1 },
+	{ codigo: 'observador_tecnica', nombre: 'Observador de la técnica', observador: true, orden: 3 },
+	{ codigo: 'facilitador', nombre: 'Facilitador', observador: false, orden: 4 },
+	{ codigo: 'operador', nombre: 'Operador', observador: false, orden: 5 },
+	{ codigo: 'asistente', nombre: 'Asistente', observador: false, orden: 6 }
+];
+
+/** La mesa 3 vista por quien escanea el QR, con el ciclo 1 abierto. */
+export function sumarse() {
+	return {
+		data: {
+			curso,
+			mesa: { id: 'mesa-video', numero: 3, escenario: { nombre: escenario.nombre } },
+			corrida: { id: 'corrida-1', numero: 1 },
+			cerrada: false,
+			volvesAElegir: false,
+			roles: rolesQueSeEligen
+		},
+		form: null
+	};
+}
+
+/**
+ * La pantalla de Martín Sosa, el participante del video.
+ * - En el ciclo 1 observa la técnica: `marcados` es cuántos ítems lleva marcados.
+ * - `siguiente`: el líder ya habilitó el ciclo 2 y todavía no eligió rol ahí.
+ * - En el ciclo 2 es operador: practica la técnica y no completa nada.
+ */
+export function cotejo({ ciclo = 1, marcados = 0, enviada = false, siguiente = false }) {
+	const persona = personas[1];
+	const operador = ciclo === 2;
+	const rol = rolesQueSeEligen.find((r) => r.codigo === (operador ? 'operador' : 'observador_tecnica'))!;
+	const noHizo = [4, 9];
+	const items = itemsDeTecnica.map((texto, i) => ({
+		id: `t-${i + 1}`,
+		orden: i + 1,
+		texto,
+		peso: 1,
+		hizo: i < marcados ? !noHizo.includes(i + 1) : null
+	}));
+	const hechos = items.filter((i) => i.hizo === true).length;
+	return {
+		data: {
+			participacion: {
+				id: `p-${ciclo}-${rol.codigo}`,
+				dni: persona.dni,
+				rolCodigo: rol.codigo,
+				rolNombre: rol.nombre,
+				checklistOrigen: operador ? null : 'del_escenario',
+				nombre: `${persona.nombre} ${persona.apellido}`
+			},
+			corrida: { numero: ciclo, habilitada: !siguiente },
+			mesa: { numero: 3 },
+			curso: { codigo: curso.codigo, nombre: curso.nombre, destinado_a: curso.destinado_a },
+			conduceLaMesa: false,
+			volverA: `/m/${curso.codigo}/3`,
+			escenario,
+			siguienteCorrida: siguiente ? { numero: ciclo + 1, participacionId: null } : null,
+			mesaCerrada: false,
+			roles: rolesQueSeEligen,
+			pendientes: [],
+			enviadaEn: enviada ? hoy('09:31') : null,
+			resultado: enviada
+				? { resultado: hechos, maximo: items.length, itemsCumplidos: hechos, items: items.length, porcentaje: Math.round((hechos / items.length) * 100) }
+				: null,
+			checklist: operador
+				? null
+				: { id: 't', nombre: escenario.nombre, ponderado: false, items, maximo: items.length }
+		},
+		form: null
+	};
+}

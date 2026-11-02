@@ -2,19 +2,9 @@
 	import { tick } from 'svelte';
 	import Marca from '$lib/Marca.svelte';
 	import Icono from '$lib/Icono.svelte';
-	import {
-		APERTURA,
-		CIERRE,
-		DEMORA,
-		DURACION,
-		desplazamientos,
-		estados,
-		notas,
-		pasos,
-		resaltados,
-		toques,
-		type Estado
-	} from './guion';
+	import { page } from '$app/state';
+	import { guiones } from './guiones';
+	import type { Estado } from './tipos';
 
 	/**
 	 * El escenario del video: 432 × 768 px de CSS, que con densidad 2,5 dan el
@@ -24,11 +14,16 @@
 	 * siempre iguales, se graben en orden o se mire uno suelto.
 	 */
 	type Pantalla = { mostrar: (estado: Estado) => Promise<boolean> };
+
+	// El guion se elige una vez, al abrir: `/video?v=participante`.
+	const guion = guiones[page.url.searchParams.get('v') ?? 'lider'] ?? guiones.lider;
+	const { estados, desplazamientos, toques, resaltados, pasos, notas, apertura: APERTURA, cierre: CIERRE } = guion;
 	type Caja = { x: number; y: number; w: number; h: number };
 
 	let marco = $state<HTMLIFrameElement>();
 	let barra = $state<HTMLElement>();
 	let v = $state(-1);
+	let textoDeBarra = $state('simunam.com');
 
 	const lineal = (a: number, b: number, x: number) => Math.min(1, Math.max(0, (x - a) / (b - a)));
 	const suave = (p: number) => (p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2);
@@ -98,21 +93,46 @@
 		return ultimas.get(i) ?? null;
 	}
 	const FUERA = { x: 470, y: 820 };
+	/**
+	 * El dedo va hacia el próximo toque y, si el anterior fue hace poco, sale de
+	 * ahí en vez de entrar desde afuera. Después del último toque de una tanda se
+	 * queda donde tocó y se desvanece.
+	 */
 	function medirDedo() {
-		const i = toques.findIndex((toque) => v >= toque.v - 0.75 && v <= toque.v + 0.55);
-		if (i < 0) return null;
-		const toque = toques[i];
-		const destino = centro(i);
-		if (!destino) return null;
-		const previo = i > 0 && toque.v - toques[i - 1].v < 1.6 ? (ultimas.get(i - 1) ?? FUERA) : FUERA;
-		const viaje = salida(lineal(toque.v - 0.75, toque.v - 0.12, v));
-		const x = previo.x + (destino.x - previo.x) * viaje;
-		const y = previo.y + (destino.y - previo.y) * viaje;
-		const apretado = v >= toque.v - 0.05 && v <= toque.v + 0.12;
-		const onda = lineal(toque.v, toque.v + 0.45, v);
-		const sigue = toques[i + 1] && toques[i + 1].v - toque.v < 1.6;
-		const opacidad = Math.min(lineal(toque.v - 0.75, toque.v - 0.5, v), sigue ? 1 : 1 - lineal(toque.v + 0.3, toque.v + 0.55, v));
-		return { x, y, apretado, onda, opacidad };
+		const j = toques.findIndex((toque) => v <= toque.v + 0.12);
+		const i = j < 0 ? toques.length - 1 : j - 1;
+		const encadenado = j >= 0 && i >= 0 && toques[j].v - toques[i].v < 1.6;
+		if (j >= 0) {
+			const toque = toques[j];
+			const previa = encadenado ? toques[i].v : -Infinity;
+			const viaje = Math.min(0.75, toque.v - previa - 0.16);
+			if (v >= toque.v - viaje) {
+				const destino = centro(j);
+				const desde = encadenado ? (ultimas.get(i) ?? FUERA) : FUERA;
+				if (destino) {
+					const p = salida(lineal(toque.v - viaje, toque.v - 0.08, v));
+					return {
+						x: desde.x + (destino.x - desde.x) * p,
+						y: desde.y + (destino.y - desde.y) * p,
+						apretado: v >= toque.v - 0.05,
+						onda: lineal(toque.v, toque.v + 0.45, v),
+						opacidad: encadenado ? 1 : lineal(toque.v - viaje, toque.v - viaje + 0.25, v)
+					};
+				}
+			}
+		}
+		if (i >= 0 && v <= toques[i].v + 0.55) {
+			// La pantalla pudo cambiar con el toque: se queda donde tocó.
+			const donde = ultimas.get(i) ?? centro(i);
+			if (!donde) return null;
+			return {
+				...donde,
+				apretado: v <= toques[i].v + 0.12,
+				onda: lineal(toques[i].v, toques[i].v + 0.45, v),
+				opacidad: 1 - lineal(toques[i].v + 0.3, toques[i].v + 0.55, v)
+			};
+		}
+		return null;
 	}
 
 	// ── Anillos, pasos y tarjetas ─────────────────────────────────────────
@@ -144,9 +164,13 @@
 	async function seek(t: number) {
 		const win = ventana();
 		if (!win?.pantalla) throw new Error('El teléfono todavía no cargó');
-		const ahora = t - DEMORA;
+		const ahora = t - guion.demora;
 		const { desde, estado } = estadoEn(ahora);
 		if (await win.pantalla.mostrar(estado)) desdeEstado = desde;
+		textoDeBarra = estado.barra ?? 'simunam.com';
+		// La línea de la cámara baja y sube sola.
+		const vaiven = (ahora % 1.6) / 1.6;
+		documento()!.documentElement.style.setProperty('--escaneo', String(1 - Math.abs(1 - 2 * vaiven)));
 		win.scrollTo(0, desplazamientoEn(ahora));
 
 		// La hoja de confirmación sube desde abajo, como en el teléfono.
@@ -178,9 +202,11 @@
 		await document.fonts.ready;
 		(window as unknown as { video: unknown }).video = {
 			seek,
-			duracion: DURACION,
-			demora: DEMORA,
-			toques: toques.map((toque) => toque.v + DEMORA)
+			duracion: guion.duracion,
+			demora: guion.demora,
+			voz: guion.voz,
+			salida: guion.salida,
+			toques: toques.map((toque) => toque.v + guion.demora)
 		};
 		await seek(0);
 	}
@@ -213,8 +239,10 @@
 
 	<div class="telefono" style:transform="translateY({(1 - telefono) * 760}px)">
 		<div class="barra-direccion" bind:this={barra}>
-			<Icono nombre="candado" tamano={11} grosor={2.5} />
-			simunam.com
+			{#if textoDeBarra === 'simunam.com'}
+				<Icono nombre="candado" tamano={11} grosor={2.5} />
+			{/if}
+			{textoDeBarra}
 		</div>
 		<iframe bind:this={marco} src="/video/pantalla" title="Teléfono" onload={cargado}></iframe>
 	</div>
@@ -246,7 +274,7 @@
 				<Marca alto={86} />
 			</span>
 			<h1>SIMUNaM</h1>
-			<p class="subtitulo">Guía rápida<br />para líderes de mesa</p>
+			<p class="subtitulo">Guía rápida<br />{guion.para}</p>
 			<p class="institucion">Centro de Simulación · Escuela de Enfermería (UNaM)</p>
 		</section>
 	{/if}

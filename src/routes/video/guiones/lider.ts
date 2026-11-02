@@ -4,54 +4,39 @@
  * qué se toca y qué se resalta. Los tiempos salen de la transcripción por
  * palabra, así cada toque cae sobre la palabra que lo nombra.
  */
-import type { mesa } from './datos';
+import type { Guion } from '../tipos';
 
-export const VOZ = 'audio/toma2.mp3';
-/** La voz entra un poco después del primer cuadro. */
-export const DEMORA = 0.5;
-export const FIN_VOZ = 48.64;
-export const DURACION = DEMORA + FIN_VOZ + 1.8;
-
-type Mesa = Parameters<typeof mesa>[0];
-export type Estado = {
-	pantalla: 'inicio' | 'mesas' | 'mesa' | 'ciclo';
-	mesa?: Mesa;
-	dialogo?: 'siguiente' | 'cierre' | null;
-};
+const DEMORA = 0.5;
+const FIN_VOZ = 48.64;
 
 const habilitado = (n: number) => `Ciclo ${n} habilitado. Los participantes ya pueden identificarse.`;
+const SIGUIENTE = '.acciones-mesa .boton.enviar';
+const CERRAR = '.acciones-mesa .boton.secundario';
 const ciclo1 = { ciclos: 1, aviso: habilitado(1) };
 
-export const estados: [number, Estado][] = [
+const estados: Guion['estados'] = [
 	[0, { pantalla: 'inicio' }],
 	[9.35, { pantalla: 'mesas' }],
-	[17.8, { pantalla: 'mesa', mesa: { ciclos: 0 } }],
-	[19.75, { pantalla: 'mesa', mesa: ciclo1 }],
+	[17.8, { pantalla: 'mesa', datos: { ciclos: 0 } }],
+	[19.75, { pantalla: 'mesa', datos: ciclo1 }],
 	...[1, 2, 3, 4, 5].map(
-		(n): [number, Estado] => [25.2 + n * 0.4, { pantalla: 'mesa', mesa: { ...ciclo1, entraron: n } }]
+		(n): Guion['estados'][number] => [25.2 + n * 0.4, { pantalla: 'mesa', datos: { ...ciclo1, entraron: n } }]
 	),
 	...[1, 2, 3].map(
-		(n): [number, Estado] => [
+		(n): Guion['estados'][number] => [
 			29.1 + n * 0.45,
-			{ pantalla: 'mesa', mesa: { ...ciclo1, entraron: 5, enviaron: n } }
+			{ pantalla: 'mesa', datos: { ...ciclo1, entraron: 5, enviaron: n } }
 		]
 	),
-	[33.45, { pantalla: 'mesa', mesa: { ...ciclo1, entraron: 5, enviaron: 3 }, dialogo: 'siguiente' }],
-	[34.85, { pantalla: 'mesa', mesa: { ciclos: 2, entraron: 5, aviso: habilitado(2) } }],
+	[33.45, { pantalla: 'mesa', datos: { ...ciclo1, entraron: 5, enviaron: 3 }, clics: [SIGUIENTE] }],
+	[34.85, { pantalla: 'mesa', datos: { ciclos: 2, entraron: 5, aviso: habilitado(2) } }],
 	[40.2, { pantalla: 'ciclo' }],
-	[44.1, { pantalla: 'mesa', mesa: { ciclos: 2, entraron: 5, enviaron: 3 } }],
-	[45.55, { pantalla: 'mesa', mesa: { ciclos: 2, entraron: 5, enviaron: 3 }, dialogo: 'cierre' }],
-	[46.45, { pantalla: 'mesa', mesa: { ciclos: 2, cerrada: true, aviso: 'La mesa quedó cerrada.' } }]
+	[44.1, { pantalla: 'mesa', datos: { ciclos: 2, entraron: 5, enviaron: 3 } }],
+	[45.55, { pantalla: 'mesa', datos: { ciclos: 2, entraron: 5, enviaron: 3 }, clics: [CERRAR] }],
+	[46.45, { pantalla: 'mesa', datos: { ciclos: 2, cerrada: true, aviso: 'La mesa quedó cerrada.' } }]
 ];
 
-/**
- * Dónde está el desplazamiento del teléfono. Un selector se resuelve a la
- * posición de ese elemento, menos el margen. Con `desde`, se llega de a poco
- * entre `desde` y `v`; sin `desde`, salta en `v` (al cambiar de pantalla).
- */
-export type Desplazamiento = { v: number; y: number | string; margen?: number; desde?: number };
-
-export const desplazamientos: Desplazamiento[] = [
+const desplazamientos: Guion['desplazamientos'] = [
 	{ v: 0, y: 0 },
 	{ v: 9.35, y: 0 },
 	{ v: 17.8, y: 0 },
@@ -65,7 +50,7 @@ export const desplazamientos: Desplazamiento[] = [
 ];
 
 /** Cada toque del dedo, sobre la palabra que lo pide. */
-export const toques: { v: number; sel: string }[] = [
+const toques: Guion['toques'] = [
 	{ v: 9.0, sel: '.inicio-coordinacion-lista a[href="/mesas"]' },
 	{ v: 17.45, sel: 'a.mesa-ficha[href$="/3"]' },
 	{ v: 19.45, sel: '.acciones-mesa .boton.enviar' },
@@ -77,7 +62,7 @@ export const toques: { v: number; sel: string }[] = [
 ];
 
 /** Lo que se marca con un anillo mientras la voz lo nombra. `url` es la barra de direcciones. */
-export const resaltados: { v0: number; v1: number; sel: string }[] = [
+const resaltados: Guion['resaltados'] = [
 	{ v0: 6.6, v1: 8.3, sel: 'url' },
 	{ v0: 13.1, v1: 14.4, sel: 'a.mesa-ficha[href$="/3"]' },
 	{ v0: 15.9, v1: 17.2, sel: '.mesas-crear' },
@@ -90,7 +75,7 @@ export const resaltados: { v0: number; v1: number; sel: string }[] = [
 ];
 
 /** El título de cada paso, arriba del teléfono, y una aclaración cuando hace falta. */
-export const pasos: { v0: number; v1: number; numero: number; titulo: string }[] = [
+const pasos: Guion['pasos'] = [
 	{ v0: 5.3, v1: 11.85, numero: 1, titulo: 'Entrá a simunam.com' },
 	{ v0: 11.85, v1: 17.85, numero: 2, titulo: 'Abrí tu mesa' },
 	{ v0: 17.85, v1: 25.4, numero: 3, titulo: 'Habilitá el primer ciclo' },
@@ -100,7 +85,7 @@ export const pasos: { v0: number; v1: number; numero: number; titulo: string }[]
 	{ v0: 43.94, v1: 47.3, numero: 7, titulo: 'Cerrá la mesa' }
 ];
 
-export const notas: { v0: number; v1: number; texto: string }[] = [
+const notas: Guion['notas'] = [
 	{ v0: 9.9, v1: 11.85, texto: 'No pide clave' },
 	{ v0: 14.2, v1: 17.85, texto: '¿No está? «Crear una mesa»' },
 	{ v0: 21.0, v1: 25.4, texto: 'Recién ahí pueden escanear el QR' },
@@ -109,6 +94,18 @@ export const notas: { v0: number; v1: number; texto: string }[] = [
 	{ v0: 40.3, v1: 43.94, texto: 'Lo que hizo y lo que no' }
 ];
 
-/** Tarjetas de apertura y cierre. */
-export const APERTURA = { hasta: 4.9, sale: 0.45 };
-export const CIERRE = { desde: 47.25, entra: 0.5 };
+export const lider: Guion = {
+	voz: 'audio/toma2.mp3',
+	salida: 'lider-de-mesa',
+	demora: DEMORA,
+	duracion: DEMORA + FIN_VOZ + 1.8,
+	para: 'para líderes de mesa',
+	estados,
+	desplazamientos,
+	toques,
+	resaltados,
+	pasos,
+	notas,
+	apertura: { hasta: 4.9, sale: 0.45 },
+	cierre: { desde: 47.25, entra: 0.5 }
+};

@@ -2,8 +2,10 @@
  * Graba el video de los líderes de mesa desde el escenario /video del servidor
  * de desarrollo, cuadro por cuadro, y lo une con la voz.
  *
- *   node grabar.mjs                 → salida/lider-de-mesa.mp4
- *   node grabar.mjs --fotos 2,9.4   → salida/foto-2.png, salida/foto-9.4.png
+ *   node grabar.mjs                              → salida/lider-de-mesa.mp4
+ *   node grabar.mjs --video participante         → salida/participante.mp4
+ *   node grabar.mjs --video participante --fotos 2,9.4
+ *                                                → salida/participante-2.png, …
  *
  * Necesita el servidor corriendo en http://localhost:5173.
  */
@@ -13,11 +15,14 @@ import { chromium } from 'playwright';
 import ffmpeg from 'ffmpeg-static';
 
 const FPS = 30;
-const URL_ESCENARIO = process.env.ESCENARIO ?? 'http://localhost:5173/video';
+const opcion = (nombre) => {
+	const i = process.argv.indexOf(nombre);
+	return i > 0 ? process.argv[i + 1] : null;
+};
+const URL_ESCENARIO = `${process.env.ESCENARIO ?? 'http://localhost:5173/video'}?v=${opcion('--video') ?? 'lider'}`;
 mkdirSync('salida', { recursive: true });
 
-const argumento = process.argv.indexOf('--fotos');
-const fotos = argumento > 0 ? process.argv[argumento + 1].split(',').map(Number) : null;
+const fotos = opcion('--fotos')?.split(',').map(Number) ?? null;
 
 const navegador = await chromium.launch();
 const pagina = await navegador.newPage({
@@ -26,15 +31,15 @@ const pagina = await navegador.newPage({
 });
 await pagina.goto(URL_ESCENARIO);
 await pagina.waitForFunction(() => 'video' in window, null, { timeout: 60_000 });
-const { duracion, demora, toques } = await pagina.evaluate(() => window.video);
+const { duracion, demora, toques, voz, salida } = await pagina.evaluate(() => window.video);
 
 const seek = (t) => pagina.evaluate((t) => window.video.seek(t), t);
 
 if (fotos) {
 	for (const t of fotos) {
 		await seek(t);
-		await pagina.screenshot({ path: `salida/foto-${t}.png` });
-		console.log(`salida/foto-${t}.png`);
+		await pagina.screenshot({ path: `salida/${salida}-${t}.png` });
+		console.log(`salida/${salida}-${t}.png`);
 	}
 	await navegador.close();
 	process.exit(0);
@@ -46,7 +51,7 @@ const video = spawn(ffmpeg, [
 	'-y', '-loglevel', 'error',
 	'-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-',
 	'-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p',
-	'salida/imagen.mp4'
+	`salida/${salida}-imagen.mp4`
 ], { stdio: ['pipe', 'inherit', 'inherit'] });
 
 const inicio = Date.now();
@@ -72,12 +77,12 @@ const filtro = [
 await new Promise((listo, fallo) => {
 	const unir = spawn(ffmpeg, [
 		'-y', '-loglevel', 'error',
-		'-i', 'salida/imagen.mp4', '-i', 'audio/toma2.mp3',
+		'-i', `salida/${salida}-imagen.mp4`, '-i', voz,
 		'-filter_complex', filtro,
 		'-map', '0:v', '-map', '[a]',
 		'-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest',
-		'salida/lider-de-mesa.mp4'
+		`salida/${salida}.mp4`
 	], { stdio: 'inherit' });
 	unir.on('close', (codigo) => (codigo === 0 ? listo() : fallo(new Error(`ffmpeg terminó con ${codigo}`))));
 });
-console.log('salida/lider-de-mesa.mp4');
+console.log(`salida/${salida}.mp4`);
