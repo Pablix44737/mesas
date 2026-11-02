@@ -302,22 +302,39 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const respondidas = delEscenario.reduce((total, c) => total + (c.respondido ?? 0), 0);
 	const fallidas = delEscenario.reduce((total, c) => total + (c.fallos ?? 0), 0);
 
-	// Cuántas veces se practicó cada escenario: el modelo prescribe tres por
-	// técnica, así que el que no llegó se ve de un vistazo.
+	// Cuántas veces se practicó cada escenario, mesa por mesa: el modelo prescribe
+	// tres ciclos en cada mesa que hace la técnica. Sumar los ciclos de todas las
+	// mesas escondería a la que no llegó detrás de la que hizo de más.
+	type MesaQuePractico = { id: string; numero: number; curso: string; ciclos: number };
 	const practicas = new Map<
 		string,
-		{ id: string; nombre: string; ciclos: number; evaluaciones: number }
+		{
+			id: string;
+			nombre: string;
+			ciclos: number;
+			evaluaciones: number;
+			mesas: Map<string, MesaQuePractico>;
+		}
 	>();
 	for (const ciclo of todosLosCiclos) {
-		if (!ciclo.escenario_id || !ciclo.escenario) continue;
+		if (!ciclo.escenario_id || !ciclo.escenario || !ciclo.mesa_id) continue;
 		const suyo = practicas.get(ciclo.escenario_id) ?? {
 			id: ciclo.escenario_id,
 			nombre: ciclo.escenario,
 			ciclos: 0,
-			evaluaciones: 0
+			evaluaciones: 0,
+			mesas: new Map<string, MesaQuePractico>()
 		};
 		suyo.ciclos += 1;
 		suyo.evaluaciones += ciclo.evaluaciones ?? 0;
+		const mesa = suyo.mesas.get(ciclo.mesa_id) ?? {
+			id: ciclo.mesa_id,
+			numero: ciclo.mesa ?? 0,
+			curso: ciclo.curso ?? '',
+			ciclos: 0
+		};
+		mesa.ciclos += 1;
+		suyo.mesas.set(ciclo.mesa_id, mesa);
 		practicas.set(ciclo.escenario_id, suyo);
 	}
 
@@ -330,6 +347,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		// Lo que se midió, para que el ranking se lea sabiendo sobre cuánto está hecho.
 		alcance: {
 			ciclos: ciclosDelEscenario.length,
+			mesas: new Set(ciclosDelEscenario.map((c) => c.mesa_id)).size,
 			evaluaciones: ciclosDelEscenario.reduce((t, c) => t + (c.evaluaciones ?? 0), 0),
 			respondidas,
 			fallidas,
@@ -338,7 +356,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			cumplimiento: respondidas > 0 ? (respondidas - fallidas) / respondidas : null
 		},
 		evolucion,
-		practicas: [...practicas.values()].sort((a, b) => b.ciclos - a.ciclos),
+		practicas: [...practicas.values()].map((p) => ({
+			...p,
+			mesas: [...p.mesas.values()].sort(
+				(a, b) => a.curso.localeCompare(b.curso) || a.numero - b.numero
+			)
+		})),
 		concordancia: {
 			discrepancias,
 			minimoPares: MINIMO_PARES,

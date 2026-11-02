@@ -30,8 +30,8 @@
 
 	const LECTURAS: Record<Lectura, string> = {
 		redaccion: 'Revisar la redacción',
-		distinto: 'Se lee distinto',
-		cuesta: 'Cuesta de verdad'
+		distinto: 'Se interpreta distinto',
+		cuesta: 'Les cuesta de verdad'
 	};
 
 	const lecturaDe = (falla: number | null, pares: number, discrepan: number): Lectura | null => {
@@ -119,17 +119,17 @@
 
 	/* --- práctica --- */
 
-	const escenariosCortos = $derived(
-		data.practicas.filter((p) => p.ciclos < PRACTICAS_MINIMAS).length
-	);
+	/** Cada escenario con sus mesas: las que no llegaron al mínimo se cuentan aparte. */
 	const practicas = $derived(
-		[...data.practicas].sort(
-			(a, b) =>
-				Number(b.ciclos < PRACTICAS_MINIMAS) - Number(a.ciclos < PRACTICAS_MINIMAS) ||
-				b.ciclos - a.ciclos
-		)
+		data.practicas
+			.map((p) => ({
+				...p,
+				cortas: p.mesas.filter((m) => m.ciclos < PRACTICAS_MINIMAS).length,
+				variosCursos: new Set(p.mesas.map((m) => m.curso)).size > 1
+			}))
+			.sort((a, b) => Number(b.cortas > 0) - Number(a.cortas > 0) || a.nombre.localeCompare(b.nombre))
 	);
-	const escalaDePractica = $derived(Math.max(10, ...data.practicas.map((p) => p.ciclos)));
+	const escenariosCortos = $derived(practicas.filter((p) => p.cortas > 0).length);
 
 	/* --- cómo viene cambiando un criterio --- */
 
@@ -146,8 +146,8 @@
 		const puntos = evo.puntos.map((p, i) => ({
 			...p,
 			x: xEn(i),
-			nombre: porVuelta ? `Vuelta ${p.etiqueta}` : fecha(p.etiqueta),
-			corto: porVuelta ? `V${p.etiqueta}` : fecha(p.etiqueta)
+			nombre: porVuelta ? `Ciclo ${p.etiqueta}` : fecha(p.etiqueta),
+			corto: porVuelta ? `C${p.etiqueta}` : fecha(p.etiqueta)
 		}));
 		// Una línea por tramo: donde un punto no tiene datos, la línea se corta.
 		const trazo = (valor: (p: (typeof puntos)[number]) => number | null) => {
@@ -286,7 +286,7 @@
 									<strong>{escenario.nombre}</strong>
 									{#if practica}
 										<span>
-											{cuantos(practica.evaluaciones, 'evaluación', 'evaluaciones')} · {cuantos(practica.ciclos, 'ciclo', 'ciclos')}
+											{cuantos(practica.evaluaciones, 'evaluación', 'evaluaciones')} · {cuantos(practica.mesas.length, 'mesa', 'mesas')}
 										</span>
 									{/if}
 								</span>
@@ -325,8 +325,8 @@
 				<strong>{cifra(data.alcance.ciclos)}</strong>
 				<span>
 					{data.escenarioElegido
-						? 'de este escenario'
-						: `en ${cuantos(data.alcance.escenarios, 'escenario', 'escenarios')}`}
+						? `en ${cuantos(data.alcance.mesas, 'mesa', 'mesas')}`
+						: `en ${cuantos(data.alcance.mesas, 'mesa', 'mesas')} · ${cuantos(data.alcance.escenarios, 'escenario', 'escenarios')}`}
 				</span>
 			</div>
 			<div>
@@ -462,10 +462,10 @@
 						{#if puntosDelMapa.length > 0}
 							<div class="estadisticas-mapa" role="img" aria-label="Cada criterio según cuánto falla y cuánto difieren los observadores">
 								<div class="estadisticas-mapa-area" style="--corte-x: {(FALLA_ALTA / FALLA_MAXIMA) * 100}%; --corte-y: {DIFIEREN_ALTO * 100}%">
-									<span class="cuadrante distinto">Se lee distinto</span>
-									<span class="cuadrante redaccion">Revisar la redacción</span>
+									<span class="cuadrante distinto">{LECTURAS.distinto}</span>
+									<span class="cuadrante redaccion">{LECTURAS.redaccion}</span>
 									<span class="cuadrante bien">Sin problemas</span>
-									<span class="cuadrante cuesta">Cuesta de verdad</span>
+									<span class="cuadrante cuesta">{LECTURAS.cuesta}</span>
 									{#each puntosDelMapa as punto (punto.itemId)}
 										<a
 											class="estadisticas-punto"
@@ -486,8 +486,44 @@
 								<span class="estadisticas-eje x-cero">0%</span>
 								<span class="estadisticas-eje x-corte" style="left: calc(34px + (100% - 40px) * {FALLA_ALTA / FALLA_MAXIMA})">{porcentaje(FALLA_ALTA)}</span>
 								<span class="estadisticas-eje x-max">{porcentaje(FALLA_MAXIMA)}</span>
-								<span class="estadisticas-titulo-eje x">Cuánto falla →</span>
-								<span class="estadisticas-titulo-eje y">Cuánto difieren →</span>
+								<span class="estadisticas-titulo-eje x">Veces que se marcó «No hizo» →</span>
+								<span class="estadisticas-titulo-eje y">Veces que marcaron distinto →</span>
+							</div>
+
+							<div class="estadisticas-como-leer">
+								<p>
+									Cada punto es un criterio. Cuanto más a la derecha, más veces se marcó «No hizo».
+									Cuanto más arriba, más veces dos observadores que miraron el mismo ciclo lo marcaron
+									distinto. Los números son los de la lista «Donde más difieren».
+								</p>
+								<dl>
+									<div>
+										<dt><span class="muestra bien"></span>Sin problemas</dt>
+										<dd>Se cumple casi siempre y los observadores coinciden.</dd>
+									</div>
+									<div>
+										<dt><span class="muestra cuesta"></span>{LECTURAS.cuesta}</dt>
+										<dd>
+											Falla en el {porcentaje(FALLA_ALTA)} o más de las veces y los observadores coinciden en
+											que falló. Es algo que a los estudiantes les cuesta: conviene reforzarlo en la práctica.
+										</dd>
+									</div>
+									<div>
+										<dt><span class="muestra distinto"></span>{LECTURAS.distinto}</dt>
+										<dd>
+											Casi siempre se cumple, pero en el {porcentaje(DIFIEREN_ALTO)} o más de las comparaciones
+											los observadores lo marcaron distinto: no todos entienden lo mismo al leerlo.
+										</dd>
+									</div>
+									<div>
+										<dt><span class="muestra redaccion"></span>{LECTURAS.redaccion}</dt>
+										<dd>
+											Falla seguido, pero los observadores no coinciden. Antes de concluir que a los
+											estudiantes les cuesta, conviene revisar cómo está escrito el criterio: parte de los
+											fallos puede venir de cómo se lo interpreta.
+										</dd>
+									</div>
+								</dl>
 							</div>
 						{/if}
 						<p class="estadisticas-nota">
@@ -552,49 +588,50 @@
 			<section class="mesa-tarjeta estadisticas-seccion" aria-labelledby="practica-titulo">
 				<div class="estadisticas-seccion-cabecera">
 					<h2 id="practica-titulo">¿Se practicó lo suficiente?</h2>
-					<p>Cada técnica pide al menos {PRACTICAS_MINIMAS} ciclos. La marca muestra dónde está ese mínimo.</p>
+					<p>
+						Cada mesa tiene que practicar su técnica al menos {PRACTICAS_MINIMAS} ciclos. Se cuenta
+						mesa por mesa: los ciclos de una mesa no completan los de otra.
+					</p>
 					{#if escenariosCortos > 0}
 						<p class="admin-advertencia">
 							<Icono nombre="alerta" />
 							<span>
 								{escenariosCortos === 1
-									? `1 escenario no llegó a ${PRACTICAS_MINIMAS} ciclos.`
-									: `${escenariosCortos} escenarios no llegaron a ${PRACTICAS_MINIMAS} ciclos.`}
+									? `En 1 escenario hay mesas que no llegaron a ${PRACTICAS_MINIMAS} ciclos.`
+									: `En ${escenariosCortos} escenarios hay mesas que no llegaron a ${PRACTICAS_MINIMAS} ciclos.`}
 							</span>
 						</p>
 					{/if}
 				</div>
 				<ul class="estadisticas-lista">
 					{#each practicas as practica (practica.id)}
-						{@const corto = practica.ciclos < PRACTICAS_MINIMAS}
+						{@const llegaron = practica.mesas.length - practica.cortas}
 						<li class="estadisticas-practica" class:elegido={practica.id === data.escenarioElegido}>
 							<span class="estadisticas-practica-nombre">
 								<strong>{practica.nombre}</strong>
-								{#if corto}
+								{#if practica.cortas > 0}
 									<span class="estadisticas-falta">
-										{PRACTICAS_MINIMAS - practica.ciclos === 1
-											? 'Le falta 1 ciclo'
-											: `Le faltan ${PRACTICAS_MINIMAS - practica.ciclos} ciclos`}
+										{practica.cortas === 1
+											? `1 mesa no llegó a ${PRACTICAS_MINIMAS} ciclos`
+											: `${practica.cortas} mesas no llegaron a ${PRACTICAS_MINIMAS} ciclos`}
 									</span>
 								{/if}
 							</span>
-							<span class="estadisticas-practica-barra" aria-hidden="true">
-								<span class="barra">
-									<span
-										class:corto
-										class:sin-evaluar={practica.evaluaciones === 0}
-										style="width: {(practica.ciclos / escalaDePractica) * 100}%"
-									></span>
-								</span>
-								<span class="minimo" style="left: calc({(PRACTICAS_MINIMAS / escalaDePractica) * 100}% - 1px)"></span>
+							<span class="estadisticas-practica-mesas">
+								{#each practica.mesas as mesa (mesa.id)}
+									{@const corta = mesa.ciclos < PRACTICAS_MINIMAS}
+									<span class="estadisticas-mesa" class:corta>
+										<Icono nombre={corta ? 'alerta' : 'tilde'} tamano={14} />
+										<span class="estadisticas-mesa-texto">
+											<span>Mesa {mesa.numero} · <strong>{cuantos(mesa.ciclos, 'ciclo', 'ciclos')}</strong></span>
+											{#if practica.variosCursos}<span class="estadisticas-mesa-curso">{mesa.curso}</span>{/if}
+										</span>
+									</span>
+								{/each}
 							</span>
 							<span class="estadisticas-practica-cifras">
-								<strong>{cuantos(practica.ciclos, 'ciclo', 'ciclos')}</strong>
-								{#if practica.evaluaciones === 0}
-									<span class="checklist-estado">Sin evaluar</span>
-								{:else}
-									<span>{cuantos(practica.evaluaciones, 'evaluación', 'evaluaciones')}</span>
-								{/if}
+								<strong>{llegaron} de {practica.mesas.length}</strong>
+								<span>{practica.mesas.length === 1 ? 'mesa llegó' : 'mesas llegaron'} a {PRACTICAS_MINIMAS}</span>
 							</span>
 						</li>
 					{/each}
@@ -630,7 +667,7 @@
 					data-sveltekit-noscroll
 					data-sveltekit-replacestate
 				>
-					Por vuelta de la mesa
+					Por ciclo de la mesa
 				</a>
 				<a
 					href={enlace({ eje: 'fecha' })}
@@ -696,11 +733,11 @@
 								? `Todo se envió el mismo día: el ${evolucion.puntos[0].nombre}.`
 								: 'Este criterio se respondió un solo día.'}
 						</strong>
-						<p>Por fecha no hay con qué comparar. Mirá por vuelta para ver si la práctica repetida mejora.</p>
-						<a class="boton secundario" href={enlace({ eje: 'vuelta' })} data-sveltekit-noscroll data-sveltekit-replacestate>Ver por vuelta</a>
+						<p>Por fecha no hay con qué comparar. Mirá por ciclo para ver si la práctica repetida mejora.</p>
+						<a class="boton secundario" href={enlace({ eje: 'vuelta' })} data-sveltekit-noscroll data-sveltekit-replacestate>Ver por ciclo</a>
 					{:else}
-						<strong>Se evaluó en una sola vuelta.</strong>
-						<p>Por vuelta no hay con qué comparar. Probá por fecha.</p>
+						<strong>Se evaluó en un solo ciclo.</strong>
+						<p>Por ciclo no hay con qué comparar. Probá por fecha.</p>
 						<a class="boton secundario" href={enlace({ eje: 'fecha' })} data-sveltekit-noscroll data-sveltekit-replacestate>Ver por fecha</a>
 					{/if}
 				</div>
@@ -708,7 +745,7 @@
 
 			<div class="estadisticas-tabla">
 				<div class="encabezado">
-					<span>{evolucion.porVuelta ? 'Vuelta' : 'Fecha'}</span><span>Falló</span><span>%</span><span>Checklist</span>
+					<span>{evolucion.porVuelta ? 'Ciclo' : 'Fecha'}</span><span>Falló</span><span>%</span><span>Checklist</span>
 				</div>
 				{#each evolucion.puntos as punto (punto.etiqueta)}
 					<div>
@@ -726,7 +763,7 @@
 				{#if evolucion.porVuelta}
 					<p class="estadisticas-nota">
 						<Icono nombre="info" tamano={16} />
-						<span>Mide a la mesa, no a una persona: los roles rotan de una vuelta a la otra.</span>
+						<span>Mide a la mesa, no a una persona: los roles rotan de un ciclo al otro.</span>
 					</p>
 				{/if}
 				<p class="estadisticas-nota">

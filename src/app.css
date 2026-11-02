@@ -8114,7 +8114,69 @@ input.sumarse-dni[aria-invalid='true'] {
 	transform: translate(-50%, -50%) rotate(-90deg);
 }
 
-/* Práctica: los ciclos de cada escenario contra el mínimo */
+/* Cómo leer el mapa de los observadores */
+
+.estadisticas-como-leer {
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-3);
+	margin: 18px 0 var(--e-3);
+	color: var(--tinta-suave);
+	font-size: 13px;
+	line-height: 1.45;
+	text-wrap: pretty;
+}
+
+.estadisticas-como-leer p {
+	margin: 0;
+}
+
+.estadisticas-como-leer dl {
+	display: grid;
+	gap: var(--e-3);
+	margin: 0;
+}
+
+.estadisticas-como-leer dt {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--tinta);
+	font-weight: 700;
+}
+
+.estadisticas-como-leer dd {
+	margin: 2px 0 0 22px;
+}
+
+.estadisticas-como-leer .muestra {
+	flex: none;
+	width: 14px;
+	height: 14px;
+	box-sizing: border-box;
+	border-radius: 4px;
+}
+
+.muestra.bien {
+	border: 1px dashed var(--borde-fuerte);
+}
+
+.muestra.cuesta {
+	border: 1px solid var(--azul);
+	background: var(--azul-tenue);
+}
+
+.muestra.distinto {
+	border: 1px solid var(--borde-fuerte);
+	background: var(--fondo);
+}
+
+.muestra.redaccion {
+	border: 1px solid var(--alerta);
+	background: var(--alerta-claro);
+}
+
+/* Práctica: los ciclos de cada mesa contra el mínimo */
 
 .estadisticas-practica {
 	display: flex;
@@ -8158,44 +8220,53 @@ input.sumarse-dni[aria-invalid='true'] {
 	font-weight: 600;
 }
 
-.estadisticas-practica-barra {
-	position: relative;
+.estadisticas-practica-mesas {
 	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.estadisticas-mesa {
+	display: inline-flex;
 	align-items: center;
-	height: 28px;
+	gap: 6px;
+	box-sizing: border-box;
+	min-height: 30px;
+	padding: 4px 12px 4px 10px;
+	border: 1px solid var(--borde);
+	border-radius: 15px;
+	background: var(--azul-tenue);
+	color: var(--tinta);
+	font-size: 13px;
 }
 
-.estadisticas-practica-barra .barra {
-	display: block;
-	width: 100%;
-	height: 10px;
-	overflow: hidden;
-	border-radius: var(--r-full);
-	background: var(--superficie-media);
+.estadisticas-mesa > svg {
+	flex: none;
+	color: var(--azul);
 }
 
-.estadisticas-practica-barra .barra span {
-	display: block;
-	height: 100%;
-	border-radius: var(--r-full);
-	background: var(--azul);
+.estadisticas-mesa strong {
+	font-weight: 700;
 }
 
-.estadisticas-practica-barra .barra span.corto {
-	background: #c98a1b;
+.estadisticas-mesa.corta {
+	border-color: var(--alerta-borde);
+	background: var(--alerta-claro);
 }
 
-.estadisticas-practica-barra .barra span.sin-evaluar {
-	background: #b5c3ce;
+.estadisticas-mesa.corta > svg {
+	color: var(--alerta);
 }
 
-.estadisticas-practica-barra .minimo {
-	position: absolute;
-	top: 2px;
-	bottom: 2px;
-	width: 2px;
-	border-radius: 1px;
-	background: var(--tinta);
+.estadisticas-mesa-texto {
+	display: flex;
+	flex-direction: column;
+	line-height: 1.3;
+}
+
+.estadisticas-mesa-curso {
+	color: var(--tinta-suave);
+	font-size: 12px;
 }
 
 .estadisticas-practica-cifras {
@@ -8668,6 +8739,11 @@ input.sumarse-dni[aria-invalid='true'] {
 
 	.estadisticas-mapa {
 		height: 340px;
+	}
+
+	.estadisticas-como-leer dl {
+		grid-template-columns: 1fr 1fr;
+		column-gap: var(--e-6);
 	}
 
 	.estadisticas-practica {

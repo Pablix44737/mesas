@@ -1,5 +1,5 @@
 /**
- * Datos inventados para el video de los líderes de mesa. Tienen la misma forma
+ * Datos inventados para los videos. Tienen la misma forma
  * que lo que devuelven los `load` de cada pantalla, así las pantallas reales se
  * dibujan tal cual, sin base de datos.
  */
@@ -10,6 +10,16 @@ const curso = {
 	nombre: 'Curso MESAS - Turno Mañana',
 	archivado: false,
 	destinado_a: 'docentes',
+	tenant_id: 'video'
+};
+
+/** El curso de estudiantes del video de Facilitadores: ahí la mesa la conduce un docente. */
+const cursoDeEstudiantes = {
+	id: 'curso-estudiantes',
+	codigo: 'enfermeria-2',
+	nombre: 'Enfermería - 2.º año',
+	archivado: false,
+	destinado_a: 'alumnos',
 	tenant_id: 'video'
 };
 
@@ -30,17 +40,37 @@ const roles = [
 
 const personas = [
 	{ dni: '28111222', nombre: 'Laura', apellido: 'Benítez' },
-	{ dni: '30222333', nombre: 'Martín', apellido: 'Sosa' },
+	{ dni: '30222333', nombre: 'Tomás', apellido: 'Ibarra' },
 	{ dni: '27333444', nombre: 'Carla', apellido: 'Duarte' },
 	{ dni: '31444555', nombre: 'Diego', apellido: 'Ferreyra' },
 	{ dni: '29555666', nombre: 'Ana', apellido: 'Gómez' }
 ];
 
-/** Quién ocupa cada rol en cada ciclo: en el segundo, todos rotan un lugar. */
-const ocupacion = (ciclo: number) =>
-	roles.map((rol, i) => ({ rol, persona: personas[(i + ciclo - 1) % personas.length] }));
+/** En un curso de estudiantes no hay observador del facilitador ni facilitador: ese lugar es del docente. */
+const rolesDeEstudiantes = [
+	{ codigo: 'observador_proceso', nombre: 'Observador del proceso' },
+	{ codigo: 'observador_tecnica', nombre: 'Observador de la técnica' },
+	{ codigo: 'operador', nombre: 'Operador' },
+	{ codigo: 'asistente', nombre: 'Asistente' }
+];
 
-const evaluan = new Set(['observador_operacion', 'observador_tecnica', 'facilitador']);
+const estudiantes = [
+	{ dni: '44111222', nombre: 'Sofía', apellido: 'Acosta' },
+	{ dni: '44222333', nombre: 'Joaquín', apellido: 'Paz' },
+	{ dni: '43333444', nombre: 'Micaela', apellido: 'Ruiz' },
+	{ dni: '44444555', nombre: 'Bruno', apellido: 'Vera' }
+];
+
+/** La docente que conduce la mesa en el video de Facilitadores. */
+const docente = { dni: '26777888', nombre: 'Paula', apellido: 'Rossi' };
+
+/** Quién ocupa cada rol en cada ciclo: en el segundo, todos rotan un lugar. */
+const ocupacion = (ciclo: number, alumnos = false) => {
+	const [rs, ps] = alumnos ? [rolesDeEstudiantes, estudiantes] : [roles, personas];
+	return rs.map((rol, i) => ({ rol, persona: ps[(i + ciclo - 1) % ps.length] }));
+};
+
+const evaluan = new Set(['observador_operacion', 'observador_proceso', 'observador_tecnica', 'facilitador']);
 
 const hoy = (hora: string) => `2026-11-14T${hora}:00-03:00`;
 
@@ -51,14 +81,22 @@ type Corrida = { id: string; numero: number; habilitada: boolean; creada_en: str
  * - `ciclos`: los ciclos habilitados hasta ahora; el último está en curso salvo con la mesa cerrada.
  * - `entraron`: cuántos roles del ciclo en curso ya se ocuparon, en orden.
  * - `enviaron`: cuántos de los que evalúan ya enviaron su lista.
+ * - `alumnos`: la mesa es de un curso de estudiantes y la conduce un docente.
+ *   `docente` dice si ya cargó su documento y `evaluo`, si ya envió la técnica
+ *   del ciclo en curso.
  */
 export function mesa({
 	ciclos = 0,
 	entraron = 0,
 	enviaron = 0,
 	cerrada = false,
-	aviso = null as string | null
+	aviso = null as string | null,
+	alumnos = false,
+	docente: conDocente = true,
+	evaluo = false
 }) {
+	const rolesDeLaMesa = alumnos ? rolesDeEstudiantes : roles;
+	const quienes = alumnos ? estudiantes : personas;
 	const corridas: Corrida[] = Array.from({ length: ciclos }, (_, i) => ({
 		id: `corrida-${i + 1}`,
 		numero: i + 1,
@@ -69,7 +107,7 @@ export function mesa({
 
 	// Participaciones de todos los ciclos: los anteriores completos, el actual hasta `entraron`.
 	const participaciones = corridas.flatMap((corrida) => {
-		const filas = ocupacion(corrida.numero);
+		const filas = ocupacion(corrida.numero, alumnos);
 		const hasta = corrida.habilitada ? entraron : filas.length;
 		let enviadas = 0;
 		return filas.slice(0, hasta).map(({ rol, persona }) => {
@@ -91,7 +129,7 @@ export function mesa({
 			envio: p.envio
 		}));
 
-	const recorrido = personas
+	const recorrido = quienes
 		.filter((persona) => participaciones.some((p) => p.persona.dni === persona.dni))
 		.map((persona) => {
 			const suyas = participaciones.filter((p) => p.persona.dni === persona.dni);
@@ -101,23 +139,44 @@ export function mesa({
 				corto: `${persona.nombre} ${persona.apellido.charAt(0)}.`,
 				enLaCorridaEnCurso: suyas.some((p) => p.corrida.habilitada),
 				corridas: suyas.length,
-				porRol: roles.map((rol) => ({
+				porRol: rolesDeLaMesa.map((rol) => ({
 					codigo: rol.codigo,
 					numeros: suyas.filter((p) => p.rol.codigo === rol.codigo).map((p) => p.corrida.numero)
 				})),
 				conduceLaMesa: false,
-				faltan: roles
+				faltan: rolesDeLaMesa
 					.filter((rol) => !suyas.some((p) => p.rol.codigo === rol.codigo))
 					.map((rol) => rol.nombre)
 			};
 		});
 
+	// La docente facilita en todos los ciclos: va primera en el recorrido.
+	if (alumnos && conDocente && corridas.length > 0) {
+		recorrido.unshift({
+			dni: docente.dni,
+			nombre: `${docente.nombre} ${docente.apellido}`,
+			corto: `${docente.nombre} ${docente.apellido.charAt(0)}.`,
+			enLaCorridaEnCurso: Boolean(enCurso),
+			corridas: corridas.length,
+			porRol: rolesDeLaMesa.map((rol) => ({ codigo: rol.codigo, numeros: [] })),
+			conduceLaMesa: true,
+			faltan: []
+		});
+	}
+
 	return {
 		data: {
-			curso,
-			docente: null,
+			curso: alumnos ? cursoDeEstudiantes : curso,
+			docente: alumnos
+				? {
+						dni: conDocente ? docente.dni : null,
+						nombre: conDocente ? `${docente.nombre} ${docente.apellido}` : null,
+						participacionId: conDocente && enCurso ? `p-${enCurso.numero}-facilitador` : null,
+						evaluo
+					}
+				: null,
 			participantes,
-			rolesDeLaMesa: roles,
+			rolesDeLaMesa,
 			recorrido,
 			nadieLosOcupo: [],
 			origen: 'https://simunam.com',
@@ -127,18 +186,21 @@ export function mesa({
 			checklistDeTecnica: { id: 't', nombre: escenario.nombre, ponderado: false, items: 10, maximo: 10 },
 			checklistComun: {
 				id: 'c',
-				nombre: 'Observadores del Facilitador',
+				nombre: alumnos ? 'Guía de observación del proceso' : 'Observadores del Facilitador',
 				ponderado: false,
 				items: 10,
 				maximo: 10,
-				rol: 'Observador del facilitador'
+				rol: alumnos ? 'Observador del proceso' : 'Observador del facilitador'
 			},
 			corridas: corridas.map((corrida) => {
 				const suyas = participaciones.filter((p) => p.corrida.id === corrida.id && p.abre);
+				// La técnica que evalúa la docente también cuenta.
+				const suya = alumnos && conDocente ? 1 : 0;
+				const envioLaSuya = suya && (!corrida.habilitada || evaluo) ? 1 : 0;
 				return {
 					...corrida,
-					evaluaciones: suyas.length,
-					enviadas: suyas.filter((p) => p.envio).length
+					evaluaciones: suyas.length + suya,
+					enviadas: suyas.filter((p) => p.envio).length + envioLaSuya
 				};
 			}),
 			corridaEnCurso: enCurso
@@ -148,7 +210,8 @@ export function mesa({
 }
 
 /** «Mis mesas», con la mesa 3 del video entre otras del mismo curso. */
-export function misMesas() {
+export function misMesas({ alumnos = false } = {}) {
+	const suCurso = alumnos ? cursoDeEstudiantes : curso;
 	const mesas = [
 		{ numero: 1, escenario: 'Sutura simple de plano cutáneo.', corridaEnCurso: null, corridas: 0 },
 		{ numero: 2, escenario: 'Reanimación Cardiopulmonar a lactantes', corridaEnCurso: null, corridas: 0 },
@@ -158,15 +221,15 @@ export function misMesas() {
 		id: `mesa-${m.numero}`,
 		numero: m.numero,
 		escenario: { id: `e-${m.numero}`, nombre: m.escenario },
-		curso: { id: curso.id, codigo: curso.codigo, nombre: curso.nombre },
+		curso: { id: suCurso.id, codigo: suCurso.codigo, nombre: suCurso.nombre },
 		corridaEnCurso: m.corridaEnCurso,
 		corridas: m.corridas
 	}));
 	return {
 		data: {
-			carpetas: [{ id: curso.id, nombre: curso.nombre, mesas }],
+			carpetas: [{ id: suCurso.id, nombre: suCurso.nombre, mesas }],
 			escenarios: [{ id: escenario.id, nombre: escenario.nombre }],
-			cursos: [{ id: curso.id, nombre: curso.nombre }]
+			cursos: [{ id: suCurso.id, nombre: suCurso.nombre }]
 		},
 		form: null
 	};
@@ -276,15 +339,25 @@ export function sumarse() {
 }
 
 /**
- * La pantalla de Martín Sosa, el participante del video.
+ * La pantalla de Tomás Ibarra, el participante del video.
  * - En el ciclo 1 observa la técnica: `marcados` es cuántos ítems lleva marcados.
  * - `siguiente`: el líder ya habilitó el ciclo 2 y todavía no eligió rol ahí.
  * - En el ciclo 2 es operador: practica la técnica y no completa nada.
  */
-export function cotejo({ ciclo = 1, marcados = 0, enviada = false, siguiente = false }) {
-	const persona = personas[1];
-	const operador = ciclo === 2;
-	const rol = rolesQueSeEligen.find((r) => r.codigo === (operador ? 'operador' : 'observador_tecnica'))!;
+export function cotejo({
+	ciclo = 1,
+	marcados = 0,
+	enviada = false,
+	siguiente = false,
+	facilitador = false
+}) {
+	// Con `facilitador`, es la pantalla de la docente que conduce la mesa.
+	const persona = facilitador ? docente : personas[1];
+	const operador = !facilitador && ciclo === 2;
+	const rol = rolesQueSeEligen.find(
+		(r) => r.codigo === (facilitador ? 'facilitador' : operador ? 'operador' : 'observador_tecnica')
+	)!;
+	const suCurso = facilitador ? cursoDeEstudiantes : curso;
 	const noHizo = [4, 9];
 	const items = itemsDeTecnica.map((texto, i) => ({
 		id: `t-${i + 1}`,
@@ -306,9 +379,9 @@ export function cotejo({ ciclo = 1, marcados = 0, enviada = false, siguiente = f
 			},
 			corrida: { numero: ciclo, habilitada: !siguiente },
 			mesa: { numero: 3 },
-			curso: { codigo: curso.codigo, nombre: curso.nombre, destinado_a: curso.destinado_a },
-			conduceLaMesa: false,
-			volverA: `/m/${curso.codigo}/3`,
+			curso: { codigo: suCurso.codigo, nombre: suCurso.nombre, destinado_a: suCurso.destinado_a },
+			conduceLaMesa: facilitador,
+			volverA: facilitador ? `/mesas/${suCurso.codigo}/3` : `/m/${suCurso.codigo}/3`,
 			escenario,
 			siguienteCorrida: siguiente ? { numero: ciclo + 1, participacionId: null } : null,
 			mesaCerrada: false,

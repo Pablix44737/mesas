@@ -26,7 +26,7 @@
 		const datos = (estado.datos ?? {}) as never;
 		switch (estado.pantalla) {
 			case 'mesas':
-				return misMesas();
+				return misMesas(datos);
 			case 'mesa':
 				return mesa(datos);
 			case 'ciclo':
