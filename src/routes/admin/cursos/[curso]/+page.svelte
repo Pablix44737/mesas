@@ -6,7 +6,7 @@
 
 	let { data, form } = $props();
 
-	type Accion = 'editar' | 'archivar' | 'eliminarCurso';
+	type Accion = 'editar' | 'archivar' | 'eliminarCurso' | 'entregarCopia';
 
 	const curso = $derived(data.curso);
 	/** Qué formulario mandó la última respuesta del servidor, para mostrarla en su lugar. */
@@ -39,7 +39,7 @@
 
 	/** El resultado de lo último, cuando no se muestra ya junto a lo que lo produjo. */
 	const aviso = $derived.by(() => {
-		if (avisoCerrado || editando || eliminando) return null;
+		if (avisoCerrado || editando || eliminando || entregando) return null;
 		if (form?.exito) return { exito: true, texto: form.exito };
 		if (form?.mensaje && accion !== 'editar' && accion !== 'eliminarCurso') {
 			return { exito: false, texto: form.mensaje };
@@ -92,10 +92,34 @@
 		document.getElementById('confirmar-curso')?.focus();
 	}
 
+	/* --- entregarle una copia a otra institución --- */
+
+	let entregando = $state(untrack(() => Boolean(form?.entregando)));
+	let institucionId = $state(untrack(() => form?.institucionId ?? ''));
+	let confirmacionCopia = $state('');
+	let conPadron = $state(true);
+	let copiaCorregida = $state(false);
+	const errorDeLaCopia = $derived(form?.entregando && !copiaCorregida ? form.mensaje : null);
+
+	const institucionElegida = $derived(
+		data.otrasInstituciones.find((i) => i.id === institucionId)?.nombre ?? null
+	);
+
+	async function pedirEntregar() {
+		entregando = true;
+		institucionId = data.otrasInstituciones.length === 1 ? data.otrasInstituciones[0].id : '';
+		confirmacionCopia = '';
+		conPadron = true;
+		copiaCorregida = true;
+		await tick();
+		document.getElementById('copia-institucion')?.focus();
+	}
+
 	function cerrar() {
 		if (trabajando) return;
 		editando = false;
 		eliminando = false;
+		entregando = false;
 	}
 
 	const enviar =
@@ -115,6 +139,10 @@
 				trabajando = null;
 				if (result.type === 'success') {
 					editando = false;
+					// La entrega termina con un mensaje, no con una redirección: si el
+					// diálogo no se cierra, el aviso queda tapado detrás y parece que no
+					// pasó nada. Eliminar no lo necesita porque se va de la pantalla.
+					entregando = false;
 					window.scrollTo({ top: 0 });
 				}
 			};
@@ -269,6 +297,22 @@
 		{/if}
 	</section>
 
+	{#if data.otrasInstituciones.length > 0}
+		<section class="admin-eliminar" aria-label="Entregar una copia">
+			<div>
+				<strong>Entregar una copia a otra institución</strong>
+				<span>
+					Se lleva el curso entero —mesas, ciclos, roles y evaluaciones— con los escenarios y
+					checklists que usó. Acá no cambia nada.
+				</span>
+			</div>
+			<button class="boton secundario neutro" type="button" onclick={pedirEntregar}>
+				<Icono nombre="externo" tamano={18} />
+				Entregar una copia
+			</button>
+		</section>
+	{/if}
+
 	<section class="admin-eliminar" aria-label="Eliminar el curso">
 		<div>
 			<strong>Eliminar el curso</strong>
@@ -363,6 +407,82 @@
 				</button>
 				<button class="boton enviar" type="submit" disabled={trabajando === 'editar'}>
 					{trabajando === 'editar' ? 'Guardando…' : 'Guardar los cambios'}
+				</button>
+			</div>
+		</form>
+	</div>
+{/if}
+
+{#if entregando}
+	<div class="admin-velo" role="presentation" onclick={cerrar}></div>
+	<div class="admin-dialogo" role="dialog" aria-modal="true" aria-labelledby="copia-titulo">
+		<span class="admin-asa" aria-hidden="true"></span>
+		<h2 id="copia-titulo">Entregar una copia de «{curso.nombre}»</h2>
+		<p>
+			{data.mesas.length > 0
+				? `Viajan ${cuantos(data.mesas.length, 'mesa', 'mesas')}, ${cuantos(ciclos, 'ciclo', 'ciclos')} y ${cuantos(evaluaciones, 'evaluación enviada', 'evaluaciones enviadas')}, con los escenarios y checklists que usó.`
+				: 'Todavía no tiene mesas: la copia va a quedar vacía.'}
+		</p>
+
+		<form method="POST" action="?/entregarCopia" novalidate use:enhance={enviar('entregarCopia')}>
+			<div class="admin-campo">
+				<label for="copia-institucion">¿Qué institución se la lleva?</label>
+				<select
+					id="copia-institucion"
+					name="institucionId"
+					bind:value={institucionId}
+					onchange={() => (copiaCorregida = true)}
+				>
+					<option value="">Elegí la institución</option>
+					{#each data.otrasInstituciones as institucion (institucion.id)}
+						<option value={institucion.id}>{institucion.nombre}</option>
+					{/each}
+				</select>
+			</div>
+
+			<!-- El padrón son nombres y documentos de personas reales. Que viaje es lo
+			     habitual —son los asistentes de ese curso— pero se elige, no se asume. -->
+			<label class="copia-padron">
+				<input type="checkbox" name="conPadron" value="si" bind:checked={conPadron} />
+				<span>
+					<strong>Incluir el padrón</strong>
+					<span class="detalle">
+						Nombre y documento de quienes participaron. Sin esto, la copia los muestra
+						sólo por documento.
+					</span>
+				</span>
+			</label>
+
+			<div class="admin-campo cursos-confirmar">
+				<label for="confirmar-copia">Para confirmar, escribí el nombre del curso</label>
+				<input
+					id="confirmar-copia"
+					name="confirmacion"
+					type="text"
+					autocomplete="off"
+					placeholder={curso.nombre}
+					bind:value={confirmacionCopia}
+					oninput={() => (copiaCorregida = true)}
+					aria-invalid={Boolean(errorDeLaCopia)}
+				/>
+				{#if errorDeLaCopia}
+					<p class="campo-error"><Icono nombre="error" tamano={16} />{errorDeLaCopia}</p>
+				{/if}
+			</div>
+
+			<p class="cursos-dialogo-nota">
+				Es una foto del curso tal como está hoy: si después se corrige algo acá, allá no cambia.
+				{#if institucionElegida}
+					La copia queda en «{institucionElegida}», que la ve con su propia clave.
+				{/if}
+			</p>
+
+			<div class="cursos-dialogo-botones">
+				<button class="boton secundario neutro" type="button" onclick={cerrar} disabled={trabajando !== null}>
+					Cancelar
+				</button>
+				<button class="boton enviar" type="submit" disabled={trabajando !== null}>
+					{trabajando === 'entregarCopia' ? 'Copiando…' : 'Entregar la copia'}
 				</button>
 			</div>
 		</form>

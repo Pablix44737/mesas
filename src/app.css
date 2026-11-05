@@ -9404,6 +9404,39 @@ input.sumarse-dni[aria-invalid='true'] {
 	font-size: 14px;
 }
 
+/* La misma nota, cuando vive dentro del formulario: la separa el gap de arriba. */
+.admin-dialogo form .cursos-dialogo-nota {
+	margin: 0;
+	font-size: 14px;
+	color: var(--tinta-suave);
+}
+
+/* Incluir el padrón en una copia es una decisión, no una casilla al pasar. */
+.copia-padron {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--e-3);
+	padding: var(--e-3) var(--e-4);
+	border: 1px solid var(--borde);
+	border-radius: var(--r-lg);
+	background: var(--superficie-baja);
+	cursor: pointer;
+}
+
+.copia-padron input {
+	flex: 0 0 auto;
+	width: 20px;
+	height: 20px;
+	margin-top: 2px;
+	accent-color: var(--azul);
+}
+
+.copia-padron > span {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
 .admin-dialogo form:has(.cursos-confirmar) {
 	flex-direction: column;
 	gap: var(--e-6);

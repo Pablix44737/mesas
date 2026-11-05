@@ -712,6 +712,14 @@ export type Database = {
 				Args: { p_nombre: string; p_codigo: string; p_clave: string };
 				Returns: Json;
 			};
+			copiar_curso_a_institucion: {
+				Args: { p_curso_id: string; p_tenant_destino: string; p_con_padron?: boolean };
+				Returns: Json;
+			};
+			plantilla_equivalente_en: {
+				Args: { p_plantilla_id: string; p_tenant: string };
+				Returns: string | null;
+			};
 			cambiar_el_destinatario: {
 				Args: { p_curso_id: string; p_destinatario: string };
 				Returns: Json;
