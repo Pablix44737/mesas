@@ -26,6 +26,7 @@ const MINIMO_PARES = 4;
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const tenant = tenantActual(locals);
 	const elegido = url.searchParams.get('escenario');
+	const cursoPedido = url.searchParams.get('curso');
 
 	const [
 		{ data: ciclos, error: falloCiclos },
@@ -45,23 +46,48 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const todosLosCriterios = criterios ?? [];
 	const todaLaConcordancia = concordancia ?? [];
 
-	// Los escenarios que se pueden mirar son los que tienen algo evaluado: ofrecer
-	// uno vacío es ofrecer una pantalla en blanco.
-	const escenarios = [
+	/**
+	 * Las dos preguntas que se hacen sobre lo mismo.
+	 *
+	 * El escenario pregunta qué cuesta en una técnica, a través de todas las
+	 * cohortes; el curso, cómo le fue a una edición, a través de todas sus
+	 * técnicas. Se combinan: elegir los dos es preguntar por una técnica dentro de
+	 * una edición, que es lo que se mira cuando algo salió raro.
+	 */
+	const cursos = [
 		...new Map(
 			todosLosCriterios
+				.filter((c) => c.curso_id && c.curso)
+				.map((c) => [c.curso_id!, { id: c.curso_id!, nombre: c.curso! }])
+		).values()
+	].sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+	// Un curso que no existe o que no tiene nada evaluado cae en «todos», que es
+	// lo que la pantalla sabe mostrar siempre.
+	const cursoId = cursos.some((c) => c.id === cursoPedido) ? cursoPedido : null;
+
+	const delCurso = cursoId
+		? todosLosCriterios.filter((c) => c.curso_id === cursoId)
+		: todosLosCriterios;
+
+	// Los escenarios que se pueden mirar son los que tienen algo evaluado —ofrecer
+	// uno vacío es ofrecer una pantalla en blanco— y, con un curso elegido, los
+	// que ese curso practicó: los demás darían cero sobre cero.
+	const escenarios = [
+		...new Map(
+			delCurso
 				.filter((c) => c.escenario_id && c.escenario)
 				.map((c) => [c.escenario_id!, { id: c.escenario_id!, nombre: c.escenario! }])
 		).values()
 	].sort((a, b) => a.nombre.localeCompare(b.nombre));
 
-	// Un escenario que no existe o que no tiene nada evaluado cae en «todos», que
-	// es lo que la pantalla sabe mostrar siempre.
+	// Si el escenario que venía en la dirección no se practicó en el curso recién
+	// elegido, se vuelve a «todos» en vez de mostrar una pantalla vacía.
 	const escenarioId = escenarios.some((e) => e.id === elegido) ? elegido : null;
 
 	const delEscenario = escenarioId
-		? todosLosCriterios.filter((c) => c.escenario_id === escenarioId)
-		: todosLosCriterios;
+		? delCurso.filter((c) => c.escenario_id === escenarioId)
+		: delCurso;
 
 	/**
 	 * Con «todos los escenarios» el mismo criterio del checklist común aparece una
@@ -121,9 +147,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		])
 	);
 
-	const deLaConcordancia = escenarioId
-		? todaLaConcordancia.filter((c) => c.escenario_id === escenarioId)
-		: todaLaConcordancia;
+	const deLaConcordancia = todaLaConcordancia
+		.filter((c) => !cursoId || c.curso_id === cursoId)
+		.filter((c) => !escenarioId || c.escenario_id === escenarioId);
 
 	const porPar = new Map<
 		string,
@@ -238,15 +264,18 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	} | null = null;
 
 	if (elCriterio) {
-		const consulta = supabase
+		let consulta = supabase
 			.from('criterios_en_el_tiempo')
 			.select('*')
 			.eq('tenant_id', tenant)
 			.eq('plantilla_id', elCriterio.plantillaId);
 
-		const { data: enElTiempo } = escenarioId
-			? await consulta.eq('escenario_id', escenarioId)
-			: await consulta;
+		// La serie respeta los mismos filtros que el ranking del que se llegó: si
+		// no, el criterio que se abrió mostraría una historia de otro alcance.
+		if (cursoId) consulta = consulta.eq('curso_id', cursoId);
+		if (escenarioId) consulta = consulta.eq('escenario_id', escenarioId);
+
+		const { data: enElTiempo } = await consulta;
 
 		// Una casilla por punto del eje: la del criterio y la de todo el checklist.
 		const suyo = new Map<string, { respondido: number; fallos: number }>();
@@ -295,9 +324,15 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		};
 	}
 
-	const ciclosDelEscenario = escenarioId
-		? todosLosCiclos.filter((c) => c.escenario_id === escenarioId)
+	// Los ciclos del curso elegido, que es contra lo que se mide el alcance y
+	// cuánto se practicó cada escenario.
+	const ciclosDelCurso = cursoId
+		? todosLosCiclos.filter((c) => c.curso_id === cursoId)
 		: todosLosCiclos;
+
+	const ciclosDelEscenario = escenarioId
+		? ciclosDelCurso.filter((c) => c.escenario_id === escenarioId)
+		: ciclosDelCurso;
 
 	const respondidas = delEscenario.reduce((total, c) => total + (c.respondido ?? 0), 0);
 	const fallidas = delEscenario.reduce((total, c) => total + (c.fallos ?? 0), 0);
@@ -316,7 +351,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			mesas: Map<string, MesaQuePractico>;
 		}
 	>();
-	for (const ciclo of todosLosCiclos) {
+	for (const ciclo of ciclosDelCurso) {
 		if (!ciclo.escenario_id || !ciclo.escenario || !ciclo.mesa_id) continue;
 		const suyo = practicas.get(ciclo.escenario_id) ?? {
 			id: ciclo.escenario_id,
@@ -339,6 +374,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	}
 
 	return {
+		cursos,
+		cursoElegido: cursoId,
 		escenarios,
 		escenarioElegido: escenarioId,
 		puntosCriticos,

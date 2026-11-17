@@ -580,6 +580,8 @@ export type Database = {
 			concordancia_entre_observadores: {
 				Row: {
 					tenant_id: string | null;
+					curso_id: string | null;
+					curso: string | null;
 					escenario_id: string | null;
 					escenario: string | null;
 					plantilla_id: string | null;
@@ -597,6 +599,7 @@ export type Database = {
 			criterios_en_el_tiempo: {
 				Row: {
 					tenant_id: string | null;
+					curso_id: string | null;
 					escenario_id: string | null;
 					plantilla_id: string | null;
 					item_id: string | null;
@@ -610,6 +613,8 @@ export type Database = {
 			criterios_evaluados: {
 				Row: {
 					tenant_id: string | null;
+					curso_id: string | null;
+					curso: string | null;
 					escenario_id: string | null;
 					escenario: string | null;
 					plantilla_id: string | null;

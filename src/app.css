@@ -7383,6 +7383,7 @@ input.sumarse-dni[aria-invalid='true'] {
 .estadisticas-alcance {
 	position: relative;
 	display: flex;
+	flex-wrap: wrap;
 	align-items: stretch;
 	gap: var(--e-2);
 	min-width: 0;
@@ -7390,7 +7391,9 @@ input.sumarse-dni[aria-invalid='true'] {
 }
 
 .estadisticas-alcance details {
-	flex: 1 1 auto;
+	/* Con dos recortes a la vez —el curso y el escenario— cada uno pide su ancho
+	   para que el nombre se lea; si no entran los dos, bajan de renglón. */
+	flex: 1 1 14rem;
 	min-width: 0;
 }
 

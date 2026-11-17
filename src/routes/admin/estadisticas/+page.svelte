@@ -53,16 +53,19 @@
 
 	/** La dirección de esta misma pantalla con algo cambiado: se puede compartir tal cual. */
 	function enlace(cambios: {
+		curso?: string | null;
 		escenario?: string | null;
 		criterio?: string | null;
 		eje?: 'vuelta' | 'fecha';
 		vista?: Vista;
 	}) {
+		const curso = 'curso' in cambios ? cambios.curso : data.cursoElegido;
 		const escenario = 'escenario' in cambios ? cambios.escenario : data.escenarioElegido;
 		const criterio = 'criterio' in cambios ? cambios.criterio : (data.evolucion?.criterio.itemId ?? null);
 		const eje = cambios.eje ?? data.evolucion?.eje ?? 'vuelta';
 		const cual = cambios.vista ?? vista;
 		const parametros = new URLSearchParams();
+		if (curso) parametros.set('curso', curso);
 		if (escenario) parametros.set('escenario', escenario);
 		if (cual !== 'fallos') parametros.set('vista', cual);
 		if (criterio) {
@@ -83,10 +86,14 @@
 	/* --- qué mirar --- */
 
 	let selector = $state<HTMLDetailsElement>();
+	let selectorDeCurso = $state<HTMLDetailsElement>();
 	const practicaDe = (id: string) => data.practicas.find((p) => p.id === id);
 	const totalEvaluaciones = $derived(data.practicas.reduce((t, p) => t + p.evaluaciones, 0));
 	const nombreElegido = $derived(
 		data.escenarios.find((e) => e.id === data.escenarioElegido)?.nombre ?? 'Todos los escenarios'
+	);
+	const cursoElegido = $derived(
+		data.cursos.find((c) => c.id === data.cursoElegido)?.nombre ?? 'Todos los cursos'
 	);
 
 	let copiado = $state(false);
@@ -243,6 +250,54 @@
 
 		{#if data.escenarios.length > 0}
 			<div class="estadisticas-alcance">
+				<!-- Dos recortes distintos de lo mismo: el curso es una edición, el
+				     escenario es una técnica. Se combinan, y cada uno queda en la
+				     dirección. Con un solo curso cargado no hay nada que elegir. -->
+				{#if data.cursos.length > 1}
+					<details bind:this={selectorDeCurso}>
+						<summary>
+							<span>
+								<span>Qué curso</span>
+								<strong>{cursoElegido}</strong>
+							</span>
+							<Icono nombre="abajo" tamano={20} />
+						</summary>
+						<button
+							class="estadisticas-velo"
+							type="button"
+							aria-label="Cerrar"
+							onclick={() => selectorDeCurso && (selectorDeCurso.open = false)}
+						></button>
+						<div class="estadisticas-opciones" role="list">
+							<span class="admin-asa" aria-hidden="true"></span>
+							<h2>Qué curso</h2>
+							<!-- Al cambiar de curso se sueltan el escenario y el criterio: el
+							     que estaba elegido puede no existir en el curso nuevo. -->
+							<a
+								href={enlace({ curso: null, escenario: null, criterio: null })}
+								aria-current={!data.cursoElegido ? 'true' : undefined}
+								onclick={() => selectorDeCurso && (selectorDeCurso.open = false)}
+							>
+								<span>
+									<strong>Todos los cursos</strong>
+									<span>{cuantos(data.cursos.length, 'curso', 'cursos')} con evaluaciones</span>
+								</span>
+								{#if !data.cursoElegido}<Icono nombre="tilde" tamano={18} />{/if}
+							</a>
+							{#each data.cursos as curso (curso.id)}
+								<a
+									href={enlace({ curso: curso.id, escenario: null, criterio: null })}
+									aria-current={data.cursoElegido === curso.id ? 'true' : undefined}
+									onclick={() => selectorDeCurso && (selectorDeCurso.open = false)}
+								>
+									<span><strong>{curso.nombre}</strong></span>
+									{#if data.cursoElegido === curso.id}<Icono nombre="tilde" tamano={18} />{/if}
+								</a>
+							{/each}
+						</div>
+					</details>
+				{/if}
+
 				<!-- Un desplegable nativo: abre y elige aunque no haya JavaScript, y cada
 				     opción es un enlace, así lo elegido queda en la dirección. -->
 				<details bind:this={selector}>
